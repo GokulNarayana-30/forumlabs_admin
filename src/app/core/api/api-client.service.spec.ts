@@ -10,11 +10,7 @@ describe('ApiClient (Typed Error & Idempotency Key Handling)', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [
-        ApiClient,
-        provideHttpClient(),
-        provideHttpClientTesting(),
-      ],
+      providers: [ApiClient, provideHttpClient(), provideHttpClientTesting()],
     });
 
     client = TestBed.inject(ApiClient);

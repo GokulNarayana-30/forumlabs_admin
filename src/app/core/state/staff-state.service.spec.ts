@@ -75,9 +75,7 @@ describe('StaffStateService (Reactive Role State)', () => {
   });
 
   it('clears state, signs out, and redirects to /login on profile load error', async () => {
-    mockApiClient.get.mockReturnValueOnce(
-      throwError(() => ({ status: 403, code: 'forbidden' })),
-    );
+    mockApiClient.get.mockReturnValueOnce(throwError(() => ({ status: 403, code: 'forbidden' })));
 
     await service.loadProfile();
 

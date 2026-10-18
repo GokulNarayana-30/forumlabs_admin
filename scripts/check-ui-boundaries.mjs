@@ -11,7 +11,7 @@ const srcRoot = path.join(adminRoot, 'src');
 export const FORBIDDEN_PATTERNS = [
   {
     name: 'direct Supabase table/storage query or service key',
-    regex: /\.(from\s*\(|storage\s*\.)|service_role/g,
+    regex: /(?<!Array)\.from\s*\(|\.storage\s*\.|service_role/g,
     fileFilter: (filePath) => !filePath.endsWith('.spec.ts'),
   },
   {
