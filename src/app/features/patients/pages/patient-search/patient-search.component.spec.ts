@@ -104,4 +104,29 @@ describe('PatientSearchComponent', () => {
     );
     expect(component.selectedPatient()).toEqual(mockPatientDetail);
   });
+
+  it('renders masked patient data in the results table without exposing unmasked phone or name in list', async () => {
+    component.searchType.set('patient_id');
+    component.searchQuery.set('FL-P-104928');
+    await component.executeSearch();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('FL-P-104928');
+    expect(compiled.textContent).toContain('Aa*** Sh****');
+    expect(compiled.textContent).toContain('+91 ******1234');
+    expect(compiled.textContent).not.toContain('Aarav Sharma');
+    expect(compiled.textContent).not.toContain('+919876543210');
+  });
+
+  it('renders empty message when no matching patients found', async () => {
+    mockPatientsService.search.mockResolvedValue([]);
+    component.searchType.set('patient_id');
+    component.searchQuery.set('FL-P-999999');
+    await component.executeSearch();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('No matching patients found');
+  });
 });
