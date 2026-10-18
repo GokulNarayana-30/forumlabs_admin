@@ -2,11 +2,12 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FieldService } from '../../services/field.service';
 import { StaffOrderListItemDto } from '../../../bookings/services/bookings.service';
+import { CollectPaymentModalComponent } from '../../components/collect-payment-modal/collect-payment-modal.component';
 
 @Component({
   selector: 'app-field-today',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, CollectPaymentModalComponent],
   templateUrl: './field-today.component.html',
 })
 export class FieldTodayComponent implements OnInit {
@@ -16,6 +17,10 @@ export class FieldTodayComponent implements OnInit {
   readonly isLoading = signal<boolean>(false);
   readonly errorMessage = signal<string>('');
   readonly successMessage = signal<string>('');
+
+  // Collect Payment Modal state
+  readonly paymentModalVisible = signal<boolean>(false);
+  readonly selectedOrderForPayment = signal<StaffOrderListItemDto | null>(null);
 
   ngOnInit(): void {
     void this.loadVisits();
@@ -33,6 +38,16 @@ export class FieldTodayComponent implements OnInit {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  openPaymentModal(order: StaffOrderListItemDto): void {
+    this.selectedOrderForPayment.set(order);
+    this.paymentModalVisible.set(true);
+  }
+
+  onCollectionSuccess(): void {
+    this.successMessage.set('Collection and payment recorded successfully.');
+    void this.loadVisits();
   }
 
   getMapsLink(address: StaffOrderListItemDto['address']): string {

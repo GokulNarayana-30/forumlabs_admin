@@ -137,9 +137,42 @@
                 </div>
               }
             </div>
+
+            <!-- Action Buttons -->
+            <div class="pt-2 border-t border-surface-100 flex flex-wrap items-center gap-2">
+              @if (visit.status === 'collected') {
+                <span
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200"
+                >
+                  &check; Collected & Paid
+                </span>
+              } @else if (visit.status === 'collection_failed') {
+                <span
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200"
+                >
+                  &cross; Collection Failed
+                </span>
+              } @else {
+                <button
+                  type="button"
+                  (click)="openPaymentModal(visit)"
+                  class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 transition-colors shadow-2xs"
+                >
+                  Collected & Paid
+                </button>
+              }
+            </div>
           </div>
         </div>
       }
     </div>
   }
+
+  <!-- Collect Payment Modal -->
+  <app-collect-payment-modal
+    [order]="selectedOrderForPayment()"
+    [visible]="paymentModalVisible()"
+    (visibleChange)="paymentModalVisible.set($event)"
+    (collected)="onCollectionSuccess()"
+  />
 </div>
