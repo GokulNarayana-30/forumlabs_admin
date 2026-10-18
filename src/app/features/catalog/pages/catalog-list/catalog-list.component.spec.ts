@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { CatalogListComponent } from './catalog-list.component';
 import { CatalogService } from '../../services/catalog.service';
 
@@ -51,7 +52,7 @@ describe('CatalogListComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [CatalogListComponent],
-      providers: [{ provide: CatalogService, useValue: mockCatalogService }],
+      providers: [provideRouter([]), { provide: CatalogService, useValue: mockCatalogService }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(CatalogListComponent);
