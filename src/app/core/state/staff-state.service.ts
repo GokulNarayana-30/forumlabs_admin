@@ -4,11 +4,20 @@ import { firstValueFrom } from 'rxjs';
 import { ApiClient } from '../api/api-client.service';
 import { AuthService } from '../auth/auth.service';
 
+export type StaffRole =
+  | 'super_admin'
+  | 'booking_dispatch'
+  | 'phlebotomist'
+  | 'catalog_manager'
+  | 'lab_staff'
+  | 'report_approver'
+  | 'support';
+
 export interface StaffUserProfile {
   staff_user_id: string;
   name: string;
   email: string;
-  roles: string[];
+  roles: StaffRole[];
 }
 
 @Injectable({
