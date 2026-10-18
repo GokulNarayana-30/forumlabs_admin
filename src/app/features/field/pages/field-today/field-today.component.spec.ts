@@ -88,4 +88,30 @@ describe('FieldTodayComponent', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.textContent).toContain('No visits assigned for today');
   });
+
+  it('triggers on_the_way journey action with expected payload and refreshes visits', async () => {
+    await component.markOnTheWay(mockVisits[0]);
+
+    expect(mockFieldService.recordEvent).toHaveBeenCalledWith('order-1', {
+      kind: 'on_the_way',
+      expected_in_minutes: 15,
+    });
+    expect(mockFieldService.getTodayVisits).toHaveBeenCalledTimes(2);
+  });
+
+  it('triggers arrived journey action with expected payload and refreshes visits', async () => {
+    await component.markArrived(mockVisits[0]);
+
+    expect(mockFieldService.recordEvent).toHaveBeenCalledWith('order-1', {
+      kind: 'arrived',
+    });
+    expect(mockFieldService.getTodayVisits).toHaveBeenCalledTimes(2);
+  });
+
+  it('handles server event_not_allowed response without crashing', async () => {
+    mockFieldService.recordEvent.mockRejectedValue(new Error('Event not allowed'));
+    await component.markOnTheWay(mockVisits[0]);
+
+    expect(component.errorMessage()).toContain('Event not allowed');
+  });
 });
