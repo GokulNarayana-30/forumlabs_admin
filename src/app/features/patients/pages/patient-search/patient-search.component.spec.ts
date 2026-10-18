@@ -45,10 +45,7 @@ describe('PatientSearchComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [PatientSearchComponent],
-      providers: [
-        provideRouter([]),
-        { provide: PatientsService, useValue: mockPatientsService },
-      ],
+      providers: [provideRouter([]), { provide: PatientsService, useValue: mockPatientsService }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(PatientSearchComponent);

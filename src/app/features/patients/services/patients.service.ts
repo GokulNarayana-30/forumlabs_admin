@@ -3,12 +3,7 @@ import { firstValueFrom } from 'rxjs';
 import { ApiClient } from '../../../core/api/api-client.service';
 
 export type PatientSearchType =
-  | 'patient_id'
-  | 'phone'
-  | 'booking_ref'
-  | 'ticket_ref'
-  | 'reg_no'
-  | 'name';
+  'patient_id' | 'phone' | 'booking_ref' | 'ticket_ref' | 'reg_no' | 'name';
 
 export interface StaffPatientSearchResult {
   patient_id: string;
@@ -67,10 +62,7 @@ export interface ReportDocumentLink {
 export class PatientsService {
   private readonly api = inject(ApiClient);
 
-  async search(
-    query: string,
-    type: PatientSearchType,
-  ): Promise<StaffPatientSearchResult[]> {
+  async search(query: string, type: PatientSearchType): Promise<StaffPatientSearchResult[]> {
     return firstValueFrom(
       this.api.get<StaffPatientSearchResult[]>('/staff/patients/search', {
         params: { q: query.trim(), type },
@@ -79,15 +71,10 @@ export class PatientsService {
   }
 
   async getPatientDetail(patientRowId: string): Promise<StaffPatientDetail> {
-    return firstValueFrom(
-      this.api.get<StaffPatientDetail>(`/staff/patients/${patientRowId}`),
-    );
+    return firstValueFrom(this.api.get<StaffPatientDetail>(`/staff/patients/${patientRowId}`));
   }
 
-  async getReportDocumentLink(
-    reportId: string,
-    version: number = 1,
-  ): Promise<ReportDocumentLink> {
+  async getReportDocumentLink(reportId: string, version: number = 1): Promise<ReportDocumentLink> {
     return firstValueFrom(
       this.api.post<ReportDocumentLink>(
         `/staff/reports/${reportId}/versions/${version}/preview-link`,

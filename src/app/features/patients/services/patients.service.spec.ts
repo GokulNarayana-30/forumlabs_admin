@@ -1,11 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 import { ApiClient } from '../../../core/api/api-client.service';
-import {
-  PatientsService,
-  StaffPatientSearchResult,
-  StaffPatientDetail,
-} from './patients.service';
+import { PatientsService, StaffPatientSearchResult, StaffPatientDetail } from './patients.service';
 
 describe('PatientsService', () => {
   let service: PatientsService;
@@ -67,10 +63,7 @@ describe('PatientsService', () => {
     };
 
     TestBed.configureTestingModule({
-      providers: [
-        PatientsService,
-        { provide: ApiClient, useValue: mockApiClient },
-      ],
+      providers: [PatientsService, { provide: ApiClient, useValue: mockApiClient }],
     });
 
     service = TestBed.inject(PatientsService);

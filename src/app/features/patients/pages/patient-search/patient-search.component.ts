@@ -12,6 +12,7 @@ import {
   StaffPatientSearchResult,
   StaffPatientDetail,
 } from '../../services/patients.service';
+import { PatientDetailViewComponent } from '../../components/patient-detail-view/patient-detail-view.component';
 
 export interface SearchTypeOption {
   label: string;
@@ -29,6 +30,7 @@ export interface SearchTypeOption {
     InputTextModule,
     TableModule,
     ToastModule,
+    PatientDetailViewComponent,
   ],
   providers: [MessageService],
   templateUrl: './patient-search.component.html',

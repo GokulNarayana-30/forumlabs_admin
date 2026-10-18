@@ -1,0 +1,207 @@
+<p-dialog
+  header="Patient Record Details"
+  [visible]="visible"
+  (visibleChange)="close()"
+  [modal]="true"
+  [closable]="true"
+  [style]="{ width: '52rem', maxWidth: '98vw' }"
+>
+  <div *ngIf="patient" class="space-y-6 pt-2">
+    <!-- Demographics Card -->
+    <div class="bg-surface-50 border border-surface-200 rounded-xl p-4">
+      <div
+        class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-surface-200 pb-3 mb-3"
+      >
+        <div>
+          <div class="text-xs font-semibold uppercase text-surface-500">Patient Code</div>
+          <div class="font-mono text-lg font-bold text-primary-700">{{ patient.patient_code }}</div>
+        </div>
+        <div class="text-right">
+          <div class="text-xs font-semibold uppercase text-surface-500">System UUID</div>
+          <div class="font-mono text-xs text-surface-500">{{ patient.patient_id }}</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+        <div>
+          <span class="text-surface-500 block">Full Name:</span>
+          <span class="font-semibold text-surface-900 text-sm">{{ patient.name }}</span>
+        </div>
+        <div>
+          <span class="text-surface-500 block">Phone:</span>
+          <span class="font-mono font-medium text-surface-900 text-sm">{{
+            patient.phone || '-'
+          }}</span>
+        </div>
+        <div>
+          <span class="text-surface-500 block">Gender:</span>
+          <span class="font-medium text-surface-800 capitalize text-sm">{{
+            patient.gender || 'Not specified'
+          }}</span>
+        </div>
+        <div>
+          <span class="text-surface-500 block">Date of Birth:</span>
+          <span class="font-mono font-medium text-surface-800 text-sm">{{
+            patient.date_of_birth || 'Not recorded'
+          }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error Alert -->
+    <div
+      *ngIf="errorMessage()"
+      class="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700"
+    >
+      {{ errorMessage() }}
+    </div>
+
+    <!-- Family Members -->
+    <div>
+      <h3 class="text-sm font-bold text-surface-900 mb-2 flex items-center gap-2">
+        <i class="pi pi-users text-primary-600"></i>
+        <span>Family Members ({{ patient.family.length }})</span>
+      </h3>
+      <div
+        *ngIf="patient.family.length === 0"
+        class="p-4 bg-surface-50 rounded-lg text-xs text-surface-500 text-center"
+      >
+        No additional family members registered under this account.
+      </div>
+      <div
+        *ngIf="patient.family.length > 0"
+        class="border border-surface-200 rounded-lg overflow-hidden"
+      >
+        <table class="w-full text-left text-xs text-surface-700">
+          <thead
+            class="bg-surface-50 border-b border-surface-200 uppercase font-semibold text-surface-500"
+          >
+            <tr>
+              <th class="py-2.5 px-3">Patient Code</th>
+              <th class="py-2.5 px-3">Name</th>
+              <th class="py-2.5 px-3">Relationship</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-surface-100">
+            <tr *ngFor="let m of patient.family" class="hover:bg-surface-50">
+              <td class="py-2.5 px-3 font-mono font-semibold text-primary-700">
+                {{ m.patient_code }}
+              </td>
+              <td class="py-2.5 px-3 font-medium text-surface-900">{{ m.name }}</td>
+              <td class="py-2.5 px-3 capitalize">{{ m.relation }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Booking History -->
+    <div>
+      <h3 class="text-sm font-bold text-surface-900 mb-2 flex items-center gap-2">
+        <i class="pi pi-calendar text-primary-600"></i>
+        <span>Booking History ({{ patient.bookings.length }})</span>
+      </h3>
+      <div
+        *ngIf="patient.bookings.length === 0"
+        class="p-4 bg-surface-50 rounded-lg text-xs text-surface-500 text-center"
+      >
+        No orders found for this patient.
+      </div>
+      <div
+        *ngIf="patient.bookings.length > 0"
+        class="border border-surface-200 rounded-lg overflow-hidden"
+      >
+        <table class="w-full text-left text-xs text-surface-700">
+          <thead
+            class="bg-surface-50 border-b border-surface-200 uppercase font-semibold text-surface-500"
+          >
+            <tr>
+              <th class="py-2.5 px-3">Order Number</th>
+              <th class="py-2.5 px-3">Status</th>
+              <th class="py-2.5 px-3">Date</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-surface-100">
+            <tr *ngFor="let b of patient.bookings" class="hover:bg-surface-50">
+              <td class="py-2.5 px-3 font-mono font-semibold text-primary-700">
+                {{ b.order_number }}
+              </td>
+              <td class="py-2.5 px-3">
+                <p-tag [value]="b.status" severity="info"></p-tag>
+              </td>
+              <td class="py-2.5 px-3 text-surface-500">{{ b.created_at | date: 'mediumDate' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Diagnostic Reports -->
+    <div>
+      <h3 class="text-sm font-bold text-surface-900 mb-2 flex items-center gap-2">
+        <i class="pi pi-file-pdf text-primary-600"></i>
+        <span>Diagnostic Reports ({{ patient.reports.length }})</span>
+      </h3>
+      <div
+        *ngIf="patient.reports.length === 0"
+        class="p-4 bg-surface-50 rounded-lg text-xs text-surface-500 text-center"
+      >
+        No diagnostic reports available for this patient.
+      </div>
+      <div
+        *ngIf="patient.reports.length > 0"
+        class="border border-surface-200 rounded-lg overflow-hidden"
+      >
+        <table class="w-full text-left text-xs text-surface-700">
+          <thead
+            class="bg-surface-50 border-b border-surface-200 uppercase font-semibold text-surface-500"
+          >
+            <tr>
+              <th class="py-2.5 px-3">Report / Reg No</th>
+              <th class="py-2.5 px-3">Status</th>
+              <th class="py-2.5 px-3 text-right">Document Access</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-surface-100">
+            <tr *ngFor="let r of patient.reports" class="hover:bg-surface-50">
+              <td class="py-2.5 px-3 font-mono font-semibold text-surface-900">
+                {{ r.report_number }}
+              </td>
+              <td class="py-2.5 px-3">
+                <p-tag [value]="r.status" severity="success"></p-tag>
+              </td>
+              <td class="py-2.5 px-3 text-right">
+                <div *ngIf="canAccessReportDocuments()">
+                  <p-button
+                    label="Preview PDF"
+                    icon="pi pi-external-link"
+                    size="small"
+                    [outlined]="true"
+                    styleClass="btn-report-preview"
+                    [loading]="loadingReportLink() === r.report_id"
+                    (onClick)="openReportDocument(r)"
+                  ></p-button>
+                </div>
+                <div *ngIf="!canAccessReportDocuments()" class="text-surface-400 italic text-xs">
+                  Restricted to Lab / Approvers
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <div class="flex justify-end pt-2">
+      <p-button
+        label="Close"
+        severity="secondary"
+        [outlined]="true"
+        size="small"
+        (onClick)="close()"
+      ></p-button>
+    </div>
+  </ng-template>
+</p-dialog>

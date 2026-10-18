@@ -121,10 +121,7 @@ describe('PatientDetailViewComponent', () => {
 
     await component.openReportDocument(mockPatient.reports[0]);
 
-    expect(mockPatientsService.getReportDocumentLink).toHaveBeenCalledWith(
-      'rep-2001',
-      1,
-    );
+    expect(mockPatientsService.getReportDocumentLink).toHaveBeenCalledWith('rep-2001', 1);
     expect(windowOpenSpy).toHaveBeenCalledWith(
       'https://storage.example.com/patient-report.pdf',
       '_blank',
