@@ -9,6 +9,7 @@ import {
 } from '../../services/bookings.service';
 import { StaffStateService } from '../../../../core/state/staff-state.service';
 import { AssignPhleboDialogComponent } from '../../components/assign-phlebo-dialog/assign-phlebo-dialog.component';
+import { BookingDetailDrawerComponent } from '../../components/booking-detail-drawer/booking-detail-drawer.component';
 
 export interface StatusFilterOption {
   key: string;
@@ -18,7 +19,7 @@ export interface StatusFilterOption {
 @Component({
   selector: 'app-booking-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, AssignPhleboDialogComponent],
+  imports: [CommonModule, FormsModule, AssignPhleboDialogComponent, BookingDetailDrawerComponent],
   templateUrl: './booking-list.component.html',
 })
 export class BookingListComponent implements OnInit {
@@ -34,6 +35,9 @@ export class BookingListComponent implements OnInit {
 
   readonly assignDialogVisible = signal<boolean>(false);
   readonly assigningOrder = signal<StaffOrderListItemDto | null>(null);
+
+  readonly detailDrawerVisible = signal<boolean>(false);
+  readonly selectedOrderId = signal<string | null>(null);
 
   readonly statusOptions: StatusFilterOption[] = [
     { key: 'all', label: 'All' },
@@ -102,6 +106,11 @@ export class BookingListComponent implements OnInit {
   openAssign(order: StaffOrderListItemDto): void {
     this.assigningOrder.set(order);
     this.assignDialogVisible.set(true);
+  }
+
+  openDetail(order: StaffOrderListItemDto): void {
+    this.selectedOrderId.set(order.order_id);
+    this.detailDrawerVisible.set(true);
   }
 
   async onAssigned(): Promise<void> {
