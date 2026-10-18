@@ -8,7 +8,10 @@
 >
   <div class="space-y-4 pt-2">
     <!-- Header Details Bar -->
-    <div *ngIf="item" class="p-3 bg-surface-50 border border-surface-200 rounded-lg flex flex-wrap items-center justify-between gap-3 text-xs">
+    <div
+      *ngIf="item"
+      class="p-3 bg-surface-50 border border-surface-200 rounded-lg flex flex-wrap items-center justify-between gap-3 text-xs"
+    >
       <div>
         <span class="text-surface-500">Booking:</span>
         <span class="font-mono font-bold text-surface-900 ml-1">{{ item.booking_ref }}</span>
@@ -39,17 +42,23 @@
       <i class="pi pi-exclamation-triangle text-amber-600 mt-0.5"></i>
       <div>
         <span class="font-semibold">Two-Person Segregation Policy Enforced:</span>
-        You uploaded this draft report version. Under hospital compliance rules (B-04), a different authorized approver must review and release this document.
+        You uploaded this draft report version. Under hospital compliance rules (B-04), a different
+        authorized approver must review and release this document.
       </div>
     </div>
 
     <!-- Error Alert -->
-    <div *ngIf="errorMessage()" class="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+    <div
+      *ngIf="errorMessage()"
+      class="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700"
+    >
       {{ errorMessage() }}
     </div>
 
     <!-- Viewer Area -->
-    <div class="border border-surface-200 rounded-lg overflow-hidden bg-surface-100 flex flex-col items-center justify-center min-h-[28rem] relative">
+    <div
+      class="border border-surface-200 rounded-lg overflow-hidden bg-surface-100 flex flex-col items-center justify-center min-h-[28rem] relative"
+    >
       <div *ngIf="loading()" class="text-center py-12 text-surface-500 text-sm">
         <i class="pi pi-spin pi-spinner text-2xl text-primary-600 mb-2"></i>
         <div>Fetching secure preview document...</div>
@@ -62,7 +71,10 @@
         title="Diagnostic Report PDF Preview"
       ></iframe>
 
-      <div *ngIf="!loading() && !safePreviewUrl() && !errorMessage()" class="text-surface-500 text-sm py-12">
+      <div
+        *ngIf="!loading() && !safePreviewUrl() && !errorMessage()"
+        class="text-surface-500 text-sm py-12"
+      >
         No preview available.
       </div>
     </div>

@@ -41,12 +41,7 @@ describe('ReportWithdrawDialogComponent', () => {
 
   it('exposes exactly the four canonical withdrawal reason codes', () => {
     const codes = component.reasonOptions.map((o: { label: string; value: string }) => o.value);
-    expect(codes).toEqual([
-      'wrong_patient',
-      'wrong_report',
-      'corrected_report_follows',
-      'other',
-    ]);
+    expect(codes).toEqual(['wrong_patient', 'wrong_report', 'corrected_report_follows', 'other']);
 
     // Negative controls: ensure invalid codes are absent
     expect(codes).not.toContain('transcription_error');
@@ -75,11 +70,7 @@ describe('ReportWithdrawDialogComponent', () => {
 
     await component.submit();
 
-    expect(mockReportsService.withdrawReport).toHaveBeenCalledWith(
-      'rep-202',
-      'wrong_patient',
-      1,
-    );
+    expect(mockReportsService.withdrawReport).toHaveBeenCalledWith('rep-202', 'wrong_patient', 1);
     expect(successSpy).toHaveBeenCalled();
     expect(component.visible).toBe(false);
   });

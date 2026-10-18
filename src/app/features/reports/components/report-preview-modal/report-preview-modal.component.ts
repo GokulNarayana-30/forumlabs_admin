@@ -61,10 +61,7 @@ export class ReportPreviewModalComponent implements OnChanges {
     this.errorMessage.set('');
 
     try {
-      const link = await this.reportsService.getPreviewLink(
-        this.item.report_id,
-        this.item.version,
-      );
+      const link = await this.reportsService.getPreviewLink(this.item.report_id, this.item.version);
       this.previewUrl.set(link.source);
       this.expiresAt.set(link.expires_at);
     } catch (err: any) {
@@ -107,10 +104,7 @@ export class ReportPreviewModalComponent implements OnChanges {
     this.errorMessage.set('');
 
     try {
-      const res = await this.reportsService.releaseReport(
-        this.item.report_id,
-        this.item.version,
-      );
+      const res = await this.reportsService.releaseReport(this.item.report_id, this.item.version);
 
       if (res.kind === 'report_released') {
         this.releaseSuccess.emit();

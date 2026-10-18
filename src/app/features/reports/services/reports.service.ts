@@ -26,10 +26,7 @@ export interface ReportDocumentLink {
 }
 
 export type CanonicalWithdrawReasonCode =
-  | 'wrong_patient'
-  | 'wrong_report'
-  | 'corrected_report_follows'
-  | 'other';
+  'wrong_patient' | 'wrong_report' | 'corrected_report_follows' | 'other';
 
 export interface AddReportResult {
   kind:

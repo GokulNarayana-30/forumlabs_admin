@@ -7,7 +7,11 @@ import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
-import { ReportsService, StaffReportQueueItem, AddReportResult } from '../../services/reports.service';
+import {
+  ReportsService,
+  StaffReportQueueItem,
+  AddReportResult,
+} from '../../services/reports.service';
 import { StaffStateService } from '../../../../core/state/staff-state.service';
 import { ReportUploadDialogComponent } from '../../components/report-upload-dialog/report-upload-dialog.component';
 import { ReportPreviewModalComponent } from '../../components/report-preview-modal/report-preview-modal.component';

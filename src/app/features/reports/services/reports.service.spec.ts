@@ -47,10 +47,7 @@ describe('ReportsService', () => {
     };
 
     TestBed.configureTestingModule({
-      providers: [
-        ReportsService,
-        { provide: ApiClient, useValue: mockApiClient },
-      ],
+      providers: [ReportsService, { provide: ApiClient, useValue: mockApiClient }],
     });
 
     service = TestBed.inject(ReportsService);
@@ -92,20 +89,26 @@ describe('ReportsService', () => {
     const mockResponse = { kind: 'report_added', report_id: 'rep-1', version: 1, status: 'draft' };
     mockApiClient.post.mockReturnValue(of(mockResponse));
 
-    const res = await service.linkReport('ord-1', 'pat-1', 'REG-123', 'https://labsmart.example.com/r/123');
-    expect(mockApiClient.post).toHaveBeenCalledWith(
-      '/staff/orders/ord-1/reports/link',
-      {
-        patient_id: 'pat-1',
-        reg_no: 'REG-123',
-        link: 'https://labsmart.example.com/r/123',
-      },
+    const res = await service.linkReport(
+      'ord-1',
+      'pat-1',
+      'REG-123',
+      'https://labsmart.example.com/r/123',
     );
+    expect(mockApiClient.post).toHaveBeenCalledWith('/staff/orders/ord-1/reports/link', {
+      patient_id: 'pat-1',
+      reg_no: 'REG-123',
+      link: 'https://labsmart.example.com/r/123',
+    });
     expect(res).toEqual(mockResponse);
   });
 
   it('getPreviewLink calls POST /staff/reports/:report_id/versions/:version/preview-link', async () => {
-    const mockLink = { source: 'https://storage.example.com/signed-url', expires_at: '2026-10-19T11:00:00Z', version: 1 };
+    const mockLink = {
+      source: 'https://storage.example.com/signed-url',
+      expires_at: '2026-10-19T11:00:00Z',
+      version: 1,
+    };
     mockApiClient.post.mockReturnValue(of(mockLink));
 
     const res = await service.getPreviewLink('rep-2', 1);
@@ -114,7 +117,12 @@ describe('ReportsService', () => {
   });
 
   it('releaseReport calls POST /staff/reports/:report_id/versions/:version/release with idempotency', async () => {
-    const mockResponse = { kind: 'report_released', report_id: 'rep-2', version: 1, order_status: 'report_ready' };
+    const mockResponse = {
+      kind: 'report_released',
+      report_id: 'rep-2',
+      version: 1,
+      order_status: 'report_ready',
+    };
     mockApiClient.post.mockReturnValue(of(mockResponse));
 
     const res = await service.releaseReport('rep-2', 1);
@@ -127,7 +135,12 @@ describe('ReportsService', () => {
   });
 
   it('withdrawReport calls POST /staff/reports/:report_id/withdraw with idempotency and canonical reason', async () => {
-    const mockResponse = { kind: 'report_withdrawn', report_id: 'rep-2', versions: [1], order_status: 'processing' };
+    const mockResponse = {
+      kind: 'report_withdrawn',
+      report_id: 'rep-2',
+      versions: [1],
+      order_status: 'processing',
+    };
     mockApiClient.post.mockReturnValue(of(mockResponse));
 
     const res = await service.withdrawReport('rep-2', 'wrong_patient', 1);

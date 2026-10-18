@@ -67,7 +67,10 @@
   </div>
 
   <!-- Intake Queue Table -->
-  <div *ngIf="activeTab() === 'intake'" class="bg-surface-0 border border-surface-200 rounded-xl overflow-hidden shadow-xs">
+  <div
+    *ngIf="activeTab() === 'intake'"
+    class="bg-surface-0 border border-surface-200 rounded-xl overflow-hidden shadow-xs"
+  >
     <p-table
       [value]="intakeQueue()"
       [loading]="loading()"
@@ -76,12 +79,26 @@
     >
       <ng-template pTemplate="header">
         <tr>
-          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">Booking Ref</th>
-          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">Patient</th>
-          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">Tests</th>
-          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">Slot Date</th>
-          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">Status</th>
-          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4 text-right">Actions</th>
+          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">
+            Booking Ref
+          </th>
+          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">
+            Patient
+          </th>
+          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">
+            Tests
+          </th>
+          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">
+            Slot Date
+          </th>
+          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">
+            Status
+          </th>
+          <th
+            class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4 text-right"
+          >
+            Actions
+          </th>
         </tr>
       </ng-template>
 
@@ -132,7 +149,10 @@
   </div>
 
   <!-- Approval Queue Table -->
-  <div *ngIf="activeTab() === 'approval'" class="bg-surface-0 border border-surface-200 rounded-xl overflow-hidden shadow-xs">
+  <div
+    *ngIf="activeTab() === 'approval'"
+    class="bg-surface-0 border border-surface-200 rounded-xl overflow-hidden shadow-xs"
+  >
     <p-table
       [value]="approvalQueue()"
       [loading]="loading()"
@@ -141,13 +161,29 @@
     >
       <ng-template pTemplate="header">
         <tr>
-          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">Booking Ref</th>
-          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">Patient</th>
-          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">Tests</th>
-          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">Reg No</th>
-          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">Version</th>
-          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">Uploaded At</th>
-          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4 text-right">Actions</th>
+          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">
+            Booking Ref
+          </th>
+          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">
+            Patient
+          </th>
+          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">
+            Tests
+          </th>
+          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">
+            Reg No
+          </th>
+          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">
+            Version
+          </th>
+          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">
+            Uploaded At
+          </th>
+          <th
+            class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4 text-right"
+          >
+            Actions
+          </th>
         </tr>
       </ng-template>
 
@@ -174,7 +210,9 @@
             {{ item.reg_no || '-' }}
           </td>
           <td class="py-3 px-4 text-sm">
-            <span class="inline-block px-2 py-0.5 bg-primary-50 text-primary-700 font-mono text-xs rounded font-bold">
+            <span
+              class="inline-block px-2 py-0.5 bg-primary-50 text-primary-700 font-mono text-xs rounded font-bold"
+            >
               v{{ item.version }}
             </span>
           </td>
