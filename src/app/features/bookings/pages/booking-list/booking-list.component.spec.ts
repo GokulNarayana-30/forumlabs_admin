@@ -16,9 +16,30 @@ describe('BookingListComponent', () => {
       booking_ref: 'BK-1001',
       status: 'confirmed',
       payment_status: 'pending',
-      slot: { slot_key: '0700-0800', starts_at: '2026-10-19T07:00:00Z', ends_at: '2026-10-19T08:00:00Z' },
-      address: { house: '12', street: 'MG Road', area: 'Indiranagar', pincode: '560038', landmark: null, access_notes: null },
-      patients: [{ patient_id: 'p1', patient_code: 'PT-01', name: 'John Doe', gender: 'male', date_of_birth: '1990-01-01', relation: 'Self', test_names: ['Complete Blood Count'] }],
+      slot: {
+        slot_key: '0700-0800',
+        starts_at: '2026-10-19T07:00:00Z',
+        ends_at: '2026-10-19T08:00:00Z',
+      },
+      address: {
+        house: '12',
+        street: 'MG Road',
+        area: 'Indiranagar',
+        pincode: '560038',
+        landmark: null,
+        access_notes: null,
+      },
+      patients: [
+        {
+          patient_id: 'p1',
+          patient_code: 'PT-01',
+          name: 'John Doe',
+          gender: 'male',
+          date_of_birth: '1990-01-01',
+          relation: 'Self',
+          test_names: ['Complete Blood Count'],
+        },
+      ],
       assigned_phlebotomist: null,
     },
   ];
@@ -47,7 +68,9 @@ describe('BookingListComponent', () => {
     fixture.detectChanges();
   });
 
-  it('initializes with IST today date and loads orders', () => {
+  it('initializes with IST today date and loads orders', async () => {
+    await fixture.whenStable();
+    fixture.detectChanges();
     expect(mockBookingsService.getOrders).toHaveBeenCalled();
     const el = fixture.nativeElement as HTMLElement;
     expect(el.textContent).toContain('BK-1001');
@@ -71,7 +94,10 @@ describe('BookingListComponent', () => {
   it('filters by status chip selection', async () => {
     await component.setStatusFilter('confirmed');
     expect(component.selectedStatus()).toBe('confirmed');
-    expect(mockBookingsService.getOrders).toHaveBeenCalledWith(component.selectedDate(), 'confirmed');
+    expect(mockBookingsService.getOrders).toHaveBeenCalledWith(
+      component.selectedDate(),
+      'confirmed',
+    );
 
     await component.setStatusFilter('all');
     expect(component.selectedStatus()).toBe('all');

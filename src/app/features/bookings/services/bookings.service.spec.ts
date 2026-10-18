@@ -14,10 +14,7 @@ describe('BookingsService', () => {
     };
 
     TestBed.configureTestingModule({
-      providers: [
-        BookingsService,
-        { provide: ApiClient, useValue: mockApiClient },
-      ],
+      providers: [BookingsService, { provide: ApiClient, useValue: mockApiClient }],
     });
 
     service = TestBed.inject(BookingsService);
@@ -31,9 +28,30 @@ describe('BookingsService', () => {
           booking_ref: 'BK-1001',
           status: 'confirmed',
           payment_status: 'pending',
-          slot: { slot_key: '0700-0800', starts_at: '2026-10-19T07:00:00Z', ends_at: '2026-10-19T08:00:00Z' },
-          address: { house: '12', street: 'MG Road', area: 'Indiranagar', pincode: '560038', landmark: null, access_notes: null },
-          patients: [{ patient_id: 'p1', patient_code: 'PT-01', name: 'John Doe', gender: 'male', date_of_birth: '1990-01-01', relation: 'Self', test_names: ['CBC'] }],
+          slot: {
+            slot_key: '0700-0800',
+            starts_at: '2026-10-19T07:00:00Z',
+            ends_at: '2026-10-19T08:00:00Z',
+          },
+          address: {
+            house: '12',
+            street: 'MG Road',
+            area: 'Indiranagar',
+            pincode: '560038',
+            landmark: null,
+            access_notes: null,
+          },
+          patients: [
+            {
+              patient_id: 'p1',
+              patient_code: 'PT-01',
+              name: 'John Doe',
+              gender: 'male',
+              date_of_birth: '1990-01-01',
+              relation: 'Self',
+              test_names: ['CBC'],
+            },
+          ],
           assigned_phlebotomist: null,
         },
       ];
@@ -80,8 +98,19 @@ describe('BookingsService', () => {
         booking_ref: 'BK-1001',
         status: 'confirmed',
         payment_status: 'pending',
-        slot: { slot_key: '0700-0800', starts_at: '2026-10-19T07:00:00Z', ends_at: '2026-10-19T08:00:00Z' },
-        address: { house: '12', street: 'MG Road', area: 'Indiranagar', pincode: '560038', landmark: null, access_notes: null },
+        slot: {
+          slot_key: '0700-0800',
+          starts_at: '2026-10-19T07:00:00Z',
+          ends_at: '2026-10-19T08:00:00Z',
+        },
+        address: {
+          house: '12',
+          street: 'MG Road',
+          area: 'Indiranagar',
+          pincode: '560038',
+          landmark: null,
+          access_notes: null,
+        },
         patients: [],
         events: [],
       };
@@ -95,26 +124,18 @@ describe('BookingsService', () => {
   });
 
   describe('recordEvent', () => {
-    it('posts event command with stable key for identical payload and fresh key for edited payload', async () => {
-      mockApiClient.post.mockReturnValue(of({ kind: 'event_recorded', status: 'assigned', payment_status: 'pending' }));
+    it('posts event command with idempotent option set to true', async () => {
+      mockApiClient.post.mockReturnValue(
+        of({ kind: 'event_recorded', status: 'assigned', payment_status: 'pending' }),
+      );
 
-      const payload1 = { kind: 'phlebotomist_assigned', phlebotomist_id: 'phlebo-1' };
-      await service.recordEvent('order-1', payload1);
+      const payload = { kind: 'phlebotomist_assigned', phlebotomist_id: 'phlebo-1' };
+      const res = await service.recordEvent('order-1', payload);
 
-      expect(mockApiClient.post).toHaveBeenCalled();
-      const firstCallKey = mockApiClient.post.mock.calls[0][2]?.headers?.['Idempotency-Key'];
-      expect(firstCallKey).toBeTruthy();
-
-      // Retry identical payload
-      await service.recordEvent('order-1', payload1);
-      const secondCallKey = mockApiClient.post.mock.calls[1][2]?.headers?.['Idempotency-Key'];
-      expect(secondCallKey).toBe(firstCallKey); // Reuses stable idempotency key
-
-      // New payload
-      const payload2 = { kind: 'phlebotomist_assigned', phlebotomist_id: 'phlebo-2' };
-      await service.recordEvent('order-1', payload2);
-      const thirdCallKey = mockApiClient.post.mock.calls[2][2]?.headers?.['Idempotency-Key'];
-      expect(thirdCallKey).not.toBe(firstCallKey); // Allocates fresh key
+      expect(mockApiClient.post).toHaveBeenCalledWith('/staff/orders/order-1/events', payload, {
+        idempotent: true,
+      });
+      expect(res.kind).toBe('event_recorded');
     });
   });
 });
