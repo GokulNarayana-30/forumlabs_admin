@@ -8,6 +8,7 @@ import {
   shiftDate,
 } from '../../services/bookings.service';
 import { StaffStateService } from '../../../../core/state/staff-state.service';
+import { AssignPhleboDialogComponent } from '../../components/assign-phlebo-dialog/assign-phlebo-dialog.component';
 
 export interface StatusFilterOption {
   key: string;
@@ -17,7 +18,7 @@ export interface StatusFilterOption {
 @Component({
   selector: 'app-booking-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, AssignPhleboDialogComponent],
   templateUrl: './booking-list.component.html',
 })
 export class BookingListComponent implements OnInit {
@@ -29,6 +30,10 @@ export class BookingListComponent implements OnInit {
   readonly orders = signal<StaffOrderListItemDto[]>([]);
   readonly isLoading = signal<boolean>(false);
   readonly errorMessage = signal<string>('');
+  readonly successMessage = signal<string>('');
+
+  readonly assignDialogVisible = signal<boolean>(false);
+  readonly assigningOrder = signal<StaffOrderListItemDto | null>(null);
 
   readonly statusOptions: StatusFilterOption[] = [
     { key: 'all', label: 'All' },
@@ -92,6 +97,43 @@ export class BookingListComponent implements OnInit {
       }
     }
     return Array.from(tests).join(', ') || '—';
+  }
+
+  openAssign(order: StaffOrderListItemDto): void {
+    this.assigningOrder.set(order);
+    this.assignDialogVisible.set(true);
+  }
+
+  async onAssigned(): Promise<void> {
+    this.successMessage.set('Phlebotomist assigned successfully.');
+    await this.loadOrders();
+  }
+
+  canMarkReceivedAtLab(order: StaffOrderListItemDto): boolean {
+    const isCollected = order.status === 'collected';
+    const isDispatchOrAdmin =
+      this.staffState.hasRole('booking_dispatch') || this.staffState.hasRole('super_admin');
+    return isCollected && isDispatchOrAdmin;
+  }
+
+  async markReceivedAtLab(order: StaffOrderListItemDto): Promise<void> {
+    if (!this.canMarkReceivedAtLab(order)) {
+      return;
+    }
+
+    try {
+      this.isLoading.set(true);
+      await this.bookingsService.recordEvent(order.order_id, {
+        kind: 'received_by_lab',
+      });
+      this.successMessage.set(`Order ${order.booking_ref} marked as received at lab.`);
+      await this.loadOrders();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to record received at lab';
+      this.errorMessage.set(message);
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 
   getStatusClass(status: string): string {

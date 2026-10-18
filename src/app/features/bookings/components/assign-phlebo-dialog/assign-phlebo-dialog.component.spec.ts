@@ -12,8 +12,19 @@ describe('AssignPhleboDialogComponent', () => {
     booking_ref: 'BK-1001',
     status: 'confirmed',
     payment_status: 'pending',
-    slot: { slot_key: '0700-0800', starts_at: '2026-10-19T07:00:00Z', ends_at: '2026-10-19T08:00:00Z' },
-    address: { house: '12', street: 'MG Road', area: 'Indiranagar', pincode: '560038', landmark: null, access_notes: null },
+    slot: {
+      slot_key: '0700-0800',
+      starts_at: '2026-10-19T07:00:00Z',
+      ends_at: '2026-10-19T08:00:00Z',
+    },
+    address: {
+      house: '12',
+      street: 'MG Road',
+      area: 'Indiranagar',
+      pincode: '560038',
+      landmark: null,
+      access_notes: null,
+    },
     patients: [],
     assigned_phlebotomist: null,
   };
@@ -31,9 +42,7 @@ describe('AssignPhleboDialogComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [AssignPhleboDialogComponent],
-      providers: [
-        { provide: BookingsService, useValue: mockBookingsService },
-      ],
+      providers: [{ provide: BookingsService, useValue: mockBookingsService }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(AssignPhleboDialogComponent);
