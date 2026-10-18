@@ -1,18 +1,7 @@
-import { Component } from '@angular/core';
 import { Routes } from '@angular/router';
 import { CatalogListComponent } from './pages/catalog-list/catalog-list.component';
 import { CategoryManagerComponent } from './pages/category-manager/category-manager.component';
-
-@Component({
-  standalone: true,
-  template: `
-    <div class="p-4 bg-white rounded-xl border border-surface-200">
-      <h2 class="text-lg font-bold text-surface-900 mb-2">Catalog Excel Import</h2>
-      <p class="text-sm text-surface-600">Upload Excel template and preview updates.</p>
-    </div>
-  `,
-})
-export class ImportPlaceholderComponent {}
+import { CatalogImportComponent } from './pages/catalog-import/catalog-import.component';
 
 export const routes: Routes = [
   {
@@ -25,6 +14,6 @@ export const routes: Routes = [
   },
   {
     path: 'import',
-    component: ImportPlaceholderComponent,
+    component: CatalogImportComponent,
   },
 ];
