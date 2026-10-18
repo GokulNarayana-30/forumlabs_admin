@@ -7,8 +7,9 @@ import { TagModule } from 'primeng/tag';
 import { TooltipModule } from 'primeng/tooltip';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
-import { ReportsService, StaffReportQueueItem } from '../../services/reports.service';
+import { ReportsService, StaffReportQueueItem, AddReportResult } from '../../services/reports.service';
 import { StaffStateService } from '../../../../core/state/staff-state.service';
+import { ReportUploadDialogComponent } from '../../components/report-upload-dialog/report-upload-dialog.component';
 
 @Component({
   selector: 'app-reports-dashboard',
@@ -21,6 +22,7 @@ import { StaffStateService } from '../../../../core/state/staff-state.service';
     TagModule,
     TooltipModule,
     ToastModule,
+    ReportUploadDialogComponent,
   ],
   providers: [MessageService],
   templateUrl: './reports-dashboard.component.html',
@@ -88,9 +90,22 @@ export class ReportsDashboardComponent implements OnInit {
     this.withdrawDialogVisible.set(true);
   }
 
-  onReportIntakeSuccess(): void {
+  onReportIntakeSuccess(res?: AddReportResult): void {
     this.uploadDialogVisible.set(false);
     this.selectedIntakeItem.set(null);
+    if (res?.kind === 'report_added') {
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Report Added',
+        detail: `Report draft version ${res.version} created.`,
+      });
+    } else if (res?.kind === 'report_unchanged') {
+      this.messageService.add({
+        severity: 'info',
+        summary: 'Report Unchanged',
+        detail: `Identical report already on file (v${res.version}).`,
+      });
+    }
     this.loadQueues();
   }
 

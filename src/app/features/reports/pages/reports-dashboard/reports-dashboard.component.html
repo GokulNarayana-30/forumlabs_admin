@@ -212,4 +212,15 @@
       </ng-template>
     </p-table>
   </div>
+
+  <!-- Intake Dialog -->
+  <app-report-upload-dialog
+    *ngIf="selectedIntakeItem()"
+    [orderId]="selectedIntakeItem()!.order_id"
+    [patientId]="selectedIntakeItem()!.patient_id"
+    [patientName]="selectedIntakeItem()!.patient_name"
+    [visible]="uploadDialogVisible()"
+    (visibleChange)="uploadDialogVisible.set($event)"
+    (intakeSuccess)="onReportIntakeSuccess($event)"
+  ></app-report-upload-dialog>
 </div>
