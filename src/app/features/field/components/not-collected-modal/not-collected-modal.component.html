@@ -1,0 +1,89 @@
+@if (visible && order) {
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="not-collected-title"
+  >
+    <div
+      class="bg-white rounded-2xl border border-surface-200 shadow-xl w-full max-w-md overflow-hidden"
+    >
+      <!-- Modal Header -->
+      <div class="p-5 border-b border-surface-100 flex items-center justify-between bg-surface-50">
+        <div>
+          <h2 id="not-collected-title" class="text-base font-bold text-surface-900">
+            Record Collection Failure
+          </h2>
+          <p class="text-xs text-surface-500 mt-0.5">
+            Booking ref: <span class="font-semibold text-surface-800">{{ order.booking_ref }}</span>
+          </p>
+        </div>
+        <button
+          type="button"
+          (click)="close()"
+          class="text-surface-400 hover:text-surface-700 text-lg font-bold p-1 rounded-lg transition-colors"
+          aria-label="Close dialog"
+        >
+          &times;
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-5 space-y-4">
+        @if (errorMessage()) {
+          <div
+            class="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-medium"
+          >
+            {{ errorMessage() }}
+          </div>
+        }
+
+        <div class="space-y-1.5">
+          <label for="failure-reason" class="text-xs font-bold text-surface-700 block">
+            Reason for Non-Collection
+          </label>
+          <select
+            id="failure-reason"
+            [ngModel]="selectedReasonCode()"
+            (ngModelChange)="selectedReasonCode.set($event)"
+            class="w-full px-3 py-2 rounded-xl border border-surface-300 text-sm text-surface-900 bg-white focus:outline-hidden focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+          >
+            <option value="" disabled selected>-- Select a reason --</option>
+            @for (reason of reasons; track reason.code) {
+              <option [value]="reason.code">{{ reason.label }}</option>
+            }
+          </select>
+          <span class="text-xs text-surface-400">
+            This reason will be logged on the order timeline and customer notified.
+          </span>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div
+        class="p-4 bg-surface-50 border-t border-surface-100 flex items-center justify-end gap-2"
+      >
+        <button
+          type="button"
+          (click)="close()"
+          [disabled]="isSubmitting()"
+          class="px-4 py-2 rounded-xl text-xs font-semibold text-surface-600 hover:text-surface-900 hover:bg-surface-200 transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          (click)="onSubmit()"
+          [disabled]="isSubmitting() || !selectedReasonCode()"
+          class="px-5 py-2 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-50 transition-colors shadow-xs"
+        >
+          @if (isSubmitting()) {
+            Recording...
+          } @else {
+            Confirm Not Collected
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}
