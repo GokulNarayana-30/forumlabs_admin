@@ -223,4 +223,23 @@
     (visibleChange)="uploadDialogVisible.set($event)"
     (intakeSuccess)="onReportIntakeSuccess($event)"
   ></app-report-upload-dialog>
+
+  <!-- Approver Preview Modal -->
+  <app-report-preview-modal
+    *ngIf="selectedApprovalItem()"
+    [visible]="previewModalVisible()"
+    [item]="selectedApprovalItem()"
+    (visibleChange)="previewModalVisible.set($event)"
+    (releaseSuccess)="onReleaseSuccess()"
+    (withdrawRequested)="openWithdraw($event)"
+  ></app-report-preview-modal>
+
+  <!-- Withdraw Dialog -->
+  <app-report-withdraw-dialog
+    *ngIf="withdrawingItem()"
+    [visible]="withdrawDialogVisible()"
+    [item]="withdrawingItem()"
+    (visibleChange)="withdrawDialogVisible.set($event)"
+    (withdrawSuccess)="onWithdrawSuccess()"
+  ></app-report-withdraw-dialog>
 </div>

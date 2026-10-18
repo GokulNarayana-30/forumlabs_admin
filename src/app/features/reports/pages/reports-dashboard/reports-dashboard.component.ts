@@ -10,6 +10,8 @@ import { MessageService } from 'primeng/api';
 import { ReportsService, StaffReportQueueItem, AddReportResult } from '../../services/reports.service';
 import { StaffStateService } from '../../../../core/state/staff-state.service';
 import { ReportUploadDialogComponent } from '../../components/report-upload-dialog/report-upload-dialog.component';
+import { ReportPreviewModalComponent } from '../../components/report-preview-modal/report-preview-modal.component';
+import { ReportWithdrawDialogComponent } from '../../components/report-withdraw-dialog/report-withdraw-dialog.component';
 
 @Component({
   selector: 'app-reports-dashboard',
@@ -23,6 +25,8 @@ import { ReportUploadDialogComponent } from '../../components/report-upload-dial
     TooltipModule,
     ToastModule,
     ReportUploadDialogComponent,
+    ReportPreviewModalComponent,
+    ReportWithdrawDialogComponent,
   ],
   providers: [MessageService],
   templateUrl: './reports-dashboard.component.html',
@@ -109,11 +113,25 @@ export class ReportsDashboardComponent implements OnInit {
     this.loadQueues();
   }
 
-  onApprovalActionSuccess(): void {
+  onReleaseSuccess(): void {
     this.previewModalVisible.set(false);
-    this.withdrawDialogVisible.set(false);
     this.selectedApprovalItem.set(null);
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Report Released',
+      detail: 'Diagnostic report released and customer notified.',
+    });
+    this.loadQueues();
+  }
+
+  onWithdrawSuccess(): void {
+    this.withdrawDialogVisible.set(false);
     this.withdrawingItem.set(null);
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Report Withdrawn',
+      detail: 'Diagnostic report version withdrawn.',
+    });
     this.loadQueues();
   }
 
