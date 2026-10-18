@@ -1,0 +1,215 @@
+<p-toast></p-toast>
+
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight text-surface-900">Diagnostic Reports</h1>
+      <p class="text-sm text-surface-500 mt-1">
+        Manage report intake, two-person approver review, and canonical withdrawals.
+      </p>
+    </div>
+    <div class="flex items-center gap-3">
+      <p-button
+        label="Refresh"
+        icon="pi pi-refresh"
+        [loading]="loading()"
+        [outlined]="true"
+        severity="secondary"
+        (onClick)="loadQueues()"
+      ></p-button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="flex border-b border-surface-200 gap-4">
+    <button
+      type="button"
+      (click)="selectTab('intake')"
+      [class.border-primary-600]="activeTab() === 'intake'"
+      [class.text-primary-600]="activeTab() === 'intake'"
+      [class.border-transparent]="activeTab() !== 'intake'"
+      [class.text-surface-600]="activeTab() !== 'intake'"
+      class="pb-3 px-2 font-medium text-sm border-b-2 flex items-center gap-2 transition-colors cursor-pointer"
+    >
+      <span>Pending Intake</span>
+      <span
+        class="text-xs px-2 py-0.5 rounded-full font-semibold"
+        [class.bg-primary-100]="activeTab() === 'intake'"
+        [class.text-primary-800]="activeTab() === 'intake'"
+        [class.bg-surface-100]="activeTab() !== 'intake'"
+        [class.text-surface-600]="activeTab() !== 'intake'"
+      >
+        {{ intakeQueue().length }}
+      </span>
+    </button>
+
+    <button
+      type="button"
+      (click)="selectTab('approval')"
+      [class.border-primary-600]="activeTab() === 'approval'"
+      [class.text-primary-600]="activeTab() === 'approval'"
+      [class.border-transparent]="activeTab() !== 'approval'"
+      [class.text-surface-600]="activeTab() !== 'approval'"
+      class="pb-3 px-2 font-medium text-sm border-b-2 flex items-center gap-2 transition-colors cursor-pointer"
+    >
+      <span>Pending Approval</span>
+      <span
+        class="text-xs px-2 py-0.5 rounded-full font-semibold"
+        [class.bg-primary-100]="activeTab() === 'approval'"
+        [class.text-primary-800]="activeTab() === 'approval'"
+        [class.bg-surface-100]="activeTab() !== 'approval'"
+        [class.text-surface-600]="activeTab() !== 'approval'"
+      >
+        {{ approvalQueue().length }}
+      </span>
+    </button>
+  </div>
+
+  <!-- Intake Queue Table -->
+  <div *ngIf="activeTab() === 'intake'" class="bg-surface-0 border border-surface-200 rounded-xl overflow-hidden shadow-xs">
+    <p-table
+      [value]="intakeQueue()"
+      [loading]="loading()"
+      [tableStyle]="{ 'min-width': '50rem' }"
+      styleClass="p-datatable-sm"
+    >
+      <ng-template pTemplate="header">
+        <tr>
+          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">Booking Ref</th>
+          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">Patient</th>
+          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">Tests</th>
+          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">Slot Date</th>
+          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">Status</th>
+          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4 text-right">Actions</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-item>
+        <tr class="hover:bg-surface-50 transition-colors border-b border-surface-100 last:border-0">
+          <td class="py-3 px-4 font-mono text-sm font-semibold text-surface-900">
+            {{ item.booking_ref }}
+          </td>
+          <td class="py-3 px-4 text-sm">
+            <div class="font-medium text-surface-900">{{ item.patient_name }}</div>
+            <div class="text-xs text-surface-500 font-mono">{{ item.patient_code }}</div>
+          </td>
+          <td class="py-3 px-4 text-sm text-surface-700">
+            <div class="flex flex-wrap gap-1">
+              <span
+                *ngFor="let test of item.test_names"
+                class="inline-block px-2 py-0.5 bg-surface-100 text-surface-800 text-xs rounded"
+              >
+                {{ test }}
+              </span>
+            </div>
+          </td>
+          <td class="py-3 px-4 text-sm text-surface-600">
+            {{ item.slot_date || '-' }}
+          </td>
+          <td class="py-3 px-4 text-sm">
+            <p-tag [value]="item.status" severity="info"></p-tag>
+          </td>
+          <td class="py-3 px-4 text-sm text-right">
+            <p-button
+              label="Add Report"
+              icon="pi pi-file-plus"
+              size="small"
+              (onClick)="openAddReport(item)"
+            ></p-button>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="6" class="text-center py-8 text-surface-500 text-sm">
+            No orders pending report intake.
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+
+  <!-- Approval Queue Table -->
+  <div *ngIf="activeTab() === 'approval'" class="bg-surface-0 border border-surface-200 rounded-xl overflow-hidden shadow-xs">
+    <p-table
+      [value]="approvalQueue()"
+      [loading]="loading()"
+      [tableStyle]="{ 'min-width': '55rem' }"
+      styleClass="p-datatable-sm"
+    >
+      <ng-template pTemplate="header">
+        <tr>
+          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">Booking Ref</th>
+          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">Patient</th>
+          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">Tests</th>
+          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">Reg No</th>
+          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">Version</th>
+          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">Uploaded At</th>
+          <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4 text-right">Actions</th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-item>
+        <tr class="hover:bg-surface-50 transition-colors border-b border-surface-100 last:border-0">
+          <td class="py-3 px-4 font-mono text-sm font-semibold text-surface-900">
+            {{ item.booking_ref }}
+          </td>
+          <td class="py-3 px-4 text-sm">
+            <div class="font-medium text-surface-900">{{ item.patient_name }}</div>
+            <div class="text-xs text-surface-500 font-mono">{{ item.patient_code }}</div>
+          </td>
+          <td class="py-3 px-4 text-sm text-surface-700">
+            <div class="flex flex-wrap gap-1">
+              <span
+                *ngFor="let test of item.test_names"
+                class="inline-block px-2 py-0.5 bg-surface-100 text-surface-800 text-xs rounded"
+              >
+                {{ test }}
+              </span>
+            </div>
+          </td>
+          <td class="py-3 px-4 font-mono text-sm text-surface-800">
+            {{ item.reg_no || '-' }}
+          </td>
+          <td class="py-3 px-4 text-sm">
+            <span class="inline-block px-2 py-0.5 bg-primary-50 text-primary-700 font-mono text-xs rounded font-bold">
+              v{{ item.version }}
+            </span>
+          </td>
+          <td class="py-3 px-4 text-xs text-surface-500">
+            {{ item.uploaded_at | date: 'medium' }}
+          </td>
+          <td class="py-3 px-4 text-sm text-right space-x-2">
+            <p-button
+              label="Preview"
+              icon="pi pi-eye"
+              size="small"
+              [outlined]="true"
+              (onClick)="openPreview(item)"
+            ></p-button>
+
+            <p-button
+              *ngIf="canWithdraw()"
+              label="Withdraw"
+              icon="pi pi-ban"
+              size="small"
+              severity="danger"
+              [outlined]="true"
+              (onClick)="openWithdraw(item)"
+            ></p-button>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="7" class="text-center py-8 text-surface-500 text-sm">
+            No draft reports awaiting approval.
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+</div>
