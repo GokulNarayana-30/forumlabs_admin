@@ -184,9 +184,9 @@ export class CatalogService {
 
   async reorderCategories(
     categories: CategoryReorderItemDto[],
-  ): Promise<{ status: string; count: number }> {
+  ): Promise<{ success: true }> {
     return firstValueFrom(
-      this.api.put<{ status: string; count: number }>(
+      this.api.put<{ success: true }>(
         '/staff/catalog/categories/reorder',
         { categories },
         { idempotent: true },

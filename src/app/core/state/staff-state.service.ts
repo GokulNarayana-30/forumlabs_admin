@@ -4,19 +4,23 @@ import { firstValueFrom } from 'rxjs';
 import { ApiClient } from '../api/api-client.service';
 import { AuthService } from '../auth/auth.service';
 
+/** The nine staff roles, exactly as apps/api/src/staff/staff-roles.ts (STAFF_ROLES). */
 export type StaffRole =
   | 'super_admin'
   | 'booking_dispatch'
   | 'phlebotomist'
-  | 'catalog_manager'
   | 'lab_staff'
   | 'report_approver'
-  | 'support';
+  | 'support'
+  | 'finance'
+  | 'catalog_manager'
+  | 'marketing';
 
+/** GET /staff/me (StaffMeResponse in apps/api/src/staff/staff-me.controller.ts). */
 export interface StaffUserProfile {
-  staff_user_id: string;
-  name: string;
+  user_id: string;
   email: string;
+  display_name: string;
   roles: StaffRole[];
 }
 
@@ -33,7 +37,13 @@ export class StaffStateService {
 
   readonly currentUser = this._currentUser.asReadonly();
   readonly roles = this._roles.asReadonly();
-  readonly displayName = computed(() => this._currentUser()?.name ?? '');
+  readonly displayName = computed(() => {
+    const user = this._currentUser();
+    return user?.display_name || user?.email || '';
+  });
+
+  /** The signed-in staff user id (the wire field user_id). */
+  readonly currentUserId = computed(() => this._currentUser()?.user_id ?? null);
 
   hasRole(...requiredRoles: string[]): boolean {
     const currentRoles = this._roles();

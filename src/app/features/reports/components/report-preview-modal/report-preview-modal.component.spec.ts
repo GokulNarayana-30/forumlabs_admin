@@ -37,8 +37,8 @@ describe('ReportPreviewModalComponent', () => {
 
     mockStaffStateService = {
       currentUser: signal({
-        staff_user_id: 'usr-approver-2',
-        name: 'Dr. Reviewer',
+        user_id: 'usr-approver-2',
+        display_name: 'Dr. Reviewer',
         email: 'reviewer@forumlabs.in',
         roles: ['report_approver'],
       }),
@@ -68,8 +68,8 @@ describe('ReportPreviewModalComponent', () => {
 
   it('enforces two-person rule: disables release button if current user is uploader', () => {
     mockStaffStateService.currentUser.set({
-      staff_user_id: 'usr-uploader-1',
-      name: 'Lab Tech',
+      user_id: 'usr-uploader-1',
+      display_name: 'Lab Tech',
       email: 'tech@forumlabs.in',
       roles: ['report_approver', 'lab_staff'],
     });
@@ -81,8 +81,8 @@ describe('ReportPreviewModalComponent', () => {
 
   it('enforces two-person rule: enables release button if current user is different approver', () => {
     mockStaffStateService.currentUser.set({
-      staff_user_id: 'usr-approver-2',
-      name: 'Dr. Reviewer',
+      user_id: 'usr-approver-2',
+      display_name: 'Dr. Reviewer',
       email: 'reviewer@forumlabs.in',
       roles: ['report_approver'],
     });

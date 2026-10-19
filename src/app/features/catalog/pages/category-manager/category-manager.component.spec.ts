@@ -35,7 +35,7 @@ describe('CategoryManagerComponent', () => {
   beforeEach(async () => {
     mockCatalogService = {
       getCategories: vi.fn().mockResolvedValue(mockCategories),
-      reorderCategories: vi.fn().mockResolvedValue({ status: 'reordered', count: 3 }),
+      reorderCategories: vi.fn().mockResolvedValue({ success: true }),
     };
 
     await TestBed.configureTestingModule({

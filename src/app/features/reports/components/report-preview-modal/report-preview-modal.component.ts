@@ -72,8 +72,7 @@ export class ReportPreviewModalComponent implements OnChanges {
   }
 
   isUploader(): boolean {
-    const cur = this.staffState.currentUser() as any;
-    const curUserId = cur?.user_id || cur?.staff_user_id;
+    const curUserId = this.staffState.currentUser()?.user_id;
     return !!(
       curUserId &&
       this.item?.uploaded_by_user_id &&

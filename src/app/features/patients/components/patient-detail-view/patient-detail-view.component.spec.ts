@@ -59,8 +59,8 @@ describe('PatientDetailViewComponent', () => {
 
     mockStaffStateService = {
       currentUser: signal({
-        staff_user_id: 'usr-support-1',
-        name: 'Support Agent',
+        user_id: 'usr-support-1',
+        display_name: 'Support Agent',
         email: 'support@forumlabs.in',
         roles: ['support'],
       }),

@@ -62,8 +62,8 @@ describe('ReportsDashboardComponent', () => {
 
     mockStaffStateService = {
       currentUser: signal({
-        staff_user_id: 'usr-approver-99',
-        name: 'Dr. Approver',
+        user_id: 'usr-approver-99',
+        display_name: 'Dr. Approver',
         email: 'approver@forumlabs.in',
         roles: ['report_approver'],
       }),

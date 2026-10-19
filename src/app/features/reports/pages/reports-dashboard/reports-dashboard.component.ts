@@ -140,8 +140,7 @@ export class ReportsDashboardComponent implements OnInit {
   }
 
   isUploader(item: StaffReportQueueItem): boolean {
-    const cur = this.staffState.currentUser() as any;
-    const curUserId = cur?.user_id || cur?.staff_user_id;
+    const curUserId = this.staffState.currentUser()?.user_id;
     return !!(curUserId && item.uploaded_by_user_id && curUserId === item.uploaded_by_user_id);
   }
 
