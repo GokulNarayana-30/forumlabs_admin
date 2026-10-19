@@ -70,7 +70,11 @@ describe('TicketsListComponent', () => {
 
   it('ignores an older filter response after the selected filter completes', async () => {
     let finishOld!: (rows: StaffTicketSummaryDto[]) => void;
-    mockTicketsService.listTickets.mockReturnValueOnce(new Promise((resolve) => { finishOld = resolve; }));
+    mockTicketsService.listTickets.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishOld = resolve;
+      }),
+    );
     const oldLoad = component.onFilterChange('open');
     const resolved = [{ ...mockTickets[1], status: 'resolved' }];
     mockTicketsService.listTickets.mockResolvedValueOnce(resolved);
@@ -84,9 +88,17 @@ describe('TicketsListComponent', () => {
   it('ignores an older failure while the newest filter is loading', async () => {
     let failOld!: (error: Error) => void;
     let finishNew!: (rows: StaffTicketSummaryDto[]) => void;
-    mockTicketsService.listTickets.mockReturnValueOnce(new Promise((_, reject) => { failOld = reject; }));
+    mockTicketsService.listTickets.mockReturnValueOnce(
+      new Promise((_, reject) => {
+        failOld = reject;
+      }),
+    );
     const oldLoad = component.onFilterChange('open');
-    mockTicketsService.listTickets.mockReturnValueOnce(new Promise((resolve) => { finishNew = resolve; }));
+    mockTicketsService.listTickets.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishNew = resolve;
+      }),
+    );
     const newLoad = component.onFilterChange('resolved');
     failOld(new Error('Old request failed'));
     await oldLoad;
