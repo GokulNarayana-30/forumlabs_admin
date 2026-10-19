@@ -96,6 +96,21 @@ describe('LoginComponent', () => {
     expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/bookings');
   });
 
+  it('signs in and redirects support role to /tickets', async () => {
+    mockAuthService.signIn.mockResolvedValue({ session: { access_token: 'jwt' }, error: null });
+    mockStaffState.loadProfile.mockImplementation(async () => {
+      rolesSignal.set(['support']);
+      return { ok: true };
+    });
+
+    component.email.set('support@example.com');
+    component.password.set('password123');
+
+    await component.onSubmit();
+
+    expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/tickets');
+  });
+
   it('shows a message for wrong credentials and never loads the profile (WR-15)', async () => {
     // The real AuthService.signIn never throws: it answers {session: null, error}.
     mockAuthService.signIn.mockResolvedValue({

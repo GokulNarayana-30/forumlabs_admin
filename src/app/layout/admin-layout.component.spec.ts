@@ -77,6 +77,7 @@ describe('AdminLayoutComponent', () => {
     expect(navText).toContain('Catalog');
     expect(navText).toContain('Reports');
     expect(navText).toContain('Patient Search');
+    expect(navText).toContain('Tickets');
   });
 
   it('filters navigation strictly for phlebotomist role', () => {
@@ -88,6 +89,7 @@ describe('AdminLayoutComponent', () => {
     expect(labels).not.toContain('Catalog');
     expect(labels).not.toContain('Reports');
     expect(labels).not.toContain('Bookings');
+    expect(labels).not.toContain('Tickets');
   });
 
   it('filters navigation strictly for catalog_manager role', () => {
@@ -98,6 +100,7 @@ describe('AdminLayoutComponent', () => {
     expect(labels).toContain('Catalog');
     expect(labels).not.toContain('Field / Collection');
     expect(labels).not.toContain('Reports');
+    expect(labels).not.toContain('Tickets');
   });
 
   it('filters navigation strictly for lab_staff and report_approver roles', () => {
@@ -106,12 +109,14 @@ describe('AdminLayoutComponent', () => {
     let labels = component.navItems().map((i: { label: string }) => i.label);
     expect(labels).toContain('Reports');
     expect(labels).not.toContain('Field / Collection');
+    expect(labels).not.toContain('Tickets');
 
     rolesSignal.set(['report_approver']);
     fixture.detectChanges();
     labels = component.navItems().map((i: { label: string }) => i.label);
     expect(labels).toContain('Reports');
     expect(labels).not.toContain('Field / Collection');
+    expect(labels).not.toContain('Tickets');
   });
 
   it('filters navigation strictly for support role', () => {
@@ -119,6 +124,7 @@ describe('AdminLayoutComponent', () => {
     fixture.detectChanges();
     const labels = component.navItems().map((i: { label: string }) => i.label);
     expect(labels).toContain('Patient Search');
+    expect(labels).toContain('Tickets');
     expect(labels).not.toContain('Catalog');
     expect(labels).not.toContain('Field / Collection');
   });
