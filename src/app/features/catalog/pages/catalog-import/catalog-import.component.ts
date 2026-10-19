@@ -10,6 +10,7 @@ import {
   ImportPreviewRowDto,
   ImportSheetDto,
 } from '../../services/catalog.service';
+import { errorText } from '../../../../core/api/error-text';
 
 export const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MiB
 
@@ -133,7 +134,7 @@ export class CatalogImportComponent {
         this.unreadableError.set(`${result.reason}${detail}`);
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to upload template file';
+      const message = errorText(err, 'Failed to upload template file');
       this.errorMessage.set(message);
     } finally {
       this.isUploading.set(false);
@@ -182,7 +183,7 @@ export class CatalogImportComponent {
           break;
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to apply import';
+      const message = errorText(err, 'Failed to apply import');
       this.errorMessage.set(message);
     } finally {
       this.isApplying.set(false);

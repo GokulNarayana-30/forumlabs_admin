@@ -16,6 +16,7 @@ import { ButtonModule } from 'primeng/button';
 import { TooltipModule } from 'primeng/tooltip';
 import { ReportsService, StaffReportQueueItem } from '../../services/reports.service';
 import { StaffStateService } from '../../../../core/state/staff-state.service';
+import { errorText } from '../../../../core/api/error-text';
 
 @Component({
   selector: 'app-report-preview-modal',
@@ -64,8 +65,8 @@ export class ReportPreviewModalComponent implements OnChanges {
       const link = await this.reportsService.getPreviewLink(this.item.report_id, this.item.version);
       this.previewUrl.set(link.source);
       this.expiresAt.set(link.expires_at);
-    } catch (err: any) {
-      this.errorMessage.set(err?.message || 'Failed to load preview link');
+    } catch (err: unknown) {
+      this.errorMessage.set(errorText(err, 'Failed to load preview link'));
     } finally {
       this.loading.set(false);
     }
@@ -111,8 +112,8 @@ export class ReportPreviewModalComponent implements OnChanges {
       } else {
         this.errorMessage.set(`Release refused: ${res.reason}`);
       }
-    } catch (err: any) {
-      this.errorMessage.set(err?.message || 'Failed to release report');
+    } catch (err: unknown) {
+      this.errorMessage.set(errorText(err, 'Failed to release report'));
     } finally {
       this.releasing.set(false);
     }

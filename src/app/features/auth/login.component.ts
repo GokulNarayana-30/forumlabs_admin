@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
 import { StaffStateService } from '../../core/state/staff-state.service';
+import { errorText } from '../../core/api/error-text';
 
 @Component({
   selector: 'app-login',
@@ -66,9 +67,7 @@ export class LoginComponent {
         await this.router.navigateByUrl('/no-access');
       }
     } catch (err: unknown) {
-      this.errorMessage.set(
-        err instanceof Error && err.message ? err.message : 'Sign-in failed, please try again.',
-      );
+      this.errorMessage.set(errorText(err, 'Sign-in failed, please try again.'));
     } finally {
       this.isSubmitting.set(false);
     }

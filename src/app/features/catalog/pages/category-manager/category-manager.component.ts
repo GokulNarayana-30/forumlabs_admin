@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { CatalogService, StaffCatalogCategoryListItemDto } from '../../services/catalog.service';
+import { errorText } from '../../../../core/api/error-text';
 
 @Component({
   selector: 'app-category-manager',
@@ -34,7 +35,7 @@ export class CategoryManagerComponent implements OnInit {
       this.categories.set(sorted);
       this.isDirty.set(false);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to load categories';
+      const message = errorText(err, 'Failed to load categories');
       this.errorMessage.set(message);
     } finally {
       this.isLoading.set(false);
@@ -105,7 +106,7 @@ export class CategoryManagerComponent implements OnInit {
       this.successMessage.set('Category order and visibility saved successfully.');
       await this.loadCategories();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to save categories';
+      const message = errorText(err, 'Failed to save categories');
       this.errorMessage.set(message);
     } finally {
       this.isSaving.set(false);

@@ -13,6 +13,7 @@ import {
   StaffPatientDetail,
 } from '../../services/patients.service';
 import { PatientDetailViewComponent } from '../../components/patient-detail-view/patient-detail-view.component';
+import { errorText } from '../../../../core/api/error-text';
 
 export interface SearchTypeOption {
   label: string;
@@ -108,11 +109,11 @@ export class PatientSearchComponent {
           'Ticket reference search will be active in Phase 12 support desk integration.',
         );
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.messageService.add({
         severity: 'error',
         summary: 'Search Failed',
-        detail: err?.message || 'Failed to search patients',
+        detail: errorText(err, 'Failed to search patients'),
       });
       this.results.set([]);
     } finally {
@@ -126,11 +127,11 @@ export class PatientSearchComponent {
       const detail = await this.patientsService.getPatientDetail(result.patient_id);
       this.selectedPatient.set(detail);
       this.detailVisible.set(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
       this.messageService.add({
         severity: 'error',
         summary: 'Error',
-        detail: err?.message || 'Failed to load patient record',
+        detail: errorText(err, 'Failed to load patient record'),
       });
     } finally {
       this.loading.set(false);

@@ -9,6 +9,7 @@ import {
   StaffPatientReport,
 } from '../../services/patients.service';
 import { StaffStateService } from '../../../../core/state/staff-state.service';
+import { errorText } from '../../../../core/api/error-text';
 
 @Component({
   selector: 'app-patient-detail-view',
@@ -60,8 +61,8 @@ export class PatientDetailViewComponent {
         report.version,
       );
       window.open(link.source, '_blank', 'noopener,noreferrer');
-    } catch (err: any) {
-      this.errorMessage.set(err?.message || 'Failed to fetch report access link');
+    } catch (err: unknown) {
+      this.errorMessage.set(errorText(err, 'Failed to fetch report access link'));
     } finally {
       this.loadingReportLink.set(null);
     }

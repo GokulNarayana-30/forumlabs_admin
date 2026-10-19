@@ -8,6 +8,7 @@ import {
   StaffReportQueueItem,
   CanonicalWithdrawReasonCode,
 } from '../../services/reports.service';
+import { errorText } from '../../../../core/api/error-text';
 
 export interface WithdrawReasonOption {
   label: string;
@@ -82,8 +83,8 @@ export class ReportWithdrawDialogComponent {
       } else {
         this.errorMessage.set(`Withdrawal refused: ${res.reason}`);
       }
-    } catch (err: any) {
-      this.errorMessage.set(err?.message || 'Failed to withdraw report');
+    } catch (err: unknown) {
+      this.errorMessage.set(errorText(err, 'Failed to withdraw report'));
     } finally {
       this.submitting.set(false);
     }

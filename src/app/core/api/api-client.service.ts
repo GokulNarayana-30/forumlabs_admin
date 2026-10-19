@@ -17,6 +17,23 @@ export interface ApiErrorContract {
   details?: Record<string, unknown>;
 }
 
+/**
+ * What every failed ApiClient request rejects with: a real Error (so feature handlers can read it)
+ * carrying the contract fields. The message is the API's contract message, which never holds
+ * personal values (WR-21).
+ */
+export class ApiClientError extends Error implements ApiErrorContract {
+  constructor(
+    readonly status: number,
+    readonly code: string,
+    message: string,
+    readonly details?: Record<string, unknown>,
+  ) {
+    super(message);
+    this.name = 'ApiClientError';
+  }
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -104,16 +121,14 @@ export class ApiClient {
   private handleError(err: unknown): Observable<never> {
     if (err instanceof HttpErrorResponse) {
       const body = err.error;
-      const apiError: ApiErrorContract = {
-        status: err.status,
-        code: typeof body?.code === 'string' ? body.code : 'api_error',
-        message:
-          typeof body?.message === 'string' ? body.message : err.statusText || 'Request failed',
-        details:
-          body && typeof body === 'object' && body.details
-            ? (body.details as Record<string, unknown>)
-            : undefined,
-      };
+      const apiError = new ApiClientError(
+        err.status,
+        typeof body?.code === 'string' ? body.code : 'api_error',
+        typeof body?.message === 'string' ? body.message : err.statusText || 'Request failed',
+        body && typeof body === 'object' && body.details
+          ? (body.details as Record<string, unknown>)
+          : undefined,
+      );
       return throwError(() => apiError);
     }
     return throwError(() => err);

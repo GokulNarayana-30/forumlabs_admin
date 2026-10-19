@@ -15,6 +15,7 @@ import {
   StaffCatalogCategoryListItemDto,
   StaffCatalogItemListItemDto,
 } from '../../services/catalog.service';
+import { errorText } from '../../../../core/api/error-text';
 
 @Component({
   selector: 'app-catalog-edit-dialog',
@@ -118,7 +119,7 @@ export class CatalogEditDialogComponent implements OnChanges {
       this.saved.emit();
       this.close();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to update item';
+      const message = errorText(err, 'Failed to update item');
       this.errorMessage.set(message);
     } finally {
       this.isSubmitting.set(false);

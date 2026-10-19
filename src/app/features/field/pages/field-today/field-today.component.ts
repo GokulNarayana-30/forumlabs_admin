@@ -4,6 +4,7 @@ import { FieldService } from '../../services/field.service';
 import { StaffOrderListItemDto } from '../../../bookings/services/bookings.service';
 import { CollectPaymentModalComponent } from '../../components/collect-payment-modal/collect-payment-modal.component';
 import { NotCollectedModalComponent } from '../../components/not-collected-modal/not-collected-modal.component';
+import { errorText } from '../../../../core/api/error-text';
 
 @Component({
   selector: 'app-field-today',
@@ -38,7 +39,7 @@ export class FieldTodayComponent implements OnInit {
       const data = await this.fieldService.getTodayVisits();
       this.visits.set(data);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to load visits';
+      const message = errorText(err, 'Failed to load visits');
       this.errorMessage.set(message);
     } finally {
       this.isLoading.set(false);
@@ -95,7 +96,7 @@ export class FieldTodayComponent implements OnInit {
         this.errorMessage.set(`Unable to update status: ${res.kind}`);
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to update status';
+      const message = errorText(err, 'Failed to update status');
       this.errorMessage.set(message);
     } finally {
       this.actionInProgressOrderId.set(null);
@@ -119,7 +120,7 @@ export class FieldTodayComponent implements OnInit {
         this.errorMessage.set(`Unable to update status: ${res.kind}`);
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to update status';
+      const message = errorText(err, 'Failed to update status');
       this.errorMessage.set(message);
     } finally {
       this.actionInProgressOrderId.set(null);

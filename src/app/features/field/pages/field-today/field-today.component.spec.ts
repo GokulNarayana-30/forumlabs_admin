@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { FieldTodayComponent } from './field-today.component';
 import { FieldService } from '../../services/field.service';
+import { ApiClientError } from '../../../../core/api/api-client.service';
 
 describe('FieldTodayComponent', () => {
   let fixture: ComponentFixture<FieldTodayComponent>;
@@ -174,7 +175,9 @@ describe('FieldTodayComponent', () => {
   });
 
   it('handles server event_not_allowed response without crashing', async () => {
-    mockFieldService.recordEvent.mockRejectedValue(new Error('Event not allowed'));
+    mockFieldService.recordEvent.mockRejectedValue(
+      new ApiClientError(422, 'validation_failed', 'Event not allowed'),
+    );
     await component.markOnTheWay(mockVisits[0]);
 
     expect(component.errorMessage()).toContain('Event not allowed');

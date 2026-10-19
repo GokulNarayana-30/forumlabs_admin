@@ -18,6 +18,7 @@ import {
   eventRefusalText,
   isRecorded,
 } from '../../services/bookings.service';
+import { errorText } from '../../../../core/api/error-text';
 
 @Component({
   selector: 'app-assign-phlebo-dialog',
@@ -57,7 +58,7 @@ export class AssignPhleboDialogComponent implements OnInit, OnChanges {
       const list = await this.bookingsService.getPhlebotomists();
       this.phlebotomists.set(list.filter((p) => p.active));
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to load phlebotomists';
+      const message = errorText(err, 'Failed to load phlebotomists');
       this.errorMessage.set(message);
     }
   }
@@ -93,7 +94,7 @@ export class AssignPhleboDialogComponent implements OnInit, OnChanges {
       this.assigned.emit();
       this.close();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to assign phlebotomist';
+      const message = errorText(err, 'Failed to assign phlebotomist');
       this.errorMessage.set(message);
     } finally {
       this.isSubmitting.set(false);

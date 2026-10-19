@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { FieldService } from '../../services/field.service';
 import { StaffOrderListItemDto } from '../../../bookings/services/bookings.service';
+import { errorText } from '../../../../core/api/error-text';
 
 export interface FailureReasonOption {
   code: string;
@@ -70,7 +71,7 @@ export class NotCollectedModalComponent {
         this.errorMessage.set(`Unable to record failure: ${res.kind}`);
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to record failure';
+      const message = errorText(err, 'Failed to record failure');
       this.errorMessage.set(message);
     } finally {
       this.isSubmitting.set(false);

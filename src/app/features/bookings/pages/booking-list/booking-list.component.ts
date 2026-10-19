@@ -15,6 +15,7 @@ import {
 import { StaffStateService } from '../../../../core/state/staff-state.service';
 import { AssignPhleboDialogComponent } from '../../components/assign-phlebo-dialog/assign-phlebo-dialog.component';
 import { BookingDetailDrawerComponent } from '../../components/booking-detail-drawer/booking-detail-drawer.component';
+import { errorText } from '../../../../core/api/error-text';
 
 export interface StatusFilterOption {
   key: string;
@@ -75,7 +76,7 @@ export class BookingListComponent implements OnInit {
       const data = await this.bookingsService.getOrders(this.selectedDate(), this.selectedStatus());
       this.orders.set(data);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to load bookings';
+      const message = errorText(err, 'Failed to load bookings');
       this.errorMessage.set(message);
     } finally {
       this.isLoading.set(false);
@@ -159,7 +160,7 @@ export class BookingListComponent implements OnInit {
         this.errorMessage.set(eventRefusalText(res));
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to record received at lab';
+      const message = errorText(err, 'Failed to record received at lab');
       this.errorMessage.set(message);
     } finally {
       this.isLoading.set(false);

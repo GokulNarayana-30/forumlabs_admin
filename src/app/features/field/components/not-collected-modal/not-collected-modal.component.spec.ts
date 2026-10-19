@@ -5,6 +5,7 @@ import {
 } from './not-collected-modal.component';
 import { FieldService } from '../../services/field.service';
 import { StaffOrderListItemDto } from '../../../bookings/services/bookings.service';
+import { ApiClientError } from '../../../../core/api/api-client.service';
 
 describe('NotCollectedModalComponent', () => {
   let component: NotCollectedModalComponent;
@@ -99,7 +100,9 @@ describe('NotCollectedModalComponent', () => {
   });
 
   it('handles server refusal or error properly', async () => {
-    mockFieldService.recordEvent.mockRejectedValue(new Error('Wrong order status'));
+    mockFieldService.recordEvent.mockRejectedValue(
+      new ApiClientError(422, 'validation_failed', 'Wrong order status'),
+    );
     component.selectedReasonCode.set('customer_unavailable');
 
     await component.onSubmit();

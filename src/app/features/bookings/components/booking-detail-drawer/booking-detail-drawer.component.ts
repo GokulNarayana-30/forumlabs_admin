@@ -11,6 +11,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { BookingsService, StaffOrderView } from '../../services/bookings.service';
+import { errorText } from '../../../../core/api/error-text';
 
 @Component({
   selector: 'app-booking-detail-drawer',
@@ -51,7 +52,7 @@ export class BookingDetailDrawerComponent implements OnInit, OnChanges {
       const data = await this.bookingsService.getOrderDetail(this.orderId);
       this.order.set(data);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to load booking details';
+      const message = errorText(err, 'Failed to load booking details');
       this.errorMessage.set(message);
     } finally {
       this.isLoading.set(false);

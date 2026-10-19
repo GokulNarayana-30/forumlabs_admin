@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClient, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ApiClient } from './api-client.service';
+import { ApiClient, ApiClientError } from './api-client.service';
+import { errorText } from './error-text';
 import { environment } from '../../../environments/environment';
 
 describe('ApiClient (Typed Error & Idempotency Key Handling)', () => {
@@ -147,6 +148,33 @@ describe('ApiClient (Typed Error & Idempotency Key Handling)', () => {
 
       expect(second.key).not.toBe(first.key);
     });
+  });
+
+  it('rejects with a real Error carrying the contract fields, which errorText shows (WR-21)', () => {
+    let captured: unknown;
+    client.patch('/staff/catalog/items/tst-hba1c', { offer_price_paise: 0 }).subscribe({
+      error: (err: unknown) => {
+        captured = err;
+      },
+    });
+    httpMock
+      .expectOne(`${environment.apiUrl}/staff/catalog/items/tst-hba1c`)
+      .flush(
+        { code: 'validation_failed', message: 'The request body did not pass validation.' },
+        { status: 422, statusText: 'Unprocessable Entity' },
+      );
+
+    expect(captured).toBeInstanceOf(Error);
+    expect(captured).toBeInstanceOf(ApiClientError);
+    expect(captured).toMatchObject({ status: 422, code: 'validation_failed' });
+    expect(errorText(captured, 'Failed to update item')).toBe(
+      'The request body did not pass validation.',
+    );
+    // Anything that is not an API error falls back, so raw thrown values are never shown.
+    expect(errorText(new Error('socket hang up at 10.0.0.1'), 'Failed to update item')).toBe(
+      'Failed to update item',
+    );
+    expect(errorText({ message: 'x' }, 'Failed')).toBe('Failed');
   });
 
   it('preserves 200 business refusal wire bodies with kind discriminator', () => {

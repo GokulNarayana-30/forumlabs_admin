@@ -8,6 +8,7 @@ import {
   StaffCatalogItemListItemDto,
 } from '../../services/catalog.service';
 import { CatalogEditDialogComponent } from '../../components/catalog-edit-dialog/catalog-edit-dialog.component';
+import { errorText } from '../../../../core/api/error-text';
 
 @Component({
   selector: 'app-catalog-list',
@@ -66,7 +67,7 @@ export class CatalogListComponent implements OnInit {
       this.items.set(items);
       this.categories.set(categories);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to load catalog';
+      const message = errorText(err, 'Failed to load catalog');
       this.errorMessage.set(message);
     } finally {
       this.isLoading.set(false);

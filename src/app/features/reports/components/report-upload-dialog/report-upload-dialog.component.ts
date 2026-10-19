@@ -5,6 +5,7 @@ import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { ReportsService, AddReportResult } from '../../services/reports.service';
+import { errorText } from '../../../../core/api/error-text';
 
 export const REG_NO_REGEX = /^[A-Za-z0-9/_ .-]{1,32}$/;
 export const MAX_REPORT_FILE_SIZE = 10485760; // 10 MB
@@ -100,8 +101,8 @@ export class ReportUploadDialogComponent {
         const reason = res.reason ? ` (${res.reason})` : '';
         this.errorMessage.set(`Report rejected: ${res.kind}${reason}`);
       }
-    } catch (err: any) {
-      this.errorMessage.set(err?.message || 'Failed to submit report');
+    } catch (err: unknown) {
+      this.errorMessage.set(errorText(err, 'Failed to submit report'));
     } finally {
       this.submitting.set(false);
     }
