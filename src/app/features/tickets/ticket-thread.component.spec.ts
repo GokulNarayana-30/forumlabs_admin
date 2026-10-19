@@ -14,7 +14,7 @@ describe('TicketThreadComponent', () => {
     ticket: {
       id: 'ticket-1',
       reference: 'TK-2026-000001',
-      topic_code: 'sample_delay',
+      category: 'sample_delay',
       status: 'open',
       description: 'Where is my phlebotomist?',
       booking_id: 'bk-1',
@@ -99,6 +99,14 @@ describe('TicketThreadComponent', () => {
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
+  });
+
+  it('renders category from the actual staff ticket wire shape', async () => {
+    const ticket = mockDetail.ticket;
+    mockTicketsService.getTicket.mockResolvedValue({ ...mockDetail, ticket: { ...ticket, category: 'report_delay' } });
+    await component.loadTicket();
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('report_delay');
   });
 
   it('renders IST timestamp boundaries correctly for first_response_at and resolved_at', () => {

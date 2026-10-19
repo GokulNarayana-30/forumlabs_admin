@@ -29,7 +29,7 @@ describe('TicketsService (HttpTestingController tracer)', () => {
     ticket: {
       id: 'ticket-1',
       reference: 'TK-2026-000001',
-      topic_code: 'sample_delay',
+      category: 'sample_delay',
       status: 'open',
       description: 'Where is my phlebotomist?',
       booking_id: 'bk-1',

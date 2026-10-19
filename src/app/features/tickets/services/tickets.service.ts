@@ -39,7 +39,7 @@ export interface TicketMessageDto {
 export interface StaffTicketDto {
   id: string;
   reference: string;
-  topic_code: string;
+  category: string;
   status: string;
   description: string;
   booking_id: string | null;
