@@ -62,7 +62,7 @@ export class LoginComponent {
       } else if (roles.includes('lab_staff') || roles.includes('report_approver')) {
         await this.router.navigateByUrl('/reports');
       } else if (roles.includes('support')) {
-        await this.router.navigateByUrl('/patients');
+        await this.router.navigateByUrl('/tickets');
       } else {
         await this.router.navigateByUrl('/no-access');
       }

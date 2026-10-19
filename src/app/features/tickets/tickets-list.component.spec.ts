@@ -54,6 +54,7 @@ describe('TicketsListComponent', () => {
     component = fixture.componentInstance;
     fixture.detectChanges();
     await fixture.whenStable();
+    fixture.detectChanges();
   });
 
   it('renders the tickets list with references and status', () => {

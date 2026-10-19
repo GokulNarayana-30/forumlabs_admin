@@ -54,9 +54,9 @@ describe('TicketThreadComponent', () => {
   beforeEach(async () => {
     mockTicketsService = {
       getTicket: vi.fn().mockResolvedValue(mockDetail),
-      listAssignees: vi.fn().mockResolvedValue([
-        { user_id: 'staff-user-1', display_name: 'Dr. Anita Rao' },
-      ]),
+      listAssignees: vi
+        .fn()
+        .mockResolvedValue([{ user_id: 'staff-user-1', display_name: 'Dr. Anita Rao' }]),
       sendMessage: vi.fn().mockResolvedValue({
         id: 'msg-3',
         sender: 'support',
@@ -98,6 +98,7 @@ describe('TicketThreadComponent', () => {
     component = fixture.componentInstance;
     fixture.detectChanges();
     await fixture.whenStable();
+    fixture.detectChanges();
   });
 
   it('renders IST timestamp boundaries correctly for first_response_at and resolved_at', () => {

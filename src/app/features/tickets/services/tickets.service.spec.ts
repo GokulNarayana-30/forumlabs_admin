@@ -4,11 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import { environment } from '../../../../environments/environment';
 import { ApiClient } from '../../../core/api/api-client.service';
-import {
-  TicketsService,
-  StaffTicketSummaryDto,
-  StaffTicketDetailDto,
-} from './tickets.service';
+import { TicketsService, StaffTicketSummaryDto, StaffTicketDetailDto } from './tickets.service';
 
 describe('TicketsService (HttpTestingController tracer)', () => {
   let service: TicketsService;

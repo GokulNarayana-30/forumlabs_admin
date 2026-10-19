@@ -34,6 +34,7 @@ export class AdminLayoutComponent {
       path: '/patients',
       roles: ['support', 'booking_dispatch', 'super_admin'],
     },
+    { label: 'Tickets', path: '/tickets', roles: ['support', 'super_admin'] },
   ];
 
   readonly navItems = computed(() => {
