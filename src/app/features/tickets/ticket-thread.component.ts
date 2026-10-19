@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { FormsModule } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 import {
   TicketsService,
@@ -16,7 +15,7 @@ import { assigneeLabelFor } from './assignee-label';
 @Component({
   selector: 'app-ticket-thread',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, ButtonModule, TagModule],
+  imports: [CommonModule, RouterModule, FormsModule, TagModule],
   templateUrl: './ticket-thread.component.html',
 })
 export class TicketThreadComponent implements OnInit, OnDestroy {

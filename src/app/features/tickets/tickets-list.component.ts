@@ -1,9 +1,6 @@
 import { Component, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { FormsModule } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
-import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import {
   TicketsService,
@@ -18,7 +15,7 @@ export type TicketStatusFilter = 'all' | 'open' | 'in_progress' | 'resolved' | '
 @Component({
   selector: 'app-tickets-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, ButtonModule, TableModule, TagModule],
+  imports: [CommonModule, RouterModule, TagModule],
   templateUrl: './tickets-list.component.html',
 })
 export class TicketsListComponent implements OnInit, OnDestroy {

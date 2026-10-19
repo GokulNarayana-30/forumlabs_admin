@@ -144,6 +144,24 @@ describe('TicketsListComponent', () => {
     expect(component.getAssigneeName(null)).toBe('Unassigned');
   });
 
+  // N-11: the ticket screens import only what their templates use.
+  it('the ticket screens carry no unused standalone imports', async () => {
+    const { TicketThreadComponent } = await import('./ticket-thread.component');
+    const namesOf = (type: unknown): string[] => {
+      const def = (type as { ɵcmp: { dependencies?: unknown } }).ɵcmp;
+      const deps = typeof def.dependencies === 'function' ? def.dependencies() : def.dependencies;
+      return ((deps as { name?: string }[] | undefined) ?? []).map((d) => d.name ?? '');
+    };
+    const list = namesOf(TicketsListComponent);
+    const thread = namesOf(TicketThreadComponent);
+    expect(list).toContain('TagModule');
+    expect(list).not.toEqual(expect.arrayContaining(['ButtonModule']));
+    expect(list).not.toEqual(expect.arrayContaining(['TableModule']));
+    expect(list).not.toEqual(expect.arrayContaining(['FormsModule']));
+    expect(thread).toContain('FormsModule');
+    expect(thread).not.toEqual(expect.arrayContaining(['ButtonModule']));
+  });
+
   it('displays empty state when no tickets are returned', async () => {
     mockTicketsService.listTickets.mockResolvedValue([]);
     await component.loadTickets();
