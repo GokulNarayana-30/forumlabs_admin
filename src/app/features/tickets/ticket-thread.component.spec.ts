@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 import { describe, expect, it, beforeEach, vi } from 'vitest';
+import { ApiClientError } from '../../core/api/api-client.service';
 import { TicketThreadComponent } from './ticket-thread.component';
 import { TicketsService, StaffTicketDetailDto } from './services/tickets.service';
 
@@ -107,6 +108,20 @@ describe('TicketThreadComponent', () => {
     await component.loadTicket();
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('report_delay');
+  });
+
+  it.each(['status', 'assignee'])('shows %s failure beside an already loaded thread', async (action) => {
+    if (action === 'status') {
+      mockTicketsService.updateStatus.mockRejectedValue(new ApiClientError(409, 'invalid_status_transition', 'Status transition not allowed.'));
+      await component.onStatusChange('open');
+    } else {
+      mockTicketsService.updateAssignee.mockRejectedValue(new ApiClientError(422, 'validation_failed', 'Assignee is unavailable.'));
+      await component.onAssigneeChange('disabled-staff');
+    }
+    fixture.detectChanges();
+    const alert = (fixture.nativeElement as HTMLElement).querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain(action === 'status' ? 'Status transition not allowed.' : 'Assignee is unavailable.');
+    expect(component.detail()).not.toBeNull();
   });
 
   it('renders IST timestamp boundaries correctly for first_response_at and resolved_at', () => {
