@@ -42,6 +42,9 @@ export class BookingListComponent implements OnInit {
   readonly assignDialogVisible = signal<boolean>(false);
   readonly assigningOrder = signal<StaffOrderListItemDto | null>(null);
 
+  /** The order whose receive-at-lab is waiting for a confirmation click (WR-22). */
+  readonly confirmingReceiveOrderId = signal<string | null>(null);
+
   readonly detailDrawerVisible = signal<boolean>(false);
   readonly selectedOrderId = signal<string | null>(null);
 
@@ -142,6 +145,7 @@ export class BookingListComponent implements OnInit {
   }
 
   async markReceivedAtLab(order: StaffOrderListItemDto): Promise<void> {
+    this.confirmingReceiveOrderId.set(null);
     if (!this.canMarkReceivedAtLab(order)) {
       return;
     }

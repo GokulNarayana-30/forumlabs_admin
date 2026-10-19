@@ -98,7 +98,12 @@ describe('BookingDetailDrawerComponent', () => {
     expect(el.textContent).toContain('assigned');
 
     // Slot & complete address (B-10)
-    expect(el.textContent).toContain('0700-0800');
+    // The slot window in IST (07:00Z-08:00Z), never the raw slot_key; no hard-coded city (WR-22).
+    expect(
+      el.querySelector('[data-testid="slot-window"]')?.textContent?.replace(/\s+/g, ' ').trim(),
+    ).toBe('19 Oct, 12:30 PM - 01:30 PM');
+    expect(el.textContent).not.toContain('0700-0800');
+    expect(el.textContent).not.toContain('Bangalore');
     expect(el.textContent).toContain('Flat 402, Lotus Apts');
     expect(el.textContent).toContain('14th Main Road');
     expect(el.textContent).toContain('Indiranagar');
@@ -127,5 +132,38 @@ describe('BookingDetailDrawerComponent', () => {
     component.close();
 
     expect(closeSpy).toHaveBeenCalledWith(false);
+  });
+
+  it('prints event times in IST across the 18:30Z day boundary (WR-22)', async () => {
+    const detail = await mockBookingsService.getOrderDetail.mock.results[0].value;
+    mockBookingsService.getOrderDetail.mockResolvedValue({
+      ...detail,
+      events: [
+        {
+          ...detail.events[0],
+          id: 'b1',
+          kind: 'before_midnight',
+          occurred_at: '2026-10-18T18:29:59Z',
+        },
+        {
+          ...detail.events[0],
+          id: 'b2',
+          kind: 'after_midnight',
+          occurred_at: '2026-10-18T18:30:00Z',
+        },
+      ],
+    });
+    fixture = TestBed.createComponent(BookingDetailDrawerComponent);
+    component = fixture.componentInstance;
+    component.orderId = 'order-1';
+    component.visible = true;
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('18 Oct, 11:59 PM');
+    expect(text).toContain('19 Oct, 12:00 AM');
+    expect(text).not.toContain('T18:29:59Z');
   });
 });

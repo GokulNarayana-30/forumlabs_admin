@@ -165,4 +165,44 @@ describe('BookingListComponent', () => {
       expect(component.errorMessage()).toBe('');
     });
   });
+
+  describe('receive at lab needs a confirmation click (WR-22)', () => {
+    const buttonByText = (text: string) =>
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(
+        (b) => (b.textContent ?? '').trim() === text,
+      ) as HTMLButtonElement | undefined;
+
+    beforeEach(async () => {
+      mockBookingsService.getOrders.mockResolvedValue([
+        { ...mockOrders[0], status: 'collected', total_paise: 89900 },
+      ]);
+      mockBookingsService.recordEvent = vi.fn().mockResolvedValue({ kind: 'event_recorded' });
+      await component.loadOrders();
+      fixture.detectChanges();
+    });
+
+    it('the first click only asks; Cancel records nothing', async () => {
+      buttonByText('Receive at Lab')!.click();
+      fixture.detectChanges();
+      expect(mockBookingsService.recordEvent).not.toHaveBeenCalled();
+
+      buttonByText('Cancel')!.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(mockBookingsService.recordEvent).not.toHaveBeenCalled();
+      expect(buttonByText('Receive at Lab')).toBeDefined();
+    });
+
+    it('Confirm records received_by_lab once', async () => {
+      buttonByText('Receive at Lab')!.click();
+      fixture.detectChanges();
+      buttonByText('Confirm')!.click();
+      await fixture.whenStable();
+
+      expect(mockBookingsService.recordEvent).toHaveBeenCalledTimes(1);
+      expect(mockBookingsService.recordEvent).toHaveBeenCalledWith('order-1', {
+        kind: 'received_by_lab',
+      });
+    });
+  });
 });

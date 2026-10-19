@@ -115,16 +115,37 @@
           (onClick)="close()"
         ></p-button>
 
-        <span [pTooltip]="releaseTooltip()" tooltipPosition="top">
+        @if (confirmingRelease()) {
+          <span class="text-xs text-surface-700">Release this report to the patient?</span>
           <p-button
-            label="Release Report"
+            label="Cancel"
+            severity="secondary"
+            size="small"
+            [text]="true"
+            styleClass="btn-release-cancel"
+            (onClick)="confirmingRelease.set(false)"
+          ></p-button>
+          <p-button
+            label="Confirm Release"
             icon="pi pi-check"
             size="small"
+            styleClass="btn-release-confirm"
             [disabled]="!canRelease() || releasing()"
             [loading]="releasing()"
             (onClick)="release()"
           ></p-button>
-        </span>
+        } @else {
+          <span [pTooltip]="releaseTooltip()" tooltipPosition="top">
+            <p-button
+              label="Release Report"
+              icon="pi pi-check"
+              size="small"
+              styleClass="btn-release"
+              [disabled]="!canRelease() || releasing()"
+              (onClick)="release()"
+            ></p-button>
+          </span>
+        }
       </div>
     </div>
   </ng-template>

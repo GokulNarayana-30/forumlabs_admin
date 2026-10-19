@@ -67,7 +67,14 @@ describe('FieldTodayComponent', () => {
     const el = fixture.nativeElement as HTMLElement;
 
     expect(el.textContent).toContain('BK-1001');
-    expect(el.textContent).toContain('0700-0800');
+    // IST slot window, amount due, DOB and gender; no hard-coded city (WR-22).
+    expect(el.textContent).toContain('12:30 PM - 01:30 PM');
+    expect(el.textContent).not.toContain('Bangalore');
+    expect(el.querySelector('[data-testid="amount-due"]')?.textContent).toContain(
+      'Collect ₹899.00',
+    );
+    expect(el.textContent).toContain('female');
+    expect(el.textContent).toContain('1985-05-15');
     expect(el.textContent).toContain('Sunita Rao');
     expect(el.textContent).toContain('Complete Blood Count');
     expect(el.textContent).toContain('12, MG Road');

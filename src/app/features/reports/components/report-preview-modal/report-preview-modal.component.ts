@@ -38,6 +38,8 @@ export class ReportPreviewModalComponent implements OnChanges {
 
   readonly loading = signal<boolean>(false);
   readonly releasing = signal<boolean>(false);
+  /** Release waits for a second, explicit click (WR-22). */
+  readonly confirmingRelease = signal<boolean>(false);
   readonly previewUrl = signal<string | null>(null);
   readonly expiresAt = signal<string | null>(null);
   readonly errorMessage = signal<string>('');
@@ -100,6 +102,12 @@ export class ReportPreviewModalComponent implements OnChanges {
       return;
     }
 
+    // The first call only asks; the Confirm Release button calls again to release (WR-22).
+    if (!this.confirmingRelease()) {
+      this.confirmingRelease.set(true);
+      return;
+    }
+    this.confirmingRelease.set(false);
     this.releasing.set(true);
     this.errorMessage.set('');
 

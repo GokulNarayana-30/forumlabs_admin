@@ -103,6 +103,7 @@ describe('ReportPreviewModalComponent', () => {
     const successSpy = vi.fn();
     component.releaseSuccess.subscribe(successSpy);
 
+    component.confirmingRelease.set(true); // the Confirm Release click (WR-22)
     await component.release();
 
     expect(mockReportsService.releaseReport).toHaveBeenCalledWith('rep-101', 1);
@@ -119,9 +120,34 @@ describe('ReportPreviewModalComponent', () => {
     const successSpy = vi.fn();
     component.releaseSuccess.subscribe(successSpy);
 
+    component.confirmingRelease.set(true); // the Confirm Release click (WR-22)
     await component.release();
 
     expect(successSpy).not.toHaveBeenCalled();
     expect(component.errorMessage()).toContain('own_upload');
+  });
+
+  describe('release needs a confirmation (WR-22)', () => {
+    beforeEach(() => {
+      mockReportsService.releaseReport.mockResolvedValue({ kind: 'report_released' });
+    });
+
+    it('the first release() only asks; cancelling releases nothing', async () => {
+      await component.release();
+      expect(component.confirmingRelease()).toBe(true);
+      expect(mockReportsService.releaseReport).not.toHaveBeenCalled();
+
+      component.confirmingRelease.set(false); // the Cancel button
+      expect(mockReportsService.releaseReport).not.toHaveBeenCalled();
+    });
+
+    it('the confirming second call releases once', async () => {
+      await component.release();
+      await component.release();
+
+      expect(mockReportsService.releaseReport).toHaveBeenCalledTimes(1);
+      expect(mockReportsService.releaseReport).toHaveBeenCalledWith('rep-101', 1);
+      expect(component.confirmingRelease()).toBe(false);
+    });
   });
 });

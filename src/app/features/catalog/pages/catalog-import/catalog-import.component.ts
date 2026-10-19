@@ -14,6 +14,13 @@ import { errorText } from '../../../../core/api/error-text';
 
 export const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MiB
 
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+/** A .xlsx name, and an xlsx MIME type when the browser reports one (some report none). */
+export function isXlsxFile(file: File): boolean {
+  return file.name.toLowerCase().endsWith('.xlsx') && (file.type === '' || file.type === XLSX_MIME);
+}
+
 /** Plain wording for the closed CatalogImportMessageCode list (the server sends codes only). */
 export const IMPORT_MESSAGE_TEXT: Readonly<Record<string, string>> = {
   required: 'is required',
@@ -63,6 +70,8 @@ export class CatalogImportComponent {
 
   readonly isUploading = signal<boolean>(false);
   readonly isApplying = signal<boolean>(false);
+  /** Apply waits for a second, explicit click (WR-22). */
+  readonly confirmingApply = signal<boolean>(false);
   readonly errorMessage = signal<string>('');
   readonly successMessage = signal<string>('');
 
@@ -113,6 +122,12 @@ export class CatalogImportComponent {
     this.unreadableError.set('');
     this.preview.set(null);
 
+    if (!isXlsxFile(file)) {
+      this.errorMessage.set('Select an Excel workbook (.xlsx).');
+      this.selectedFile.set(null);
+      return;
+    }
+
     if (file.size > MAX_FILE_SIZE_BYTES) {
       this.errorMessage.set(
         `Selected file exceeds the 2 MB limit (${(file.size / (1024 * 1024)).toFixed(2)} MB). Please select a valid Excel file.`,
@@ -143,6 +158,7 @@ export class CatalogImportComponent {
 
   async onApply(): Promise<void> {
     const prev = this.preview();
+    this.confirmingApply.set(false);
     if (!prev || !this.canApply()) return;
 
     this.isApplying.set(true);
@@ -162,6 +178,7 @@ export class CatalogImportComponent {
           );
           this.preview.set(null);
           this.selectedFile.set(null);
+          await this.router.navigate(['/catalog']);
           break;
 
         case 'import_has_errors':

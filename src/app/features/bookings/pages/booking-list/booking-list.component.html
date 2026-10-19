@@ -107,7 +107,8 @@
                   {{ getTestNames(order) }}
                 </td>
                 <td class="px-5 py-4 text-surface-600 whitespace-nowrap">
-                  {{ order.slot.slot_key }}
+                  {{ order.slot.starts_at | date: 'hh:mm a' : '+0530' }} -
+                  {{ order.slot.ends_at | date: 'hh:mm a' : '+0530' }}
                 </td>
                 <td class="px-5 py-4 text-surface-600">
                   {{ order.address.area }}, {{ order.address.pincode }}
@@ -143,13 +144,31 @@
                   </button>
 
                   @if (canMarkReceivedAtLab(order)) {
-                    <button
-                      type="button"
-                      (click)="markReceivedAtLab(order)"
-                      class="px-2.5 py-1 rounded-lg text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 transition-colors"
-                    >
-                      Receive at Lab
-                    </button>
+                    @if (confirmingReceiveOrderId() === order.order_id) {
+                      <span class="text-xs text-surface-700">Sample received at the lab?</span>
+                      <button
+                        type="button"
+                        (click)="markReceivedAtLab(order)"
+                        class="px-2.5 py-1 rounded-lg text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 transition-colors"
+                      >
+                        Confirm
+                      </button>
+                      <button
+                        type="button"
+                        (click)="confirmingReceiveOrderId.set(null)"
+                        class="px-2.5 py-1 rounded-lg text-xs font-semibold text-surface-600 hover:bg-surface-100 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    } @else {
+                      <button
+                        type="button"
+                        (click)="confirmingReceiveOrderId.set(order.order_id)"
+                        class="px-2.5 py-1 rounded-lg text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 transition-colors"
+                      >
+                        Receive at Lab
+                      </button>
+                    }
                   }
                 </td>
               </tr>

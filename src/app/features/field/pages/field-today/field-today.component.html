@@ -65,7 +65,8 @@
           >
             <div>
               <span class="text-xs font-bold text-primary-700 tracking-wide uppercase">
-                Slot: {{ visit.slot.slot_key }}
+                Slot: {{ visit.slot.starts_at | date: 'hh:mm a' : '+0530' }} -
+                {{ visit.slot.ends_at | date: 'hh:mm a' : '+0530' }}
               </span>
               <div class="text-sm font-bold text-surface-900">
                 {{ visit.booking_ref }}
@@ -95,7 +96,7 @@
                     {{ visit.address.house }}, {{ visit.address.street }}
                   </p>
                   <p class="text-xs text-surface-600">
-                    {{ visit.address.area }}, Bangalore - {{ visit.address.pincode }}
+                    {{ visit.address.area }} - {{ visit.address.pincode }}
                   </p>
                   @if (visit.address.landmark) {
                     <p class="text-xs text-surface-500 mt-0.5">
@@ -122,6 +123,13 @@
 
             <!-- Patients & Tests -->
             <div class="space-y-2">
+              <div class="text-xs font-semibold text-surface-700" data-testid="amount-due">
+                @if (visit.payment_status === 'paid') {
+                  Paid
+                } @else {
+                  Collect ₹{{ (visit.total_paise / 100).toFixed(2) }} (cash or UPI)
+                }
+              </div>
               <span class="text-xs text-surface-400 font-semibold block uppercase"
                 >Patients & Tests</span
               >
@@ -130,6 +138,10 @@
                   <div class="font-bold text-surface-800">
                     {{ pt.name }}
                     <span class="font-normal text-surface-500">({{ pt.relation }})</span>
+                  </div>
+                  <div class="text-surface-500">
+                    {{ pt.gender || 'Gender unstated' }} · DOB
+                    {{ pt.date_of_birth || 'not recorded' }}
                   </div>
                   <div class="text-surface-600">
                     {{ pt.test_names.join(', ') }}

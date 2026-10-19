@@ -28,6 +28,9 @@
           <p class="text-xs text-surface-500 mt-0.5">
             Payment Status:
             <span class="font-medium text-surface-700">{{ order()?.payment_status }}</span>
+            @if (order(); as o) {
+              <span class="text-surface-500"> · Total ₹{{ (o.total_paise / 100).toFixed(2) }}</span>
+            }
           </p>
         </div>
 
@@ -61,7 +64,10 @@
             <div class="grid grid-cols-2 gap-3 text-sm">
               <div>
                 <span class="text-xs text-surface-500 block">Slot Window</span>
-                <span class="font-semibold text-surface-800">{{ ord.slot.slot_key }}</span>
+                <span class="font-semibold text-surface-800" data-testid="slot-window"
+                  >{{ ord.slot.starts_at | date: 'dd MMM, hh:mm a' : '+0530' }} -
+                  {{ ord.slot.ends_at | date: 'hh:mm a' : '+0530' }}</span
+                >
               </div>
               <div>
                 <span class="text-xs text-surface-500 block">Pincode</span>
@@ -75,7 +81,7 @@
                 {{ ord.address.house }}, {{ ord.address.street }}
               </p>
               <p class="text-surface-600 text-xs">
-                {{ ord.address.area }}, Bangalore - {{ ord.address.pincode }}
+                {{ ord.address.area }} - {{ ord.address.pincode }}
               </p>
               @if (ord.address.landmark) {
                 <p class="text-xs text-surface-500">
@@ -151,7 +157,7 @@
                       {{ evt.kind }}
                     </span>
                     <div class="text-xs text-surface-500 flex flex-wrap items-center gap-2 mt-0.5">
-                      <span>{{ evt.occurred_at }}</span>
+                      <span>{{ evt.occurred_at | date: 'dd MMM, hh:mm a' : '+0530' }}</span>
                       &bull;
                       <span
                         >Actor: <strong class="text-surface-700">{{ evt.actor_type }}</strong> ({{

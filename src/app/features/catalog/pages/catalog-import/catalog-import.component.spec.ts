@@ -252,4 +252,45 @@ describe('CatalogImportComponent', () => {
     await component.onApply();
     expect(component.errorMessage()).toContain('This import has already been applied');
   });
+
+  describe('apply needs a confirmation click, xlsx only, back to the catalog after (WR-22)', () => {
+    const buttonByText = (text: string) =>
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(
+        (b) => (b.textContent ?? '').trim() === text,
+      ) as HTMLButtonElement | undefined;
+
+    it('the first click only asks; Cancel applies nothing', async () => {
+      await component.onFileSelected(new File(['content'], 'catalog.xlsx'));
+      fixture.detectChanges();
+
+      buttonByText('Apply Import')!.click();
+      fixture.detectChanges();
+      expect(mockCatalogService.applyImport).not.toHaveBeenCalled();
+      buttonByText('Cancel')!.click();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      expect(mockCatalogService.applyImport).not.toHaveBeenCalled();
+    });
+
+    it('Confirm Apply applies once and navigates to the catalog', async () => {
+      await component.onFileSelected(new File(['content'], 'catalog.xlsx'));
+      fixture.detectChanges();
+
+      buttonByText('Apply Import')!.click();
+      fixture.detectChanges();
+      buttonByText('Confirm Apply')!.click();
+      await fixture.whenStable();
+
+      expect(mockCatalogService.applyImport).toHaveBeenCalledTimes(1);
+      expect(router.navigate).toHaveBeenCalledWith(['/catalog']);
+    });
+
+    it('refuses a file that is not an .xlsx workbook before uploading', async () => {
+      await component.onFileSelected(new File(['a,b'], 'catalog.csv', { type: 'text/csv' }));
+      await component.onFileSelected(new File(['x'], 'catalog.xlsx', { type: 'application/pdf' }));
+
+      expect(mockCatalogService.uploadImportFile).not.toHaveBeenCalled();
+      expect(component.errorMessage()).toContain('.xlsx');
+    });
+  });
 });
