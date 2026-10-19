@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter, ActivatedRoute } from '@angular/router';
-import { of } from 'rxjs';
+import { provideRouter, ActivatedRoute, convertToParamMap } from '@angular/router';
+import { BehaviorSubject } from 'rxjs';
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { ApiClientError } from '../../core/api/api-client.service';
 import { TicketThreadComponent } from './ticket-thread.component';
@@ -10,6 +10,7 @@ describe('TicketThreadComponent', () => {
   let fixture: ComponentFixture<TicketThreadComponent>;
   let component: TicketThreadComponent;
   let mockTicketsService: any;
+  let routeParams: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
 
   const mockDetail: StaffTicketDetailDto = {
     ticket: {
@@ -53,6 +54,7 @@ describe('TicketThreadComponent', () => {
   };
 
   beforeEach(async () => {
+    routeParams = new BehaviorSubject(convertToParamMap({ ticket_id: 'ticket-1' }));
     mockTicketsService = {
       getTicket: vi.fn().mockResolvedValue(mockDetail),
       listAssignees: vi
@@ -89,7 +91,7 @@ describe('TicketThreadComponent', () => {
           provide: ActivatedRoute,
           useValue: {
             snapshot: { paramMap: { get: () => 'ticket-1' } },
-            paramMap: of({ get: () => 'ticket-1' }),
+            paramMap: routeParams.asObservable(),
           },
         },
       ],
@@ -104,24 +106,81 @@ describe('TicketThreadComponent', () => {
 
   it('renders category from the actual staff ticket wire shape', async () => {
     const ticket = mockDetail.ticket;
-    mockTicketsService.getTicket.mockResolvedValue({ ...mockDetail, ticket: { ...ticket, category: 'report_delay' } });
+    mockTicketsService.getTicket.mockResolvedValue({
+      ...mockDetail,
+      ticket: { ...ticket, category: 'report_delay' },
+    });
     await component.loadTicket();
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('report_delay');
   });
 
-  it.each(['status', 'assignee'])('shows %s failure beside an already loaded thread', async (action) => {
-    if (action === 'status') {
-      mockTicketsService.updateStatus.mockRejectedValue(new ApiClientError(409, 'invalid_status_transition', 'Status transition not allowed.'));
-      await component.onStatusChange('open');
-    } else {
-      mockTicketsService.updateAssignee.mockRejectedValue(new ApiClientError(422, 'validation_failed', 'Assignee is unavailable.'));
-      await component.onAssigneeChange('disabled-staff');
-    }
-    fixture.detectChanges();
-    const alert = (fixture.nativeElement as HTMLElement).querySelector('[role="alert"]');
-    expect(alert?.textContent).toContain(action === 'status' ? 'Status transition not allowed.' : 'Assignee is unavailable.');
-    expect(component.detail()).not.toBeNull();
+  it.each(['status', 'assignee'])(
+    'shows %s failure beside an already loaded thread',
+    async (action) => {
+      if (action === 'status') {
+        mockTicketsService.updateStatus.mockRejectedValue(
+          new ApiClientError(409, 'invalid_status_transition', 'Status transition not allowed.'),
+        );
+        await component.onStatusChange('open');
+      } else {
+        mockTicketsService.updateAssignee.mockRejectedValue(
+          new ApiClientError(422, 'validation_failed', 'Assignee is unavailable.'),
+        );
+        await component.onAssigneeChange('disabled-staff');
+      }
+      fixture.detectChanges();
+      const alert = (fixture.nativeElement as HTMLElement).querySelector('[role="alert"]');
+      expect(alert?.textContent).toContain(
+        action === 'status' ? 'Status transition not allowed.' : 'Assignee is unavailable.',
+      );
+      expect(component.detail()).not.toBeNull();
+    },
+  );
+
+  it('rebinds reused routes and ignores late old ticket reads', async () => {
+    let finishOld!: (detail: StaffTicketDetailDto) => void;
+    mockTicketsService.getTicket.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishOld = resolve;
+      }),
+    );
+    const oldRead = component.loadTicket();
+    component.replyText.set('Private reply to A');
+    component.noteText.set('Private note about A');
+    const detailB = {
+      ...mockDetail,
+      ticket: { ...mockDetail.ticket, id: 'ticket-2', reference: 'TK-2026-000002' },
+    };
+    mockTicketsService.getTicket.mockResolvedValueOnce(detailB);
+    routeParams.next(convertToParamMap({ ticket_id: 'ticket-2' }));
+    expect(component.ticketId()).toBe('ticket-2');
+    expect(component.detail()).toBeNull();
+    expect(component.replyText()).toBe('');
+    expect(component.noteText()).toBe('');
+    await fixture.whenStable();
+    finishOld(mockDetail);
+    await oldRead;
+    expect(component.detail()?.ticket.id).toBe('ticket-2');
+  });
+
+  it('ignores an old reply completion after moving to another ticket', async () => {
+    let finishReply!: () => void;
+    mockTicketsService.sendMessage.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        finishReply = resolve;
+      }),
+    );
+    component.replyText.set('Reply for A');
+    const reply = component.onSendReply();
+    routeParams.next(convertToParamMap({ ticket_id: 'ticket-2' }));
+    await fixture.whenStable();
+    component.replyText.set('Draft for B');
+    mockTicketsService.getTicket.mockClear();
+    finishReply();
+    await reply;
+    expect(component.replyText()).toBe('Draft for B');
+    expect(mockTicketsService.getTicket).not.toHaveBeenCalled();
   });
 
   it('renders IST timestamp boundaries correctly for first_response_at and resolved_at', () => {

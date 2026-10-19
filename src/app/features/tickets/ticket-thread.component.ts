@@ -1,6 +1,7 @@
 import { Component, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
@@ -42,6 +43,9 @@ export class TicketThreadComponent implements OnInit, OnDestroy {
   readonly isUpdatingAssignee = signal<boolean>(false);
 
   private isDestroyed = false;
+  private routeSubscription?: Subscription;
+  private ticketGeneration = 0;
+  private loadGeneration = 0;
 
   readonly statusOptions = [
     { label: 'Open', value: 'open' },
@@ -51,14 +55,29 @@ export class TicketThreadComponent implements OnInit, OnDestroy {
   ];
 
   ngOnInit(): void {
-    const id = this.route.snapshot.paramMap.get('ticket_id') || '';
-    this.ticketId.set(id);
     void this.loadAssignees();
-    void this.loadTicket();
+    this.routeSubscription = this.route.paramMap.subscribe((params) => {
+      const id = params.get('ticket_id') || '';
+      if (id === this.ticketId() && this.ticketGeneration > 0) return;
+      this.ticketGeneration++;
+      this.ticketId.set(id);
+      this.detail.set(null);
+      this.replyText.set('');
+      this.noteText.set('');
+      this.replyError.set('');
+      this.noteError.set('');
+      this.errorMessage.set('');
+      this.isSendingReply.set(false);
+      this.isAddingNote.set(false);
+      this.isUpdatingStatus.set(false);
+      this.isUpdatingAssignee.set(false);
+      void this.loadTicket();
+    });
   }
 
   ngOnDestroy(): void {
     this.isDestroyed = true;
+    this.routeSubscription?.unsubscribe();
     this.detail.set(null);
     this.assignees.set([]);
     this.replyText.set('');
@@ -78,6 +97,8 @@ export class TicketThreadComponent implements OnInit, OnDestroy {
 
   async loadTicket(): Promise<void> {
     const id = this.ticketId();
+    const generation = this.ticketGeneration;
+    const load = ++this.loadGeneration;
     if (!id) {
       this.notFound.set(true);
       this.loading.set(false);
@@ -90,11 +111,19 @@ export class TicketThreadComponent implements OnInit, OnDestroy {
 
     try {
       const data = await this.ticketsService.getTicket(id);
-      if (!this.isDestroyed) {
+      if (
+        !this.isDestroyed &&
+        generation === this.ticketGeneration &&
+        load === this.loadGeneration
+      ) {
         this.detail.set(data);
       }
     } catch (err: any) {
-      if (!this.isDestroyed) {
+      if (
+        !this.isDestroyed &&
+        generation === this.ticketGeneration &&
+        load === this.loadGeneration
+      ) {
         if (err?.status === 404) {
           this.notFound.set(true);
         } else {
@@ -102,7 +131,11 @@ export class TicketThreadComponent implements OnInit, OnDestroy {
         }
       }
     } finally {
-      if (!this.isDestroyed) {
+      if (
+        !this.isDestroyed &&
+        generation === this.ticketGeneration &&
+        load === this.loadGeneration
+      ) {
         this.loading.set(false);
       }
     }
@@ -111,6 +144,7 @@ export class TicketThreadComponent implements OnInit, OnDestroy {
   async onSendReply(): Promise<void> {
     const text = this.replyText().trim();
     const id = this.ticketId();
+    const generation = this.ticketGeneration;
     if (!text || !id || this.isSendingReply()) return;
 
     this.isSendingReply.set(true);
@@ -118,16 +152,16 @@ export class TicketThreadComponent implements OnInit, OnDestroy {
 
     try {
       await this.ticketsService.sendMessage(id, text);
-      if (!this.isDestroyed) {
+      if (!this.isDestroyed && generation === this.ticketGeneration) {
         this.replyText.set('');
         await this.loadTicket();
       }
     } catch (err: unknown) {
-      if (!this.isDestroyed) {
+      if (!this.isDestroyed && generation === this.ticketGeneration) {
         this.replyError.set(errorText(err, 'Could not send reply. Please try again.'));
       }
     } finally {
-      if (!this.isDestroyed) {
+      if (!this.isDestroyed && generation === this.ticketGeneration) {
         this.isSendingReply.set(false);
       }
     }
@@ -136,6 +170,7 @@ export class TicketThreadComponent implements OnInit, OnDestroy {
   async onAddNote(): Promise<void> {
     const text = this.noteText().trim();
     const id = this.ticketId();
+    const generation = this.ticketGeneration;
     if (!text || !id || this.isAddingNote()) return;
 
     this.isAddingNote.set(true);
@@ -143,16 +178,16 @@ export class TicketThreadComponent implements OnInit, OnDestroy {
 
     try {
       await this.ticketsService.addNote(id, text);
-      if (!this.isDestroyed) {
+      if (!this.isDestroyed && generation === this.ticketGeneration) {
         this.noteText.set('');
         await this.loadTicket();
       }
     } catch (err: unknown) {
-      if (!this.isDestroyed) {
+      if (!this.isDestroyed && generation === this.ticketGeneration) {
         this.noteError.set(errorText(err, 'Could not add internal note.'));
       }
     } finally {
-      if (!this.isDestroyed) {
+      if (!this.isDestroyed && generation === this.ticketGeneration) {
         this.isAddingNote.set(false);
       }
     }
@@ -160,20 +195,21 @@ export class TicketThreadComponent implements OnInit, OnDestroy {
 
   async onStatusChange(newStatus: string): Promise<void> {
     const id = this.ticketId();
+    const generation = this.ticketGeneration;
     if (!id || this.isUpdatingStatus()) return;
 
     this.isUpdatingStatus.set(true);
     try {
       await this.ticketsService.updateStatus(id, newStatus);
-      if (!this.isDestroyed) {
+      if (!this.isDestroyed && generation === this.ticketGeneration) {
         await this.loadTicket();
       }
     } catch (err: unknown) {
-      if (!this.isDestroyed) {
+      if (!this.isDestroyed && generation === this.ticketGeneration) {
         this.errorMessage.set(errorText(err, 'Status transition not allowed.'));
       }
     } finally {
-      if (!this.isDestroyed) {
+      if (!this.isDestroyed && generation === this.ticketGeneration) {
         this.isUpdatingStatus.set(false);
       }
     }
@@ -181,6 +217,7 @@ export class TicketThreadComponent implements OnInit, OnDestroy {
 
   async onAssigneeChange(assigneeId: string): Promise<void> {
     const id = this.ticketId();
+    const generation = this.ticketGeneration;
     if (!id || this.isUpdatingAssignee()) return;
 
     this.isUpdatingAssignee.set(true);
@@ -188,15 +225,15 @@ export class TicketThreadComponent implements OnInit, OnDestroy {
 
     try {
       await this.ticketsService.updateAssignee(id, targetUserId);
-      if (!this.isDestroyed) {
+      if (!this.isDestroyed && generation === this.ticketGeneration) {
         await this.loadTicket();
       }
     } catch (err: unknown) {
-      if (!this.isDestroyed) {
+      if (!this.isDestroyed && generation === this.ticketGeneration) {
         this.errorMessage.set(errorText(err, 'Could not update ticket assignee.'));
       }
     } finally {
-      if (!this.isDestroyed) {
+      if (!this.isDestroyed && generation === this.ticketGeneration) {
         this.isUpdatingAssignee.set(false);
       }
     }
