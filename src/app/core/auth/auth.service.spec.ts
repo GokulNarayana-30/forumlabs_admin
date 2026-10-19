@@ -2,12 +2,15 @@ import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { AuthService } from './auth.service';
 import { inMemoryStorage } from './supabase-client';
+import { ApiClient } from '../api/api-client.service';
 
 describe('AuthService (Memory-Only Session Security)', () => {
   let service: AuthService;
   let router: Router;
+  let apiClient: { resetIdempotencyKeys: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
+    apiClient = { resetIdempotencyKeys: vi.fn() };
     inMemoryStorage.clear();
     // Seed an unrelated item in localStorage to prove we do not wipe foreign storage
     localStorage.setItem('unrelated_app_setting', 'keep_me');
@@ -15,6 +18,7 @@ describe('AuthService (Memory-Only Session Security)', () => {
     TestBed.configureTestingModule({
       providers: [
         AuthService,
+        { provide: ApiClient, useValue: apiClient },
         {
           provide: Router,
           useValue: { navigateByUrl: vi.fn() },
@@ -71,5 +75,13 @@ describe('AuthService (Memory-Only Session Security)', () => {
     expect(service.getSession()).toBeNull();
     expect(inMemoryStorage.size).toBe(0);
     expect(router.navigateByUrl).toHaveBeenCalledWith('/login');
+  });
+
+  it('signOut forgets every cached Idempotency-Key, even when Supabase sign-out fails (WR-01)', async () => {
+    vi.spyOn(service.supabase.auth, 'signOut').mockRejectedValueOnce(new Error('offline'));
+
+    await service.signOut().catch(() => undefined);
+
+    expect(apiClient.resetIdempotencyKeys).toHaveBeenCalledTimes(1);
   });
 });

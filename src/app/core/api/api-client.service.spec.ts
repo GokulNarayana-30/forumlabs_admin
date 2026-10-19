@@ -59,33 +59,94 @@ describe('ApiClient (Typed Error & Idempotency Key Handling)', () => {
     expect(capturedError.message).not.toContain('@');
   });
 
-  it('retains stable Idempotency-Key across unchanged retries, and allocates a new key when payload changes', () => {
-    const payloadA = { amount_paise: 50000, method: 'cash' };
+  describe('Idempotency-Key lifecycle (WR-01)', () => {
     const route = '/staff/orders/ord-1/events';
+    const url = `${environment.apiUrl}${route}`;
+    const payloadA = { kind: 'collection_failed', reason: 'patient_not_home' };
 
-    // First attempt
-    client.post(route, payloadA, { idempotent: true }).subscribe();
-    const req1 = httpMock.expectOne(`${environment.apiUrl}${route}`);
-    const key1 = req1.request.headers.get('Idempotency-Key');
-    expect(key1).toBeTruthy();
-    expect(key1).toMatch(/^chk_[0-9a-f]{32}$/);
-    req1.flush({ success: true });
+    const send = (body: unknown = payloadA, method: 'post' | 'patch' = 'post') => {
+      client[method](route, body, { idempotent: true }).subscribe({ error: () => undefined });
+      const req = httpMock.expectOne(url);
+      const key = req.request.headers.get('Idempotency-Key');
+      expect(key).toMatch(/^chk_[0-9a-f]{32}$/);
+      return { req, key: key! };
+    };
 
-    // Unchanged retry -> must send the EXACT SAME key
-    client.post(route, payloadA, { idempotent: true }).subscribe();
-    const req2 = httpMock.expectOne(`${environment.apiUrl}${route}`);
-    const key2 = req2.request.headers.get('Idempotency-Key');
-    expect(key2).toBe(key1);
-    req2.flush({ success: true });
+    it('two sequential successful identical actions send different keys', () => {
+      const first = send();
+      first.req.flush({ kind: 'event_recorded' });
+      const second = send();
+      second.req.flush({ kind: 'event_recorded' });
 
-    // Changed payload -> must generate a FRESH key
-    const payloadB = { amount_paise: 55000, method: 'upi' };
-    client.post(route, payloadB, { idempotent: true }).subscribe();
-    const req3 = httpMock.expectOne(`${environment.apiUrl}${route}`);
-    const key3 = req3.request.headers.get('Idempotency-Key');
-    expect(key3).toBeTruthy();
-    expect(key3).not.toBe(key1);
-    req3.flush({ success: true });
+      expect(second.key).not.toBe(first.key);
+    });
+
+    it('a 200 business refusal is definite and retires the key', () => {
+      const first = send();
+      first.req.flush({ kind: 'event_not_allowed', reason: 'wrong_status' });
+      const second = send();
+      second.req.flush({ kind: 'event_recorded' });
+
+      expect(second.key).not.toBe(first.key);
+    });
+
+    it('a retry after an uncertain failure (503, network, 408, 409 in progress) reuses the key', () => {
+      const first = send();
+      first.req.flush({ code: 'unavailable' }, { status: 503, statusText: 'Service Unavailable' });
+      const retry1 = send();
+      expect(retry1.key).toBe(first.key);
+      retry1.req.error(new ProgressEvent('error'));
+      const retry2 = send();
+      expect(retry2.key).toBe(first.key);
+      retry2.req.flush({}, { status: 408, statusText: 'Request Timeout' });
+      const retry3 = send();
+      expect(retry3.key).toBe(first.key);
+      retry3.req.flush(
+        { code: 'idempotency_in_progress' },
+        { status: 409, statusText: 'Conflict' },
+      );
+      const retry4 = send();
+      expect(retry4.key).toBe(first.key);
+      retry4.req.flush({ kind: 'event_recorded' });
+
+      const after = send();
+      expect(after.key).not.toBe(first.key);
+      after.req.flush({ kind: 'event_recorded' });
+    });
+
+    it('a 422 is definite: the identical retry sends a new key', () => {
+      const first = send();
+      first.req.flush(
+        { code: 'validation_failed' },
+        { status: 422, statusText: 'Unprocessable Entity' },
+      );
+      const second = send();
+      second.req.flush({ kind: 'event_recorded' });
+
+      expect(second.key).not.toBe(first.key);
+    });
+
+    it('a different payload or method never shares a key', () => {
+      const a = send(payloadA);
+      a.req.flush({}, { status: 503, statusText: 'Service Unavailable' });
+      const b = send({ kind: 'collection_failed', reason: 'refused' });
+      b.req.flush({ kind: 'event_recorded' });
+      const c = send(payloadA, 'patch');
+      c.req.flush({});
+
+      expect(b.key).not.toBe(a.key);
+      expect(c.key).not.toBe(a.key);
+    });
+
+    it('resetIdempotencyKeys forgets a pending key', () => {
+      const first = send();
+      first.req.flush({}, { status: 503, statusText: 'Service Unavailable' });
+      client.resetIdempotencyKeys();
+      const second = send();
+      second.req.flush({ kind: 'event_recorded' });
+
+      expect(second.key).not.toBe(first.key);
+    });
   });
 
   it('preserves 200 business refusal wire bodies with kind discriminator', () => {

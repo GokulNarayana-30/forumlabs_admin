@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
-import { Observable, catchError, throwError } from 'rxjs';
+import { Observable, catchError, tap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
 export interface ApiClientOptions {
@@ -22,7 +22,13 @@ export interface ApiErrorContract {
 })
 export class ApiClient {
   private readonly http = inject(HttpClient);
-  private readonly idempotencyKeyCache = new Map<string, { payloadHash: string; key: string }>();
+  /**
+   * One Idempotency-Key per (method, route, payload) while its outcome is uncertain. The server
+   * replays a stored success for a reused key, so the entry is retired as soon as a request
+   * settles definitely (any 2xx, or a 4xx other than 408 / 409 idempotency_in_progress) and kept
+   * only for network errors, 5xx, 408 and 409 in-progress, where a retry must reuse the key.
+   */
+  private readonly idempotencyKeyCache = new Map<string, string>();
 
   private buildUrl(path: string): string {
     if (path.startsWith('http://') || path.startsWith('https://')) {
@@ -42,15 +48,57 @@ export class ApiClient {
     return `chk_${hex}`;
   }
 
-  private getIdempotencyKey(route: string, body: unknown): string {
-    const payloadHash = JSON.stringify(body ?? {});
-    const existing = this.idempotencyKeyCache.get(route);
-    if (existing && existing.payloadHash === payloadHash) {
-      return existing.key;
-    }
+  private idempotencyCacheKey(method: string, route: string, body: unknown): string {
+    return `${method} ${route}\n${JSON.stringify(body ?? {})}`;
+  }
+
+  private getIdempotencyKey(cacheKey: string): string {
+    const existing = this.idempotencyKeyCache.get(cacheKey);
+    if (existing) return existing;
     const newKey = this.generateIdempotencyKey();
-    this.idempotencyKeyCache.set(route, { payloadHash, key: newKey });
+    this.idempotencyKeyCache.set(cacheKey, newKey);
     return newKey;
+  }
+
+  /** True when the outcome of a failed request is unknown, so a retry must reuse its key. */
+  private static isUncertainFailure(err: unknown): boolean {
+    if (!(err instanceof HttpErrorResponse)) return true;
+    if (err.status === 0 || err.status >= 500 || err.status === 408) return true;
+    return err.status === 409 && err.error?.code === 'idempotency_in_progress';
+  }
+
+  /** Forget every cached key (call on sign-out: the singleton outlives the signed-in user). */
+  resetIdempotencyKeys(): void {
+    this.idempotencyKeyCache.clear();
+  }
+
+  private sendWithBody<T>(
+    method: 'POST' | 'PATCH' | 'PUT',
+    path: string,
+    body: unknown,
+    options?: ApiClientOptions,
+  ): Observable<T> {
+    const url = this.buildUrl(path);
+    let headers =
+      options?.headers instanceof HttpHeaders ? options.headers : new HttpHeaders(options?.headers);
+
+    let cacheKey: string | null = null;
+    if (options?.idempotent) {
+      cacheKey = this.idempotencyCacheKey(method, path, body);
+      headers = headers.set('Idempotency-Key', this.getIdempotencyKey(cacheKey));
+    }
+
+    const retire = (): void => {
+      if (cacheKey) this.idempotencyKeyCache.delete(cacheKey);
+    };
+
+    return this.http.request<T>(method, url, { body, params: options?.params, headers }).pipe(
+      tap({ next: retire }),
+      catchError((err) => {
+        if (!ApiClient.isUncertainFailure(err)) retire();
+        return this.handleError(err);
+      }),
+    );
   }
 
   private handleError(err: unknown): Observable<never> {
@@ -79,48 +127,15 @@ export class ApiClient {
   }
 
   post<T>(path: string, body: unknown = {}, options?: ApiClientOptions): Observable<T> {
-    const url = this.buildUrl(path);
-    let headers =
-      options?.headers instanceof HttpHeaders ? options.headers : new HttpHeaders(options?.headers);
-
-    if (options?.idempotent) {
-      const key = this.getIdempotencyKey(path, body);
-      headers = headers.set('Idempotency-Key', key);
-    }
-
-    return this.http
-      .post<T>(url, body, { params: options?.params, headers })
-      .pipe(catchError((err) => this.handleError(err)));
+    return this.sendWithBody<T>('POST', path, body, options);
   }
 
   patch<T>(path: string, body: unknown = {}, options?: ApiClientOptions): Observable<T> {
-    const url = this.buildUrl(path);
-    let headers =
-      options?.headers instanceof HttpHeaders ? options.headers : new HttpHeaders(options?.headers);
-
-    if (options?.idempotent) {
-      const key = this.getIdempotencyKey(path, body);
-      headers = headers.set('Idempotency-Key', key);
-    }
-
-    return this.http
-      .patch<T>(url, body, { params: options?.params, headers })
-      .pipe(catchError((err) => this.handleError(err)));
+    return this.sendWithBody<T>('PATCH', path, body, options);
   }
 
   put<T>(path: string, body: unknown = {}, options?: ApiClientOptions): Observable<T> {
-    const url = this.buildUrl(path);
-    let headers =
-      options?.headers instanceof HttpHeaders ? options.headers : new HttpHeaders(options?.headers);
-
-    if (options?.idempotent) {
-      const key = this.getIdempotencyKey(path, body);
-      headers = headers.set('Idempotency-Key', key);
-    }
-
-    return this.http
-      .put<T>(url, body, { params: options?.params, headers })
-      .pipe(catchError((err) => this.handleError(err)));
+    return this.sendWithBody<T>('PUT', path, body, options);
   }
 
   delete<T>(path: string, options?: ApiClientOptions): Observable<T> {

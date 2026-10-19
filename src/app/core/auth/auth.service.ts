@@ -1,13 +1,16 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, Injector, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Session, SupabaseClient } from '@supabase/supabase-js';
 import { createSupabaseAuthClient, inMemoryStorage } from './supabase-client';
+import { ApiClient } from '../api/api-client.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AuthService {
   private readonly router = inject(Router);
+  // Resolved lazily: ApiClient's HTTP chain runs the auth interceptor, which injects AuthService.
+  private readonly injector = inject(Injector);
   public readonly supabase: SupabaseClient = createSupabaseAuthClient();
   private currentSession: Session | null = null;
 
@@ -34,6 +37,8 @@ export class AuthService {
     } finally {
       this.currentSession = null;
       inMemoryStorage.clear();
+      // Keys belong to the signed-out user's actions; the next user must never replay them.
+      this.injector.get(ApiClient).resetIdempotencyKeys();
       await this.router.navigateByUrl('/login');
     }
   }
