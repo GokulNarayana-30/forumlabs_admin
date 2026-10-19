@@ -55,36 +55,73 @@ export interface ReorderCategoriesPayload {
   categories: CategoryReorderItemDto[];
 }
 
+// Wire shape of CatalogImportPreview / CatalogImportRow in docs/api/openapi.yaml
+// (apps/api/src/catalog/import/import-plan.ts). Never invent fields here: the
+// component derives its display values from these.
+export type ImportSheetDto = 'tests' | 'packages' | 'service_areas';
+export type ImportRowStatusDto = 'new' | 'changed' | 'unchanged' | 'error';
+
+export interface ImportMessageDto {
+  level: 'error' | 'warning';
+  /** The template column the message is about, or null for the whole row. */
+  field: string | null;
+  code: string;
+}
+
+export interface ImportChangeDto {
+  field: string;
+  from: unknown;
+  to: unknown;
+}
+
 export interface ImportPreviewRowDto {
-  row_number: number;
-  sheet: string;
+  sheet: ImportSheetDto;
+  row: number;
+  key: string;
+  status: ImportRowStatusDto;
+  messages: ImportMessageDto[];
+  changes: ImportChangeDto[];
+}
+
+export interface ImportCountsDto {
+  new: number;
+  changed: number;
+  unchanged: number;
+  warning: number;
+  error: number;
+  missing: number;
+}
+
+export interface ImportMissingItemDto {
+  id: string;
+  code: string | null;
   name: string;
-  action: string;
-  warnings: string[];
-  errors: string[];
+  kind: string;
+}
+
+export interface ImportNewCategoryDto {
+  name: string;
+  looks_like: string | null;
 }
 
 export interface CatalogImportPreviewDto {
   kind: 'import_preview';
   import_id: string;
   file_sha256: string;
-  expires_at: string;
+  base_version: number;
   can_apply: boolean;
-  summary: {
-    total_rows: number;
-    valid_rows: number;
-    warning_rows: number;
-    error_rows: number;
-    new_items_count: number;
-    price_change_count: number;
-  };
+  expires_at: string;
+  counts: ImportCountsDto;
   rows: ImportPreviewRowDto[];
+  missing_items: ImportMissingItemDto[];
+  missing_pincodes: string[];
+  new_categories: ImportNewCategoryDto[];
 }
 
 export interface ImportFileUnreadableDto {
   kind: 'import_file_unreadable';
   reason: string;
-  sheet?: string;
+  sheet: string | null;
 }
 
 export type CatalogImportPreviewResultDto = CatalogImportPreviewDto | ImportFileUnreadableDto;

@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { CatalogImportComponent } from './catalog-import.component';
-import { CatalogService } from '../../services/catalog.service';
+import { CatalogImportPreviewDto, CatalogService } from '../../services/catalog.service';
 
 describe('CatalogImportComponent', () => {
   let fixture: ComponentFixture<CatalogImportComponent>;
@@ -9,51 +9,52 @@ describe('CatalogImportComponent', () => {
   let mockCatalogService: any;
   let router: Router;
 
-  const mockPreviewValid = {
-    kind: 'import_preview' as const,
+  // Wire-shaped fixtures (CatalogImportPreview in docs/api/openapi.yaml). Typed as the exported
+  // DTO so a drift between the fixture and the interface fails the build.
+  const mockPreviewValid: CatalogImportPreviewDto = {
+    kind: 'import_preview',
     import_id: 'imp-123',
-    file_sha256: 'sha256-abc',
-    expires_at: '2026-10-19T12:00:00Z',
+    file_sha256: 'a'.repeat(64),
+    base_version: 7,
     can_apply: true,
-    summary: {
-      total_rows: 10,
-      valid_rows: 10,
-      warning_rows: 0,
-      error_rows: 0,
-      new_items_count: 2,
-      price_change_count: 3,
-    },
+    expires_at: '2026-10-19T12:00:00Z',
+    counts: { new: 2, changed: 3, unchanged: 5, warning: 1, error: 0, missing: 1 },
     rows: [
       {
-        row_number: 2,
-        sheet: 'Tests',
-        name: 'Complete Blood Count',
-        action: 'price_change',
-        warnings: [],
-        errors: [],
+        sheet: 'tests',
+        row: 2,
+        key: 'CBC',
+        status: 'changed',
+        messages: [{ level: 'warning', field: 'price', code: 'price_change_over_30_percent' }],
+        changes: [{ field: 'price', from: 40000, to: 60000 }],
+      },
+    ],
+    missing_items: [{ id: 'tst-hba1c', code: 'HBA1C', name: 'HbA1c', kind: 'test' }],
+    missing_pincodes: ['560001'],
+    new_categories: [{ name: 'Hearts', looks_like: 'Heart' }],
+  };
+
+  const mockPreviewWithErrors: CatalogImportPreviewDto = {
+    ...mockPreviewValid,
+    import_id: 'imp-456',
+    can_apply: false,
+    counts: { ...mockPreviewValid.counts, error: 2 },
+    rows: [
+      {
+        sheet: 'tests',
+        row: 3,
+        key: 'row-3',
+        status: 'error',
+        messages: [{ level: 'error', field: 'code', code: 'required' }],
+        changes: [],
       },
     ],
   };
 
-  const mockPreviewWithErrors = {
-    ...mockPreviewValid,
-    import_id: 'imp-456',
-    can_apply: false,
-    summary: {
-      ...mockPreviewValid.summary,
-      error_rows: 2,
-    },
-    rows: [
-      {
-        row_number: 3,
-        sheet: 'Tests',
-        name: 'Invalid Test',
-        action: 'error',
-        warnings: [],
-        errors: ['Missing required code'],
-      },
-    ],
-  };
+  const findApplyButton = (): HTMLButtonElement | undefined =>
+    Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find((b) =>
+      (b.textContent ?? '').includes('Apply Import'),
+    ) as HTMLButtonElement | undefined;
 
   beforeEach(async () => {
     mockCatalogService = {
@@ -111,15 +112,50 @@ describe('CatalogImportComponent', () => {
     expect(mockCatalogService.uploadImportFile).not.toHaveBeenCalled();
   });
 
-  it('renders server preview with summary cards and row preview', async () => {
+  it('renders a wire-shaped preview: derived counts, rows, messages and an enabled Apply', async () => {
     const validFile = new File(['content'], 'catalog.xlsx');
     await component.onFileSelected(validFile);
-    fixture.detectChanges();
+    expect(() => fixture.detectChanges()).not.toThrow();
 
     expect(component.preview()).toEqual(mockPreviewValid);
+    expect(component.canApply()).toBe(true);
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.textContent).toContain('10'); // Total rows
-    expect(el.textContent).toContain('Complete Blood Count');
+    // total = new + changed + unchanged + error = 2 + 3 + 5 + 0
+    expect(el.querySelector('[data-testid="count-total"]')?.textContent?.trim()).toBe('10');
+    expect(el.querySelector('[data-testid="count-error"]')?.textContent?.trim()).toBe('0');
+    expect(el.textContent).toContain('CBC');
+    expect(el.textContent).toContain('Tests');
+    expect(el.textContent).toContain('price changes the price by more than 30%');
+    expect(el.textContent).toContain('price: 40000 -> 60000');
+    expect(el.textContent).toContain('1 not in the file');
+    expect(el.textContent).toContain('Hearts');
+    const apply = findApplyButton();
+    expect(apply).toBeDefined();
+    expect(apply!.disabled).toBe(false);
+  });
+
+  it('renders an error preview without throwing and keeps Apply disabled', async () => {
+    mockCatalogService.uploadImportFile.mockResolvedValue(mockPreviewWithErrors);
+    await component.onFileSelected(new File(['content'], 'catalog.xlsx'));
+    expect(() => fixture.detectChanges()).not.toThrow();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="count-error"]')?.textContent?.trim()).toBe('2');
+    expect(el.textContent).toContain('code is required');
+    const apply = findApplyButton();
+    expect(apply).toBeDefined();
+    expect(apply!.disabled).toBe(true);
+  });
+
+  it('keeps Apply disabled when the server allows it but counts still report errors', async () => {
+    mockCatalogService.uploadImportFile.mockResolvedValue({
+      ...mockPreviewWithErrors,
+      can_apply: true,
+    } satisfies CatalogImportPreviewDto);
+    await component.onFileSelected(new File(['content'], 'catalog.xlsx'));
+    fixture.detectChanges();
+
+    expect(component.canApply()).toBe(false);
   });
 
   it('handles import_file_unreadable result kind without showing apply controls', async () => {

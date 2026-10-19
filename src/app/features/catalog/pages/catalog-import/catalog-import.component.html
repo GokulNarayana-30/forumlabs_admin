@@ -90,23 +90,32 @@
   <!-- Preview Container -->
   @if (preview(); as prev) {
     <div class="space-y-6">
-      <!-- Summary Metrics Grid -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <!-- Summary Metrics Grid (derived from the API counts) -->
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
         <div class="bg-white rounded-2xl border border-surface-200 p-4 shadow-xs">
           <span class="text-xs font-semibold text-surface-500 uppercase tracking-wider block">
             Total Rows
           </span>
-          <div class="text-2xl font-extrabold text-surface-900 mt-1">
-            {{ prev.summary.total_rows }}
+          <div class="text-2xl font-extrabold text-surface-900 mt-1" data-testid="count-total">
+            {{ totalRows() }}
           </div>
         </div>
 
         <div class="bg-white rounded-2xl border border-surface-200 p-4 shadow-xs">
           <span class="text-xs font-semibold text-emerald-700 uppercase tracking-wider block">
-            Valid Rows
+            New / Changed
           </span>
           <div class="text-2xl font-extrabold text-emerald-700 mt-1">
-            {{ prev.summary.valid_rows }}
+            {{ prev.counts.new }} / {{ prev.counts.changed }}
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-surface-200 p-4 shadow-xs">
+          <span class="text-xs font-semibold text-surface-500 uppercase tracking-wider block">
+            Unchanged
+          </span>
+          <div class="text-2xl font-extrabold text-surface-900 mt-1">
+            {{ prev.counts.unchanged }}
           </div>
         </div>
 
@@ -115,7 +124,7 @@
             Warnings
           </span>
           <div class="text-2xl font-extrabold text-amber-700 mt-1">
-            {{ prev.summary.warning_rows }}
+            {{ prev.counts.warning }}
           </div>
         </div>
 
@@ -123,8 +132,8 @@
           <span class="text-xs font-semibold text-rose-700 uppercase tracking-wider block">
             Errors
           </span>
-          <div class="text-2xl font-extrabold text-rose-700 mt-1">
-            {{ prev.summary.error_rows }}
+          <div class="text-2xl font-extrabold text-rose-700 mt-1" data-testid="count-error">
+            {{ prev.counts.error }}
           </div>
         </div>
       </div>
@@ -145,7 +154,9 @@
                 (ngModelChange)="hideMissingItems.set($event)"
                 class="rounded-sm border-surface-300 text-primary-600 focus:ring-primary-500"
               />
-              <span>Hide missing catalog items</span>
+              <span
+                >Hide missing catalog items ({{ prev.missing_items.length }} not in the file)</span
+              >
             </label>
 
             <label class="flex items-center gap-2 text-xs text-surface-700 cursor-pointer">
@@ -155,9 +166,25 @@
                 (ngModelChange)="unserveMissingPincodes.set($event)"
                 class="rounded-sm border-surface-300 text-primary-600 focus:ring-primary-500"
               />
-              <span>Unserve missing pincodes</span>
+              <span
+                >Unserve missing pincodes ({{ prev.missing_pincodes.length }} not in the file)</span
+              >
             </label>
           </div>
+          @if (prev.new_categories.length > 0) {
+            <p class="text-xs text-surface-600">
+              New categories:
+              @for (cat of prev.new_categories; track cat.name; let last = $last) {
+                <span class="font-semibold">{{ cat.name }}</span>
+                @if (cat.looks_like) {
+                  <span class="text-amber-700"> (looks like {{ cat.looks_like }})</span>
+                }
+                @if (!last) {
+                  ,
+                }
+              }
+            </p>
+          }
         </div>
 
         <div class="flex items-center gap-3">
@@ -196,42 +223,43 @@
               <tr class="text-surface-600 font-bold uppercase tracking-wider">
                 <th class="py-2.5 px-4 w-16">Row</th>
                 <th class="py-2.5 px-4">Sheet</th>
-                <th class="py-2.5 px-4">Item Name</th>
+                <th class="py-2.5 px-4">Code / Key</th>
                 <th class="py-2.5 px-4">Action</th>
-                <th class="py-2.5 px-4">Status / Errors</th>
+                <th class="py-2.5 px-4">Status / Changes</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-surface-100 text-surface-800">
-              @for (row of prev.rows; track row.row_number) {
+              @for (row of prev.rows; track row.sheet + ':' + row.row) {
                 <tr
                   [class]="
-                    row.errors.length > 0
+                    row.status === 'error'
                       ? 'bg-rose-50/50 hover:bg-rose-50'
                       : 'hover:bg-surface-50 transition-colors'
                   "
                 >
-                  <td class="py-2.5 px-4 font-mono font-bold text-surface-500">
-                    #{{ row.row_number }}
-                  </td>
+                  <td class="py-2.5 px-4 font-mono font-bold text-surface-500">#{{ row.row }}</td>
                   <td class="py-2.5 px-4 font-medium text-surface-700">
-                    {{ row.sheet }}
+                    {{ sheetLabel(row.sheet) }}
                   </td>
                   <td class="py-2.5 px-4 font-semibold text-surface-900">
-                    {{ row.name }}
+                    {{ row.key }}
                   </td>
                   <td class="py-2.5 px-4 font-mono uppercase text-[10px] text-surface-600">
-                    {{ row.action }}
+                    {{ row.status }}
                   </td>
                   <td class="py-2.5 px-4">
-                    @if (row.errors.length > 0) {
-                      <span class="text-rose-700 font-medium block">
-                        {{ row.errors.join('; ') }}
-                      </span>
-                    } @else if (row.warnings.length > 0) {
-                      <span class="text-amber-700 font-medium block">
-                        {{ row.warnings.join('; ') }}
-                      </span>
-                    } @else {
+                    @if (rowErrors(row).length > 0) {
+                      @for (m of rowErrors(row); track $index) {
+                        <span class="text-rose-700 font-medium block">{{ messageText(m) }}</span>
+                      }
+                    }
+                    @for (m of rowWarnings(row); track $index) {
+                      <span class="text-amber-700 font-medium block">{{ messageText(m) }}</span>
+                    }
+                    @for (c of row.changes; track c.field) {
+                      <span class="text-surface-600 block font-mono">{{ changeText(c) }}</span>
+                    }
+                    @if (row.messages.length === 0 && row.changes.length === 0) {
                       <span class="text-emerald-700 font-medium">&check; Valid</span>
                     }
                   </td>

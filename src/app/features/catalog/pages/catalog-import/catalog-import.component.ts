@@ -2,9 +2,46 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
-import { CatalogImportPreviewDto, CatalogService } from '../../services/catalog.service';
+import {
+  CatalogImportPreviewDto,
+  CatalogService,
+  ImportChangeDto,
+  ImportMessageDto,
+  ImportPreviewRowDto,
+  ImportSheetDto,
+} from '../../services/catalog.service';
 
 export const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MiB
+
+/** Plain wording for the closed CatalogImportMessageCode list (the server sends codes only). */
+export const IMPORT_MESSAGE_TEXT: Readonly<Record<string, string>> = {
+  required: 'is required',
+  invalid_code: 'is not a valid code',
+  duplicate_in_file: 'appears more than once in the file',
+  code_used_by_test: 'is already used by a test',
+  kind_mismatch: 'belongs to an item of the other kind',
+  invalid_price: 'is not a valid price',
+  offer_not_below_price: 'must be below the price',
+  price_change_over_30_percent: 'changes the price by more than 30%',
+  unknown_sample_type: 'is not a known sample type',
+  invalid_fasting: 'is not a valid fasting value',
+  invalid_report_time: 'is not a valid report time',
+  invalid_who_can_book: 'is not a valid "who can book" value',
+  invalid_yes_no: 'must be Yes or No',
+  claims_wording: 'uses claims wording that is not allowed',
+  too_long: 'is too long',
+  unknown_test_code: 'names a test code that does not exist',
+  new_category: 'creates a new category',
+  category_looks_like: 'looks like an existing category',
+  invalid_pincode: 'is not a valid pincode',
+  invalid_fee: 'is not a valid fee',
+};
+
+const SHEET_LABELS: Readonly<Record<ImportSheetDto, string>> = {
+  tests: 'Tests',
+  packages: 'Packages',
+  service_areas: 'Service areas',
+};
 
 @Component({
   selector: 'app-catalog-import',
@@ -30,8 +67,37 @@ export class CatalogImportComponent {
 
   readonly canApply = computed(() => {
     const prev = this.preview();
-    return !!prev && prev.can_apply && prev.summary.error_rows === 0;
+    return !!prev && prev.can_apply && prev.counts.error === 0;
   });
+
+  /** Rows in the file, derived from the API's counts (new + changed + unchanged + error). */
+  readonly totalRows = computed(() => {
+    const c = this.preview()?.counts;
+    return c ? c.new + c.changed + c.unchanged + c.error : 0;
+  });
+
+  sheetLabel(sheet: ImportSheetDto): string {
+    return SHEET_LABELS[sheet] ?? sheet;
+  }
+
+  messageText(message: ImportMessageDto): string {
+    const text = IMPORT_MESSAGE_TEXT[message.code] ?? message.code;
+    return message.field ? `${message.field} ${text}` : text;
+  }
+
+  rowErrors(row: ImportPreviewRowDto): ImportMessageDto[] {
+    return row.messages.filter((m) => m.level === 'error');
+  }
+
+  rowWarnings(row: ImportPreviewRowDto): ImportMessageDto[] {
+    return row.messages.filter((m) => m.level === 'warning');
+  }
+
+  changeText(change: ImportChangeDto): string {
+    const show = (v: unknown): string =>
+      v === null || v === undefined ? '(empty)' : typeof v === 'string' ? v : JSON.stringify(v);
+    return `${change.field}: ${show(change.from)} -> ${show(change.to)}`;
+  }
 
   async onFileInputChange(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
