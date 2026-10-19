@@ -50,13 +50,56 @@ export function scanSource(content, filePath) {
   return errors;
 }
 
+// Tailwind 4 emits a colour utility only when its `--color-*` theme variable
+// exists. `primary` and `surface` are not Tailwind colours, so every shade a
+// template uses must be declared in styles.scss (the @theme bridge to the
+// PrimeNG preset); otherwise the class is silently dropped from the bundle.
+const THEME_CLASS_REGEX =
+  /(?<![\w-])(?:[a-z]+:)*(?:bg|text|border(?:-[trblxy])?|ring|ring-offset|from|via|to|divide|outline|fill|stroke|placeholder|accent|caret|decoration|shadow)-(primary|surface)-(\d+)(?![\w-])/g;
+
+export function collectThemeClassTokens(content) {
+  const tokens = new Set();
+  THEME_CLASS_REGEX.lastIndex = 0;
+  let match;
+  while ((match = THEME_CLASS_REGEX.exec(content)) !== null) {
+    tokens.add(`${match[1]}-${match[2]}`);
+  }
+  return tokens;
+}
+
+export function declaredThemeTokens(stylesContent) {
+  const declared = new Set();
+  for (const m of stylesContent.matchAll(/--color-(primary|surface)-(\d+)\s*:/g)) {
+    declared.add(`${m[1]}-${m[2]}`);
+  }
+  return declared;
+}
+
+export function checkThemeTokens(sources, stylesContent) {
+  const declared = declaredThemeTokens(stylesContent);
+  const errors = [];
+  for (const { relPath, content } of sources) {
+    for (const token of collectThemeClassTokens(content)) {
+      if (!declared.has(token)) {
+        errors.push(
+          `${relPath} - Theme colour '${token}' is used but '--color-${token}' is not declared in src/styles.scss`,
+        );
+      }
+    }
+  }
+  return errors;
+}
+
 export function runSelfTest() {
   console.log('[check-ui-boundaries] Running self-test negative controls...');
 
   // 1. Planted forbidden colour
   const badColor = 'const myBg = "#714EA0";';
   const cErrors = scanSource(badColor, 'src/app/example.component.ts');
-  if (cErrors.length === 0 || !cErrors.some((e) => e.includes('literal hex/rgb/hsl/oklch colour'))) {
+  if (
+    cErrors.length === 0 ||
+    !cErrors.some((e) => e.includes('literal hex/rgb/hsl/oklch colour'))
+  ) {
     throw new Error('Self-test failed: literal colour was not rejected');
   }
 
@@ -77,7 +120,10 @@ export function runSelfTest() {
   // 4. Planted direct Supabase query
   const badDb = 'supabase.from("orders").select("*");';
   const dErrors = scanSource(badDb, 'src/app/example.component.ts');
-  if (dErrors.length === 0 || !dErrors.some((e) => e.includes('direct Supabase table/storage query'))) {
+  if (
+    dErrors.length === 0 ||
+    !dErrors.some((e) => e.includes('direct Supabase table/storage query'))
+  ) {
     throw new Error('Self-test failed: Supabase table query was not rejected');
   }
 
@@ -85,10 +131,37 @@ export function runSelfTest() {
   const allowedInPreset = 'const primary = { 500: "#714EA0" };';
   const pErrors = scanSource(allowedInPreset, 'src/app/core/theme/forum-theme.preset.ts');
   if (pErrors.length > 0) {
-    throw new Error(`Self-test failed: preset colours were wrongly rejected: ${pErrors.join(', ')}`);
+    throw new Error(
+      `Self-test failed: preset colours were wrongly rejected: ${pErrors.join(', ')}`,
+    );
   }
 
-  console.log('[check-ui-boundaries] Self-test PASSED (all planted offenders rejected, preset allowed).');
+  // 6. Planted undeclared theme colour (the CR-06 failure: no @theme bridge)
+  const usage = [
+    {
+      relPath: 'src/app/example.component.html',
+      content: '<button class="text-white bg-primary-600 hover:border-surface-200">',
+    },
+  ];
+  const missing = checkThemeTokens(usage, '@import "tailwindcss";');
+  if (missing.length !== 2) {
+    throw new Error(
+      `Self-test failed: undeclared theme colours were not rejected (${missing.length} errors)`,
+    );
+  }
+  const bridged = checkThemeTokens(
+    usage,
+    '@theme inline { --color-primary-600: var(--p-primary-600); --color-surface-200: var(--p-surface-200); }',
+  );
+  if (bridged.length > 0) {
+    throw new Error(
+      `Self-test failed: declared theme colours were wrongly rejected: ${bridged.join(', ')}`,
+    );
+  }
+
+  console.log(
+    '[check-ui-boundaries] Self-test PASSED (all planted offenders rejected, preset allowed).',
+  );
 }
 
 function getAllFiles(dir, fileList = []) {
@@ -102,9 +175,7 @@ function getAllFiles(dir, fileList = []) {
       }
     } else if (
       entry.isFile() &&
-      (entry.name.endsWith('.ts') ||
-        entry.name.endsWith('.html') ||
-        entry.name.endsWith('.scss'))
+      (entry.name.endsWith('.ts') || entry.name.endsWith('.html') || entry.name.endsWith('.scss'))
     ) {
       fileList.push(fullPath);
     }
@@ -122,13 +193,21 @@ function main() {
 
   const allFiles = getAllFiles(srcRoot);
   const allErrors = [];
+  const templateSources = [];
 
   for (const file of allFiles) {
     const content = fs.readFileSync(file, 'utf8');
     const relPath = path.relative(adminRoot, file);
     const errors = scanSource(content, relPath);
     allErrors.push(...errors);
+    if ((file.endsWith('.html') || file.endsWith('.ts')) && !file.endsWith('.spec.ts')) {
+      templateSources.push({ relPath, content });
+    }
   }
+
+  const stylesPath = path.join(srcRoot, 'styles.scss');
+  const stylesContent = fs.existsSync(stylesPath) ? fs.readFileSync(stylesPath, 'utf8') : '';
+  allErrors.push(...checkThemeTokens(templateSources, stylesContent));
 
   if (allErrors.length > 0) {
     console.error(`[check-ui-boundaries] Validation FAILED (${allErrors.length} violation(s)):`);
