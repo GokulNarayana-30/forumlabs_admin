@@ -1,8 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { ApiClient } from '../api/api-client.service';
-import { AuthService } from '../auth/auth.service';
 
 /** The nine staff roles, exactly as apps/api/src/staff/staff-roles.ts (STAFF_ROLES). */
 export type StaffRole =
@@ -29,8 +27,6 @@ export interface StaffUserProfile {
 })
 export class StaffStateService {
   private readonly api = inject(ApiClient);
-  private readonly auth = inject(AuthService);
-  private readonly router = inject(Router);
 
   private readonly _currentUser = signal<StaffUserProfile | null>(null);
   private readonly _roles = signal<string[]>([]);
@@ -53,16 +49,23 @@ export class StaffStateService {
     return requiredRoles.some((r) => currentRoles.includes(r));
   }
 
-  async loadProfile(): Promise<void> {
+  /**
+   * Loads GET /staff/me. Never signs out or navigates itself: the caller (the login screen) shows
+   * the right message and signs out once (WR-15). `status` is the HTTP status, 0 when unknown.
+   */
+  async loadProfile(): Promise<{ ok: true } | { ok: false; status: number }> {
     try {
       const profile = await firstValueFrom(this.api.get<StaffUserProfile>('/staff/me'));
       this._currentUser.set(profile);
       this._roles.set(profile.roles ?? []);
-    } catch {
-      this._currentUser.set(null);
-      this._roles.set([]);
-      await this.auth.signOut();
-      await this.router.navigateByUrl('/login');
+      return { ok: true };
+    } catch (err: unknown) {
+      this.clear();
+      const status =
+        err && typeof err === 'object' && typeof (err as { status?: unknown }).status === 'number'
+          ? (err as { status: number }).status
+          : 0;
+      return { ok: false, status };
     }
   }
 

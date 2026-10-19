@@ -18,11 +18,12 @@ describe('LoginComponent', () => {
 
     mockAuthService = {
       signIn: vi.fn(),
+      signOut: vi.fn().mockResolvedValue(undefined),
     };
 
     mockStaffState = {
       roles: rolesSignal,
-      loadProfile: vi.fn(),
+      loadProfile: vi.fn().mockResolvedValue({ ok: true }),
     };
 
     mockRouter = {
@@ -62,9 +63,10 @@ describe('LoginComponent', () => {
   });
 
   it('signs in and redirects to /no-access when staff member has no active roles', async () => {
-    mockAuthService.signIn.mockResolvedValue({ user: { id: 'u1' } });
+    mockAuthService.signIn.mockResolvedValue({ session: { access_token: 'jwt' }, error: null });
     mockStaffState.loadProfile.mockImplementation(async () => {
       rolesSignal.set([]);
+      return { ok: true };
     });
 
     component.email.set('noroles@example.com');
@@ -78,9 +80,10 @@ describe('LoginComponent', () => {
   });
 
   it('signs in and redirects to operational home when staff member has active roles', async () => {
-    mockAuthService.signIn.mockResolvedValue({ user: { id: 'u1' } });
+    mockAuthService.signIn.mockResolvedValue({ session: { access_token: 'jwt' }, error: null });
     mockStaffState.loadProfile.mockImplementation(async () => {
       rolesSignal.set(['booking_dispatch']);
+      return { ok: true };
     });
 
     component.email.set('staff@example.com');
@@ -93,8 +96,12 @@ describe('LoginComponent', () => {
     expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/bookings');
   });
 
-  it('displays error message on failed authentication', async () => {
-    mockAuthService.signIn.mockRejectedValue(new Error('Invalid login credentials'));
+  it('shows a message for wrong credentials and never loads the profile (WR-15)', async () => {
+    // The real AuthService.signIn never throws: it answers {session: null, error}.
+    mockAuthService.signIn.mockResolvedValue({
+      session: null,
+      error: new Error('Invalid login credentials'),
+    });
 
     component.email.set('staff@example.com');
     component.password.set('wrong');
@@ -102,7 +109,33 @@ describe('LoginComponent', () => {
     await component.onSubmit();
 
     fixture.detectChanges();
-    expect(component.errorMessage()).toContain('Invalid login credentials');
+    expect(component.errorMessage()).toBe('Invalid email or password.');
+    expect(mockStaffState.loadProfile).not.toHaveBeenCalled();
     expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
+  });
+
+  it('a 403 profile shows the no-access text and signs out exactly once (WR-15)', async () => {
+    mockAuthService.signIn.mockResolvedValue({ session: { access_token: 'jwt' }, error: null });
+    mockStaffState.loadProfile.mockResolvedValue({ ok: false, status: 403 });
+
+    component.email.set('customer@example.com');
+    component.password.set('password123');
+    await component.onSubmit();
+
+    expect(component.errorMessage()).toBe('This account has no staff access.');
+    expect(mockAuthService.signOut).toHaveBeenCalledTimes(1);
+    expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
+  });
+
+  it('an unavailable profile shows a service message and signs out once', async () => {
+    mockAuthService.signIn.mockResolvedValue({ session: { access_token: 'jwt' }, error: null });
+    mockStaffState.loadProfile.mockResolvedValue({ ok: false, status: 503 });
+
+    component.email.set('staff@example.com');
+    component.password.set('password123');
+    await component.onSubmit();
+
+    expect(component.errorMessage()).toContain('Service unavailable');
+    expect(mockAuthService.signOut).toHaveBeenCalledTimes(1);
   });
 });

@@ -182,9 +182,7 @@ export class CatalogService {
     );
   }
 
-  async reorderCategories(
-    categories: CategoryReorderItemDto[],
-  ): Promise<{ success: true }> {
+  async reorderCategories(categories: CategoryReorderItemDto[]): Promise<{ success: true }> {
     return firstValueFrom(
       this.api.put<{ success: true }>(
         '/staff/catalog/categories/reorder',

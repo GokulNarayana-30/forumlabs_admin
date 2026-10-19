@@ -31,8 +31,23 @@ export class LoginComponent {
     this.errorMessage.set('');
 
     try {
-      await this.authService.signIn(this.email(), this.password());
-      await this.staffState.loadProfile();
+      // signIn never throws: it answers {session, error} (WR-15).
+      const { session, error } = await this.authService.signIn(this.email(), this.password());
+      if (error || !session) {
+        this.errorMessage.set('Invalid email or password.');
+        return;
+      }
+
+      const profile = await this.staffState.loadProfile();
+      if (!profile.ok) {
+        this.errorMessage.set(
+          profile.status === 403
+            ? 'This account has no staff access.'
+            : 'Service unavailable, please try again shortly.',
+        );
+        await this.authService.signOut();
+        return;
+      }
 
       const roles = this.staffState.roles();
       if (!roles || roles.length === 0) {
@@ -51,8 +66,9 @@ export class LoginComponent {
         await this.router.navigateByUrl('/no-access');
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Invalid login credentials';
-      this.errorMessage.set(message);
+      this.errorMessage.set(
+        err instanceof Error && err.message ? err.message : 'Sign-in failed, please try again.',
+      );
     } finally {
       this.isSubmitting.set(false);
     }

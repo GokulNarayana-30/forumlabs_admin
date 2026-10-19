@@ -92,13 +92,16 @@ describe('StaffStateService (Reactive Role State)', () => {
     expect(service.hasRole('catalog_manager')).toBe(true);
   });
 
-  it('clears state, signs out, and redirects to /login on profile load error', async () => {
+  it('clears state and reports the status on a profile load error, leaving sign-out to the caller (WR-15)', async () => {
     mockApiClient.get.mockReturnValueOnce(throwError(() => ({ status: 403, code: 'forbidden' })));
 
-    await service.loadProfile();
+    const result = await service.loadProfile();
 
+    expect(result).toEqual({ ok: false, status: 403 });
     expect(service.currentUser()).toBeNull();
     expect(service.roles()).toEqual([]);
-    expect(mockAuthService.signOut).toHaveBeenCalled();
+    // The login screen signs out exactly once; loadProfile never navigates or signs out itself.
+    expect(mockAuthService.signOut).not.toHaveBeenCalled();
+    expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
   });
 });
