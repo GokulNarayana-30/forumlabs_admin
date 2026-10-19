@@ -112,4 +112,29 @@ describe('BookingListComponent', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.textContent).toContain('No bookings found');
   });
+
+  describe('receive at lab honours 200 refusals (WR-13)', () => {
+    const collected = () => ({ ...mockOrders[0], status: 'collected', total_paise: 89900 });
+
+    it('shows the refusal and no success text when the API answers event_not_allowed', async () => {
+      mockBookingsService.recordEvent = vi
+        .fn()
+        .mockResolvedValue({ kind: 'event_not_allowed', reason: 'wrong_status' });
+
+      await component.markReceivedAtLab(collected() as any);
+
+      expect(component.successMessage()).toBe('');
+      expect(component.errorMessage()).toContain('refresh');
+      expect(mockBookingsService.getOrders).toHaveBeenCalledTimes(2); // reloaded
+    });
+
+    it('shows the success text only for a recorded event', async () => {
+      mockBookingsService.recordEvent = vi.fn().mockResolvedValue({ kind: 'event_recorded' });
+
+      await component.markReceivedAtLab(collected() as any);
+
+      expect(component.successMessage()).toContain('marked as received at lab');
+      expect(component.errorMessage()).toBe('');
+    });
+  });
 });

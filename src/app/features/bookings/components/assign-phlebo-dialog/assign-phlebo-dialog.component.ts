@@ -15,6 +15,8 @@ import {
   BookingsService,
   StaffOrderListItemDto,
   StaffPhlebotomistDto,
+  eventRefusalText,
+  isRecorded,
 } from '../../services/bookings.service';
 
 @Component({
@@ -79,10 +81,15 @@ export class AssignPhleboDialogComponent implements OnInit, OnChanges {
     this.errorMessage.set('');
 
     try {
-      await this.bookingsService.recordEvent(this.order.order_id, {
+      const res = await this.bookingsService.recordEvent(this.order.order_id, {
         kind: 'phlebotomist_assigned',
         phlebotomist_id: this.selectedPhleboId(),
       });
+      if (!isRecorded(res)) {
+        // A 200 refusal: keep the dialog open so the desk can pick again.
+        this.errorMessage.set(eventRefusalText(res));
+        return;
+      }
       this.assigned.emit();
       this.close();
     } catch (err: unknown) {

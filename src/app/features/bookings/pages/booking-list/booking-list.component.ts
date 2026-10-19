@@ -6,6 +6,8 @@ import {
   StaffOrderListItemDto,
   getIstTodayString,
   shiftDate,
+  eventRefusalText,
+  isRecorded,
 } from '../../services/bookings.service';
 import { StaffStateService } from '../../../../core/state/staff-state.service';
 import { AssignPhleboDialogComponent } from '../../components/assign-phlebo-dialog/assign-phlebo-dialog.component';
@@ -132,11 +134,17 @@ export class BookingListComponent implements OnInit {
 
     try {
       this.isLoading.set(true);
-      await this.bookingsService.recordEvent(order.order_id, {
+      const res = await this.bookingsService.recordEvent(order.order_id, {
         kind: 'received_by_lab',
       });
-      this.successMessage.set(`Order ${order.booking_ref} marked as received at lab.`);
       await this.loadOrders();
+      // After the reload: loadOrders clears the error line.
+      if (isRecorded(res)) {
+        this.successMessage.set(`Order ${order.booking_ref} marked as received at lab.`);
+      } else {
+        this.successMessage.set('');
+        this.errorMessage.set(eventRefusalText(res));
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to record received at lab';
       this.errorMessage.set(message);

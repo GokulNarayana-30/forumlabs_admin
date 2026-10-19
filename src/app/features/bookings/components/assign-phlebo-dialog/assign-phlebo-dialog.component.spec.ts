@@ -81,4 +81,33 @@ describe('AssignPhleboDialogComponent', () => {
     expect(component.errorMessage()).toContain('Please select a phlebotomist');
     expect(mockBookingsService.recordEvent).not.toHaveBeenCalled();
   });
+
+  it('keeps the dialog open and does not emit on a 200 phlebotomist_not_found refusal (WR-13)', async () => {
+    await fixture.whenStable();
+    mockBookingsService.recordEvent.mockResolvedValue({ kind: 'phlebotomist_not_found' });
+    component.selectedPhleboId.set('phlebo-1');
+    const emitSpy = vi.spyOn(component.assigned, 'emit');
+    const visibleSpy = vi.spyOn(component.visibleChange, 'emit');
+
+    await component.onSubmit();
+
+    expect(emitSpy).not.toHaveBeenCalled();
+    expect(visibleSpy).not.toHaveBeenCalled();
+    expect(component.errorMessage()).toContain('no longer active');
+  });
+
+  it('shows a refresh hint on a 200 event_not_allowed refusal (WR-13)', async () => {
+    await fixture.whenStable();
+    mockBookingsService.recordEvent.mockResolvedValue({
+      kind: 'event_not_allowed',
+      reason: 'wrong_status',
+    });
+    component.selectedPhleboId.set('phlebo-1');
+    const emitSpy = vi.spyOn(component.assigned, 'emit');
+
+    await component.onSubmit();
+
+    expect(emitSpy).not.toHaveBeenCalled();
+    expect(component.errorMessage()).toContain('refresh');
+  });
 });

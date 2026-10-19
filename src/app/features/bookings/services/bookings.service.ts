@@ -106,6 +106,30 @@ export interface StaffOrderEventRecordResult {
   expected_paise?: number;
 }
 
+/**
+ * Business refusals come back as HTTP 200 with a `kind` (idempotency layer, NotRememberedResult),
+ * so a resolved request is not a success: only these two kinds are (WR-13).
+ */
+export function isRecorded(res: StaffOrderEventRecordResult | null | undefined): boolean {
+  return res?.kind === 'event_recorded' || res?.kind === 'event_already_recorded';
+}
+
+/** Readable text for a 200 refusal of an order event. */
+export function eventRefusalText(res: StaffOrderEventRecordResult | null | undefined): string {
+  switch (res?.kind) {
+    case 'phlebotomist_not_found':
+      return 'That phlebotomist is no longer active, pick another.';
+    case 'event_not_allowed':
+      return 'This booking changed, refresh the list and try again.';
+    case 'reason_not_listed':
+      return 'That reason is not accepted for this booking.';
+    case 'payment_amount_mismatch':
+      return 'The amount does not match the order total.';
+    default:
+      return `The booking could not be updated${res?.kind ? ` (${res.kind})` : ''}.`;
+  }
+}
+
 @Injectable({
   providedIn: 'root',
 })
