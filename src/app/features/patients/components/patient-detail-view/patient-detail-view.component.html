@@ -166,12 +166,19 @@
             <tr *ngFor="let r of patient.reports" class="hover:bg-surface-50">
               <td class="py-2.5 px-3 font-mono font-semibold text-surface-900">
                 {{ r.report_number }}
+                <span class="text-surface-500 font-normal">v{{ r.version }}</span>
               </td>
               <td class="py-2.5 px-3">
                 <p-tag [value]="r.status" severity="success"></p-tag>
               </td>
               <td class="py-2.5 px-3 text-right">
-                <div *ngIf="canAccessReportDocuments()">
+                <div
+                  *ngIf="canAccessReportDocuments() && !isReportOpenable(r)"
+                  class="text-surface-400 italic text-xs"
+                >
+                  Withdrawn, not openable
+                </div>
+                <div *ngIf="canAccessReportDocuments() && isReportOpenable(r)">
                   <p-button
                     label="Preview PDF"
                     icon="pi pi-external-link"

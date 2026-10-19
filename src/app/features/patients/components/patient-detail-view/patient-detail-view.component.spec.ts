@@ -1,7 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { PatientDetailViewComponent } from './patient-detail-view.component';
-import { PatientsService, StaffPatientDetail } from '../../services/patients.service';
+import {
+  PatientsService,
+  StaffPatientDetail,
+  StaffPatientReport,
+} from '../../services/patients.service';
 import { StaffStateService } from '../../../../core/state/staff-state.service';
 
 describe('PatientDetailViewComponent', () => {
@@ -40,8 +44,6 @@ describe('PatientDetailViewComponent', () => {
         report_number: 'REG-2026-0042',
         status: 'released',
         version: 1,
-        preview_url: '/v1/staff/reports/rep-2001/preview',
-        download_url: '/v1/staff/reports/rep-2001/download',
       },
     ],
   };
@@ -127,5 +129,39 @@ describe('PatientDetailViewComponent', () => {
       '_blank',
       'noopener,noreferrer',
     );
+  });
+
+  it('opens the version the API named, never a default (CR-02)', async () => {
+    mockStaffStateService.hasRole.mockReturnValue(true);
+    vi.spyOn(window, 'open').mockImplementation(() => null);
+
+    await component.openReportDocument({ ...mockPatient.reports[0], version: 2 });
+
+    expect(mockPatientsService.getReportDocumentLink).toHaveBeenCalledWith('rep-2001', 2);
+  });
+
+  it('makes no API call and shows an error when the version is missing', async () => {
+    mockStaffStateService.hasRole.mockReturnValue(true);
+    const report = { ...mockPatient.reports[0] } as Partial<StaffPatientReport>;
+    delete report.version;
+
+    await component.openReportDocument(report as StaffPatientReport);
+
+    expect(mockPatientsService.getReportDocumentLink).not.toHaveBeenCalled();
+    expect(component.errorMessage()).toContain('version unavailable');
+  });
+
+  it('never opens a withdrawn version and shows no preview button for it', async () => {
+    mockStaffStateService.hasRole.mockReturnValue(true);
+    const withdrawn: StaffPatientReport = { ...mockPatient.reports[0], status: 'withdrawn' };
+    component.patient = { ...mockPatient, reports: [withdrawn] };
+    fixture.componentRef.changeDetectorRef.markForCheck();
+    fixture.detectChanges();
+
+    await component.openReportDocument(withdrawn);
+
+    expect(mockPatientsService.getReportDocumentLink).not.toHaveBeenCalled();
+    expect(component.errorMessage()).toContain('withdrawn');
+    expect(component.isReportOpenable(withdrawn)).toBe(false);
   });
 });

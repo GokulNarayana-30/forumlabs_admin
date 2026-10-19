@@ -28,13 +28,13 @@ export interface StaffPatientBooking {
   created_at: string;
 }
 
+/** StaffPatientReportSummary: the current version of a report (never a stale default). */
 export interface StaffPatientReport {
   report_id: string;
+  /** Registration number of the current version. */
   report_number: string;
-  status: string;
-  version?: number;
-  preview_url?: string;
-  download_url?: string;
+  status: 'draft' | 'released' | 'withdrawn';
+  version: number;
 }
 
 export interface StaffPatientDetail {
@@ -74,7 +74,7 @@ export class PatientsService {
     return firstValueFrom(this.api.get<StaffPatientDetail>(`/staff/patients/${patientRowId}`));
   }
 
-  async getReportDocumentLink(reportId: string, version: number = 1): Promise<ReportDocumentLink> {
+  async getReportDocumentLink(reportId: string, version: number): Promise<ReportDocumentLink> {
     return firstValueFrom(
       this.api.post<ReportDocumentLink>(
         `/staff/reports/${reportId}/versions/${version}/preview-link`,

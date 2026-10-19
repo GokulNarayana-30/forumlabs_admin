@@ -50,8 +50,7 @@ describe('PatientsService', () => {
         report_id: 'rep-2001',
         report_number: 'REG-2026-0042',
         status: 'released',
-        preview_url: '/v1/staff/reports/rep-2001/preview',
-        download_url: '/v1/staff/reports/rep-2001/download',
+        version: 1,
       },
     ],
   };
