@@ -6,8 +6,11 @@ import {
   StaffOrderListItemDto,
   getIstTodayString,
   shiftDate,
+  ORDER_STATUS_LABELS,
+  OrderStatus,
   eventRefusalText,
   isRecorded,
+  orderStatusLabel,
 } from '../../services/bookings.service';
 import { StaffStateService } from '../../../../core/state/staff-state.service';
 import { AssignPhleboDialogComponent } from '../../components/assign-phlebo-dialog/assign-phlebo-dialog.component';
@@ -41,15 +44,25 @@ export class BookingListComponent implements OnInit {
   readonly detailDrawerVisible = signal<boolean>(false);
   readonly selectedOrderId = signal<string | null>(null);
 
+  // Keys are canonical OrderStatus values (the API filters on them unchanged), WR-14.
+  private static readonly FILTER_STATUSES: readonly OrderStatus[] = [
+    'confirmed',
+    'phlebotomist_assigned',
+    'on_the_way',
+    'arrived',
+    'collected',
+    'received_by_lab',
+  ];
+
   readonly statusOptions: StatusFilterOption[] = [
     { key: 'all', label: 'All' },
-    { key: 'confirmed', label: 'Confirmed' },
-    { key: 'assigned', label: 'Assigned' },
-    { key: 'on_the_way', label: 'On The Way' },
-    { key: 'arrived', label: 'Arrived' },
-    { key: 'collected', label: 'Collected' },
-    { key: 'received_by_lab', label: 'Received at Lab' },
+    ...BookingListComponent.FILTER_STATUSES.map((key) => ({
+      key,
+      label: ORDER_STATUS_LABELS[key],
+    })),
   ];
+
+  readonly statusLabel = orderStatusLabel;
 
   ngOnInit(): void {
     void this.loadOrders();
@@ -157,7 +170,7 @@ export class BookingListComponent implements OnInit {
     switch (status) {
       case 'confirmed':
         return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'assigned':
+      case 'phlebotomist_assigned':
         return 'bg-amber-50 text-amber-700 border-amber-200';
       case 'on_the_way':
       case 'arrived':

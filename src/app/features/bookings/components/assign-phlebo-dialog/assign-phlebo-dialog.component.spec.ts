@@ -38,7 +38,9 @@ describe('AssignPhleboDialogComponent', () => {
   beforeEach(async () => {
     mockBookingsService = {
       getPhlebotomists: vi.fn().mockResolvedValue(mockPhlebos),
-      recordEvent: vi.fn().mockResolvedValue({ kind: 'event_recorded', status: 'assigned' }),
+      recordEvent: vi
+        .fn()
+        .mockResolvedValue({ kind: 'event_recorded', status: 'phlebotomist_assigned' }),
     };
 
     await TestBed.configureTestingModule({

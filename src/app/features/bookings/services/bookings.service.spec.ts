@@ -126,7 +126,11 @@ describe('BookingsService', () => {
   describe('recordEvent', () => {
     it('posts event command with idempotent option set to true', async () => {
       mockApiClient.post.mockReturnValue(
-        of({ kind: 'event_recorded', status: 'assigned', payment_status: 'pending' }),
+        of({
+          kind: 'event_recorded',
+          status: 'phlebotomist_assigned',
+          payment_status: 'due_at_collection',
+        }),
       );
 
       const payload = { kind: 'phlebotomist_assigned', phlebotomist_id: 'phlebo-1' };

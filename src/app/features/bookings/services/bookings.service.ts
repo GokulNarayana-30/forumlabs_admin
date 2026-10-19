@@ -15,6 +15,29 @@ export function shiftDate(dateStr: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** The canonical order statuses (apps/api/src/orders/rules/order-status.ts, OrderStatus). */
+export const ORDER_STATUS_LABELS = {
+  payment_pending: 'Payment Pending',
+  confirmed: 'Confirmed',
+  phlebotomist_assigned: 'Assigned',
+  on_the_way: 'On The Way',
+  arrived: 'Arrived',
+  collected: 'Collected',
+  received_by_lab: 'Received at Lab',
+  processing: 'Processing',
+  report_ready: 'Report Ready',
+  cancelled: 'Cancelled',
+  refunded: 'Refunded',
+  collection_failed: 'Collection Failed',
+  recollection_required: 'Recollection Required',
+} as const;
+
+export type OrderStatus = keyof typeof ORDER_STATUS_LABELS;
+
+export function orderStatusLabel(status: string): string {
+  return (ORDER_STATUS_LABELS as Record<string, string>)[status] ?? status;
+}
+
 export interface StaffOrderPatientDto {
   patient_id: string;
   patient_code: string;

@@ -11,7 +11,7 @@ describe('FieldTodayComponent', () => {
     {
       order_id: 'order-1',
       booking_ref: 'BK-1001',
-      status: 'assigned',
+      status: 'phlebotomist_assigned',
       payment_status: 'pending',
       total_paise: 89900,
       slot: {

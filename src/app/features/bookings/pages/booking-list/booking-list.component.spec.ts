@@ -104,6 +104,34 @@ describe('BookingListComponent', () => {
     expect(mockBookingsService.getOrders).toHaveBeenCalledWith(component.selectedDate(), 'all');
   });
 
+  it('the Assigned chip filters on the canonical phlebotomist_assigned status (WR-14)', async () => {
+    const assigned = {
+      ...mockOrders[0],
+      order_id: 'order-2',
+      booking_ref: 'BK-1002',
+      status: 'phlebotomist_assigned',
+      assigned_phlebotomist: { id: 'phlebo-1', name: 'Ravi Kumar' },
+    };
+    mockBookingsService.getOrders.mockResolvedValue([assigned]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const chip = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(
+      (b) => (b.textContent ?? '').trim() === 'Assigned',
+    ) as HTMLButtonElement | undefined;
+    expect(chip).toBeDefined();
+    chip!.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(mockBookingsService.getOrders).toHaveBeenLastCalledWith(
+      component.selectedDate(),
+      'phlebotomist_assigned',
+    );
+    expect(component.statusOptions.map((o) => o.key)).not.toContain('assigned');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('BK-1002');
+  });
+
   it('renders empty state when no orders match', async () => {
     mockBookingsService.getOrders.mockResolvedValue([]);
     await component.loadOrders();

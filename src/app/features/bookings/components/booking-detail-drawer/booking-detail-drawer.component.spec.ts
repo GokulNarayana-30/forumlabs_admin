@@ -10,7 +10,7 @@ describe('BookingDetailDrawerComponent', () => {
   const mockDetail: StaffOrderView = {
     order_id: 'order-1',
     booking_ref: 'BK-1001',
-    status: 'assigned',
+    status: 'phlebotomist_assigned',
     payment_status: 'pending',
     total_paise: 89900,
     slot: {
@@ -56,7 +56,7 @@ describe('BookingDetailDrawerComponent', () => {
         id: 'evt-2',
         kind: 'phlebotomist_assigned',
         attempt: 1,
-        status_after: 'assigned',
+        status_after: 'phlebotomist_assigned',
         occurred_at: '2026-10-18T10:15:00.000Z',
         actor_type: 'staff',
         actor_id: 'usr-dispatch-1',

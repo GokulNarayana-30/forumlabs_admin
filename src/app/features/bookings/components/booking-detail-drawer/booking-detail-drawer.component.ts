@@ -67,7 +67,7 @@ export class BookingDetailDrawerComponent implements OnInit, OnChanges {
     switch (status) {
       case 'confirmed':
         return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'assigned':
+      case 'phlebotomist_assigned':
         return 'bg-amber-50 text-amber-700 border-amber-200';
       case 'on_the_way':
       case 'arrived':

@@ -66,13 +66,11 @@ export class FieldTodayComponent implements OnInit {
   }
 
   canMarkOnTheWay(status: string): boolean {
-    return ['confirmed', 'phlebotomist_assigned', 'assigned', 'on_the_way'].includes(status);
+    return ['confirmed', 'phlebotomist_assigned', 'on_the_way'].includes(status);
   }
 
   canMarkArrived(status: string): boolean {
-    return ['confirmed', 'phlebotomist_assigned', 'assigned', 'on_the_way', 'arrived'].includes(
-      status,
-    );
+    return ['confirmed', 'phlebotomist_assigned', 'on_the_way', 'arrived'].includes(status);
   }
 
   isActionable(status: string): boolean {
@@ -136,7 +134,6 @@ export class FieldTodayComponent implements OnInit {
 
   getStatusClass(status: string): string {
     switch (status) {
-      case 'assigned':
       case 'phlebotomist_assigned':
         return 'bg-blue-50 text-blue-700 border-blue-200';
       case 'on_the_way':
