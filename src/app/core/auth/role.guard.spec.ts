@@ -90,43 +90,70 @@ describe('authGuard & roleGuard', () => {
   });
 
   describe('Real Route Tree Security Boundaries', () => {
-    // Verifies all protected feature routes have both authGuard and roleGuard
-    it('enforces both authGuard and roleGuard and explicit roles on protected feature routes', () => {
-      // Find shell layout route
-      const shellRoute = routes.find((r) => r.path === '' && r.children);
-      expect(shellRoute).toBeTruthy();
-      expect(shellRoute?.canActivate).toContain(authGuard);
+    const expectedRoutes: Record<string, StaffRole[]> = {
+      bookings: ['booking_dispatch', 'super_admin'],
+      field: ['phlebotomist', 'super_admin'],
+      catalog: ['catalog_manager', 'super_admin'],
+      reports: ['lab_staff', 'report_approver', 'super_admin'],
+      patients: ['support', 'booking_dispatch', 'super_admin'],
+    };
 
-      const protectedChildren = shellRoute?.children || [];
-      const expectedRoutes: Record<string, StaffRole[]> = {
-        bookings: ['booking_dispatch', 'super_admin'],
-        field: ['phlebotomist', 'super_admin'],
-        catalog: ['catalog_manager', 'super_admin'],
-        reports: ['lab_staff', 'report_approver', 'super_admin'],
-        patients: ['support', 'booking_dispatch', 'super_admin'],
-      };
-
+    /** Every problem with a route tree's protection; [] when it is sound. */
+    function routeTreeProblems(tree: Route[]): string[] {
+      const problems: string[] = [];
+      const shellRoute = tree.find((r) => r.path === '' && r.children);
+      if (!shellRoute) return ['no shell route'];
+      if (!(shellRoute.canActivate ?? []).includes(authGuard))
+        problems.push('shell route has no authGuard');
       for (const [path, expectedRoles] of Object.entries(expectedRoutes)) {
-        const route = protectedChildren.find((r) => r.path === path);
-        expect(route).toBeTruthy();
-        expect(route?.canActivate).toContain(roleGuard);
-        expect(route?.data?.['roles']).toEqual(expect.arrayContaining(expectedRoles));
+        const route = (shellRoute.children ?? []).find((r) => r.path === path);
+        if (!route) {
+          problems.push(`${path}: missing`);
+          continue;
+        }
+        if (!(route.canActivate ?? []).includes(roleGuard)) problems.push(`${path}: no roleGuard`);
+        const roles = [...((route.data?.['roles'] as string[] | undefined) ?? [])].sort();
+        if (JSON.stringify(roles) !== JSON.stringify([...expectedRoles].sort())) {
+          problems.push(`${path}: roles ${JSON.stringify(roles)}`);
+        }
       }
+      return problems;
+    }
+
+    it('enforces both authGuard and roleGuard and the exact roles on protected feature routes', () => {
+      expect(routeTreeProblems(routes)).toEqual([]);
     });
 
-    it('rejects unauthorized navigation in negative control with planted removed guard', () => {
-      // Planted invalid route tree with missing roleGuard
-      const invalidTree: Route[] = [
-        {
-          path: 'catalog',
-          canActivate: [], // MISSING roleGuard
-          data: { roles: ['catalog_manager'] },
-        },
-      ];
+    it('negative control: the same check reports a planted copy of the real tree with roleGuard removed or roles widened (IN-05)', () => {
+      const shell = routes.find((r) => r.path === '' && r.children)!;
+      const withoutGuard: Route[] = routes.map((r) =>
+        r === shell
+          ? {
+              ...shell,
+              children: shell.children!.map((c) =>
+                c.path === 'catalog'
+                  ? { ...c, canActivate: (c.canActivate ?? []).filter((g) => g !== roleGuard) }
+                  : c,
+              ),
+            }
+          : r,
+      );
+      const widened: Route[] = routes.map((r) =>
+        r === shell
+          ? {
+              ...shell,
+              children: shell.children!.map((c) =>
+                c.path === 'reports'
+                  ? { ...c, data: { ...c.data, roles: [...(c.data?.['roles'] ?? []), 'support'] } }
+                  : c,
+              ),
+            }
+          : r,
+      );
 
-      const catalogRoute = invalidTree[0];
-      const hasGuards = (catalogRoute.canActivate || []).includes(roleGuard);
-      expect(hasGuards).toBe(false); // Negative control proves vulnerability detection
+      expect(routeTreeProblems(withoutGuard)).toEqual(['catalog: no roleGuard']);
+      expect(routeTreeProblems(widened)).toHaveLength(1);
+      expect(routeTreeProblems(widened)[0]).toContain('reports: roles');
     });
 
     it('ensures /no-access is reachable without redirect loop for authenticated staff', () => {
