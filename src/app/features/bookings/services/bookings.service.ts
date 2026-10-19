@@ -30,6 +30,8 @@ export interface StaffOrderListItemDto {
   booking_ref: string;
   status: string;
   payment_status: string;
+  /** Order total in paise: the exact amount due at collection. */
+  total_paise: number;
   slot: {
     slot_key: string;
     starts_at: string;
@@ -77,6 +79,8 @@ export interface StaffOrderView {
   booking_ref: string;
   status: string;
   payment_status: string;
+  /** Order total in paise: the exact amount due at collection. */
+  total_paise: number;
   slot: {
     slot_key: string;
     starts_at: string;

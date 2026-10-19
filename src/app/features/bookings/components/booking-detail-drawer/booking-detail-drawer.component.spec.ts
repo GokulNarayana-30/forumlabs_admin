@@ -12,6 +12,7 @@ describe('BookingDetailDrawerComponent', () => {
     booking_ref: 'BK-1001',
     status: 'assigned',
     payment_status: 'pending',
+    total_paise: 89900,
     slot: {
       slot_key: '0700-0800',
       starts_at: '2026-10-19T07:00:00Z',

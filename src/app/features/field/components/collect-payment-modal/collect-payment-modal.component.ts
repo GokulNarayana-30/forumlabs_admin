@@ -31,7 +31,8 @@ export class CollectPaymentModalComponent {
 
   @Input() order: StaffOrderListItemDto | null = null;
   @Input() visible = false;
-  @Input() totalPaise = 0;
+  /** Exact order total in paise from the API; null when the list did not provide it. */
+  @Input() totalPaise: number | null = null;
   @Output() readonly visibleChange = new EventEmitter<boolean>();
   @Output() readonly collected = new EventEmitter<void>();
 
@@ -43,7 +44,17 @@ export class CollectPaymentModalComponent {
   private readonly upiRegex = /^[A-Za-z0-9-]{1,64}$/;
 
   isPaidOrZero(): boolean {
+    // A known zero total needs no payment; an unknown total (null) is never treated as paid.
     return this.order?.payment_status === 'paid' || this.totalPaise === 0;
+  }
+
+  /** True when payment is due but the amount is not known, so nothing may be submitted. */
+  amountUnknown(): boolean {
+    return !this.isPaidOrZero() && (this.totalPaise === null || !Number.isInteger(this.totalPaise));
+  }
+
+  totalRupeesText(): string {
+    return this.totalPaise === null ? '--' : (this.totalPaise / 100).toFixed(2);
   }
 
   buildPayload(): CollectPaymentPayload | null {
@@ -51,6 +62,11 @@ export class CollectPaymentModalComponent {
 
     if (this.isPaidOrZero()) {
       return { kind: 'collected' };
+    }
+
+    if (this.amountUnknown() || this.totalPaise === null) {
+      this.errorMessage.set('Amount unavailable, reload the page before recording the payment.');
+      return null;
     }
 
     if (this.paymentMethod() === 'cash') {
@@ -110,6 +126,13 @@ export class CollectPaymentModalComponent {
       if (res.kind === 'event_recorded' || res.kind === 'event_already_recorded') {
         this.collected.emit();
         this.close();
+      } else if (res.kind === 'payment_amount_mismatch') {
+        const expected = (res as { expected_paise?: unknown }).expected_paise;
+        this.errorMessage.set(
+          typeof expected === 'number'
+            ? `Amount does not match the order total. Collect exactly ₹${(expected / 100).toFixed(2)} and reload the page.`
+            : 'Amount does not match the order total. Reload the page.',
+        );
       } else {
         this.errorMessage.set(`Unable to record collection: ${res.kind}`);
       }

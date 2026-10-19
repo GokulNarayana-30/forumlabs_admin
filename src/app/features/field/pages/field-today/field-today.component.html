@@ -219,6 +219,7 @@
   <!-- Collect Payment Modal -->
   <app-collect-payment-modal
     [order]="selectedOrderForPayment()"
+    [totalPaise]="selectedOrderForPayment()?.total_paise ?? null"
     [visible]="paymentModalVisible()"
     (visibleChange)="paymentModalVisible.set($event)"
     (collected)="onCollectionSuccess()"

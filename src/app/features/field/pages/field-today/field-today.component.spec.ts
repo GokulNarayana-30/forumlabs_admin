@@ -13,6 +13,7 @@ describe('FieldTodayComponent', () => {
       booking_ref: 'BK-1001',
       status: 'assigned',
       payment_status: 'pending',
+      total_paise: 89900,
       slot: {
         slot_key: '0700-0800',
         starts_at: '2026-10-19T07:00:00Z',
@@ -106,6 +107,70 @@ describe('FieldTodayComponent', () => {
       kind: 'arrived',
     });
     expect(mockFieldService.getTodayVisits).toHaveBeenCalledTimes(2);
+  });
+
+  describe('collection with payment through the real modal (CR-01)', () => {
+    const unpaidVisit = (overrides: Record<string, unknown> = {}) => ({
+      ...mockVisits[0],
+      status: 'arrived',
+      payment_status: 'due_at_collection',
+      total_paise: 89900,
+      ...overrides,
+    });
+
+    const findButton = (label: string): HTMLButtonElement | undefined =>
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find((b) =>
+        (b.textContent ?? '').trim().startsWith(label),
+      ) as HTMLButtonElement | undefined;
+
+    async function renderWith(visit: Record<string, unknown>): Promise<void> {
+      mockFieldService.getTodayVisits.mockResolvedValue([visit]);
+      await component.loadVisits();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
+
+    it('passes the order total to the modal and posts the exact cash amount', async () => {
+      await renderWith(unpaidVisit());
+      mockFieldService.recordEvent.mockResolvedValue({ kind: 'event_recorded' });
+
+      findButton('Collected & Paid')!.click();
+      fixture.detectChanges();
+
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain('₹899.00');
+      const confirm = findButton('Confirm Collection');
+      expect(confirm).toBeDefined();
+      expect(confirm!.disabled).toBe(false);
+      confirm!.click();
+      await fixture.whenStable();
+
+      expect(mockFieldService.recordEvent).toHaveBeenCalledWith('order-1', {
+        kind: 'collected',
+        payment: { method: 'cash', amount_paise: 89900 },
+      });
+    });
+
+    it('disables Confirm and never posts when the visit carries no total', async () => {
+      const visit = unpaidVisit();
+      delete (visit as Record<string, unknown>)['total_paise'];
+      await renderWith(visit);
+
+      findButton('Collected & Paid')!.click();
+      fixture.detectChanges();
+
+      const confirm = findButton('Confirm Collection');
+      expect(confirm).toBeDefined();
+      expect(confirm!.disabled).toBe(true);
+      confirm!.click();
+      await fixture.whenStable();
+
+      expect(mockFieldService.recordEvent).not.toHaveBeenCalledWith(
+        'order-1',
+        expect.objectContaining({ kind: 'collected' }),
+      );
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain('Amount unavailable');
+    });
   });
 
   it('handles server event_not_allowed response without crashing', async () => {
