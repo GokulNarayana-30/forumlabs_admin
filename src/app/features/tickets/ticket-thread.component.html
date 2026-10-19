@@ -92,14 +92,27 @@
           <div class="flex items-center gap-2">
             <label class="text-xs font-medium text-surface-600">Assignee:</label>
             <select
+              #assigneeSelect
+              data-testid="assignee-select"
               [value]="data.ticket.assignee_user_id || ''"
               (change)="onAssigneeChange($any($event.target).value)"
               [disabled]="isUpdatingAssignee()"
               class="text-xs rounded-lg border border-surface-300 bg-surface-0 px-2.5 py-1.5 text-surface-800 focus:outline-none focus:ring-1 focus:ring-primary-500"
             >
-              <option value="">Unassigned</option>
+              <option value="" [selected]="!data.ticket.assignee_user_id">Unassigned</option>
+              @if (
+                data.ticket.assignee_user_id && !isEligibleAssignee(data.ticket.assignee_user_id)
+              ) {
+                <!-- The current assignee is no longer eligible (or the list did not load): keep
+                     them selected under an id-free label rather than showing Unassigned. -->
+                <option [value]="data.ticket.assignee_user_id" selected>
+                  {{ assigneeLabel(data.ticket.assignee_user_id) }}
+                </option>
+              }
               @for (a of assignees(); track a.user_id) {
-                <option [value]="a.user_id">{{ a.display_name }}</option>
+                <option [value]="a.user_id" [selected]="a.user_id === data.ticket.assignee_user_id">
+                  {{ a.display_name }}
+                </option>
               }
             </select>
           </div>
@@ -107,13 +120,17 @@
           <div class="flex items-center gap-2">
             <label class="text-xs font-medium text-surface-600">Status:</label>
             <select
+              #statusSelect
+              data-testid="status-select"
               [value]="data.ticket.status"
               (change)="onStatusChange($any($event.target).value)"
               [disabled]="isUpdatingStatus()"
               class="text-xs rounded-lg border border-surface-300 bg-surface-0 px-2.5 py-1.5 text-surface-800 focus:outline-none focus:ring-1 focus:ring-primary-500 font-medium"
             >
               @for (opt of statusOptions; track opt.value) {
-                <option [value]="opt.value">{{ opt.label }}</option>
+                <option [value]="opt.value" [selected]="opt.value === data.ticket.status">
+                  {{ opt.label }}
+                </option>
               }
             </select>
           </div>

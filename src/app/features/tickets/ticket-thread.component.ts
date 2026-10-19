@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy, signal } from '@angular/core';
+import { Component, ElementRef, inject, OnInit, OnDestroy, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -11,6 +11,7 @@ import {
   StaffTicketAssigneeDto,
 } from './services/tickets.service';
 import { errorText } from '../../core/api/error-text';
+import { assigneeLabelFor } from './assignee-label';
 
 @Component({
   selector: 'app-ticket-thread',
@@ -26,6 +27,7 @@ export class TicketThreadComponent implements OnInit, OnDestroy {
   readonly ticketId = signal<string>('');
   readonly detail = signal<StaffTicketDetailDto | null>(null);
   readonly assignees = signal<StaffTicketAssigneeDto[]>([]);
+  readonly assigneesLoaded = signal<boolean>(false);
   readonly loading = signal<boolean>(true);
   readonly notFound = signal<boolean>(false);
   readonly errorMessage = signal<string>('');
@@ -41,6 +43,9 @@ export class TicketThreadComponent implements OnInit, OnDestroy {
 
   readonly isUpdatingStatus = signal<boolean>(false);
   readonly isUpdatingAssignee = signal<boolean>(false);
+
+  private readonly statusSelect = viewChild<ElementRef<HTMLSelectElement>>('statusSelect');
+  private readonly assigneeSelect = viewChild<ElementRef<HTMLSelectElement>>('assigneeSelect');
 
   private isDestroyed = false;
   private routeSubscription?: Subscription;
@@ -89,6 +94,7 @@ export class TicketThreadComponent implements OnInit, OnDestroy {
       const data = await this.ticketsService.listAssignees();
       if (!this.isDestroyed) {
         this.assignees.set(data);
+        this.assigneesLoaded.set(true);
       }
     } catch {
       // Non-blocking
@@ -206,6 +212,9 @@ export class TicketThreadComponent implements OnInit, OnDestroy {
       }
     } catch (err: unknown) {
       if (!this.isDestroyed && generation === this.ticketGeneration) {
+        // The bound value did not change, so Angular will not rewrite the select: put it back on
+        // the ticket's real status by hand so it never shows the refused choice (N-06).
+        this.restoreSelect(this.statusSelect(), this.detail()?.ticket.status ?? '');
         this.errorMessage.set(errorText(err, 'Status transition not allowed.'));
       }
     } finally {
@@ -230,6 +239,7 @@ export class TicketThreadComponent implements OnInit, OnDestroy {
       }
     } catch (err: unknown) {
       if (!this.isDestroyed && generation === this.ticketGeneration) {
+        this.restoreSelect(this.assigneeSelect(), this.detail()?.ticket.assignee_user_id ?? '');
         this.errorMessage.set(errorText(err, 'Could not update ticket assignee.'));
       }
     } finally {
@@ -237,6 +247,20 @@ export class TicketThreadComponent implements OnInit, OnDestroy {
         this.isUpdatingAssignee.set(false);
       }
     }
+  }
+
+  /** Whether [userId] is in the loaded list of staff who can be assigned. */
+  isEligibleAssignee(userId: string): boolean {
+    return this.assignees().some((a) => a.user_id === userId);
+  }
+
+  /** The name to show for an assignee: never their user id (N-06). */
+  assigneeLabel(userId: string | null): string {
+    return assigneeLabelFor(userId, this.assignees(), this.assigneesLoaded());
+  }
+
+  private restoreSelect(ref: ElementRef<HTMLSelectElement> | undefined, value: string): void {
+    if (ref) ref.nativeElement.value = value;
   }
 
   getStatusSeverity(status: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {

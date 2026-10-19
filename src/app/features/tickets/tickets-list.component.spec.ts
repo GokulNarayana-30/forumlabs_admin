@@ -109,6 +109,41 @@ describe('TicketsListComponent', () => {
     expect(component.loading()).toBe(false);
   });
 
+  // N-06: the Assignee column never prints a staff user id.
+  it('shows assignee names, and no raw user id for an assignee who is not eligible', async () => {
+    const formerId = '7b0f2c1e-9a4d-4e57-8b21-3c6d5e4f7a90';
+    mockTicketsService.listAssignees = vi
+      .fn()
+      .mockResolvedValue([{ user_id: 'staff-user-1', display_name: 'Dr. Anita Rao' }]);
+    mockTicketsService.listTickets.mockResolvedValue([
+      mockTickets[0],
+      mockTickets[1],
+      {
+        ...mockTickets[1],
+        id: 'ticket-3',
+        reference: 'TK-2026-000003',
+        assignee_user_id: formerId,
+      },
+    ]);
+    await component.loadAssignees();
+    await component.loadTickets();
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).toContain('Unassigned');
+    expect(el.textContent).toContain('Dr. Anita Rao');
+    expect(el.textContent).toContain('Former staff member');
+    expect(el.textContent).not.toContain(formerId);
+  });
+
+  it('never prints a raw user id while the assignee list is unavailable', () => {
+    // The beforeEach service has no listAssignees, so the list failed to load.
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.textContent).not.toContain('staff-user-1');
+    expect(component.getAssigneeName('staff-user-1')).toBe('Assigned');
+    expect(component.getAssigneeName(null)).toBe('Unassigned');
+  });
+
   it('displays empty state when no tickets are returned', async () => {
     mockTicketsService.listTickets.mockResolvedValue([]);
     await component.loadTickets();

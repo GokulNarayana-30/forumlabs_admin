@@ -11,6 +11,7 @@ import {
   StaffTicketAssigneeDto,
 } from './services/tickets.service';
 import { errorText } from '../../core/api/error-text';
+import { assigneeLabelFor } from './assignee-label';
 
 export type TicketStatusFilter = 'all' | 'open' | 'in_progress' | 'resolved' | 'closed';
 
@@ -25,6 +26,7 @@ export class TicketsListComponent implements OnInit, OnDestroy {
 
   readonly tickets = signal<StaffTicketSummaryDto[]>([]);
   readonly assignees = signal<StaffTicketAssigneeDto[]>([]);
+  readonly assigneesLoaded = signal<boolean>(false);
   readonly loading = signal<boolean>(false);
   readonly errorMessage = signal<string>('');
   readonly selectedStatus = signal<TicketStatusFilter>('all');
@@ -56,9 +58,10 @@ export class TicketsListComponent implements OnInit, OnDestroy {
       const data = await this.ticketsService.listAssignees();
       if (!this.isDestroyed) {
         this.assignees.set(data);
+        this.assigneesLoaded.set(true);
       }
     } catch {
-      // Non-blocking: assignee display can fall back to ID or 'Unassigned'
+      // Non-blocking: an assigned ticket then shows as 'Assigned', never as a user id.
     }
   }
 
@@ -90,9 +93,7 @@ export class TicketsListComponent implements OnInit, OnDestroy {
   }
 
   getAssigneeName(userId: string | null): string {
-    if (!userId) return 'Unassigned';
-    const match = this.assignees().find((a) => a.user_id === userId);
-    return match ? match.display_name : userId;
+    return assigneeLabelFor(userId, this.assignees(), this.assigneesLoaded());
   }
 
   getStatusSeverity(status: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' {

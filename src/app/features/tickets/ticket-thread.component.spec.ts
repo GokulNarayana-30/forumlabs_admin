@@ -138,6 +138,81 @@ describe('TicketThreadComponent', () => {
     },
   );
 
+  // N-06: the controls must show the ticket's real state, never a refused choice or a wrong label.
+  describe('status and assignee controls', () => {
+    async function renderTicket(
+      ticket: Partial<StaffTicketDetailDto['ticket']>,
+    ): Promise<HTMLElement> {
+      mockTicketsService.getTicket.mockResolvedValue({
+        ...mockDetail,
+        ticket: { ...mockDetail.ticket, ...ticket },
+      });
+      await component.loadTicket();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    }
+
+    function select(el: HTMLElement, name: 'status' | 'assignee'): HTMLSelectElement {
+      const found = el.querySelector<HTMLSelectElement>(`select[data-testid="${name}-select"]`);
+      expect(found, `${name} select must exist`).toBeTruthy();
+      return found!;
+    }
+
+    async function choose(control: HTMLSelectElement, value: string): Promise<void> {
+      control.value = value;
+      expect(control.value).toBe(value);
+      control.dispatchEvent(new Event('change'));
+      await fixture.whenStable();
+      fixture.detectChanges();
+    }
+
+    it('shows the loaded status and assignee in the selects', async () => {
+      const el = await renderTicket({ status: 'resolved', assignee_user_id: 'staff-user-1' });
+      expect(select(el, 'status').value).toBe('resolved');
+      expect(select(el, 'assignee').value).toBe('staff-user-1');
+    });
+
+    it('a refused status change puts the select back on the real status', async () => {
+      const el = await renderTicket({ status: 'resolved' });
+      mockTicketsService.updateStatus.mockRejectedValue(
+        new ApiClientError(409, 'invalid_status_transition', 'Status transition not allowed.'),
+      );
+      await choose(select(el, 'status'), 'open');
+      expect(mockTicketsService.updateStatus).toHaveBeenCalledWith('ticket-1', 'open');
+      expect(el.querySelector('[role="alert"]')?.textContent).toContain(
+        'Status transition not allowed.',
+      );
+      expect(select(el, 'status').value).toBe('resolved');
+    });
+
+    it('a refused assignee change puts the select back on the real assignee', async () => {
+      mockTicketsService.listAssignees.mockResolvedValue([
+        { user_id: 'staff-user-1', display_name: 'Dr. Anita Rao' },
+        { user_id: 'staff-user-2', display_name: 'Ravi Kumar' },
+      ]);
+      await component.loadAssignees();
+      const el = await renderTicket({ assignee_user_id: 'staff-user-1' });
+      mockTicketsService.updateAssignee.mockRejectedValue(
+        new ApiClientError(422, 'validation_failed', 'Assignee is unavailable.'),
+      );
+      await choose(select(el, 'assignee'), 'staff-user-2');
+      expect(mockTicketsService.updateAssignee).toHaveBeenCalledWith('ticket-1', 'staff-user-2');
+      expect(el.querySelector('[role="alert"]')?.textContent).toContain('Assignee is unavailable.');
+      expect(select(el, 'assignee').value).toBe('staff-user-1');
+    });
+
+    it('an assignee who is no longer eligible shows as a former staff member, not Unassigned', async () => {
+      const formerId = '7b0f2c1e-9a4d-4e57-8b21-3c6d5e4f7a90';
+      const el = await renderTicket({ assignee_user_id: formerId });
+      const control = select(el, 'assignee');
+      expect(control.value).toBe(formerId);
+      expect(control.selectedOptions[0]?.textContent?.trim()).toBe('Former staff member');
+      expect(el.textContent).not.toContain(formerId);
+    });
+  });
+
   it('rebinds reused routes and ignores late old ticket reads', async () => {
     let finishOld!: (detail: StaffTicketDetailDto) => void;
     mockTicketsService.getTicket.mockReturnValueOnce(
