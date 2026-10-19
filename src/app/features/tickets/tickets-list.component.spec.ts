@@ -68,6 +68,35 @@ describe('TicketsListComponent', () => {
     expect(mockTicketsService.listTickets).toHaveBeenCalledWith('open');
   });
 
+  it('ignores an older filter response after the selected filter completes', async () => {
+    let finishOld!: (rows: StaffTicketSummaryDto[]) => void;
+    mockTicketsService.listTickets.mockReturnValueOnce(new Promise((resolve) => { finishOld = resolve; }));
+    const oldLoad = component.onFilterChange('open');
+    const resolved = [{ ...mockTickets[1], status: 'resolved' }];
+    mockTicketsService.listTickets.mockResolvedValueOnce(resolved);
+    await component.onFilterChange('resolved');
+    finishOld([mockTickets[0]]);
+    await oldLoad;
+    expect(component.selectedStatus()).toBe('resolved');
+    expect(component.tickets()).toEqual(resolved);
+  });
+
+  it('ignores an older failure while the newest filter is loading', async () => {
+    let failOld!: (error: Error) => void;
+    let finishNew!: (rows: StaffTicketSummaryDto[]) => void;
+    mockTicketsService.listTickets.mockReturnValueOnce(new Promise((_, reject) => { failOld = reject; }));
+    const oldLoad = component.onFilterChange('open');
+    mockTicketsService.listTickets.mockReturnValueOnce(new Promise((resolve) => { finishNew = resolve; }));
+    const newLoad = component.onFilterChange('resolved');
+    failOld(new Error('Old request failed'));
+    await oldLoad;
+    expect(component.loading()).toBe(true);
+    expect(component.errorMessage()).toBe('');
+    finishNew([]);
+    await newLoad;
+    expect(component.loading()).toBe(false);
+  });
+
   it('displays empty state when no tickets are returned', async () => {
     mockTicketsService.listTickets.mockResolvedValue([]);
     await component.loadTickets();

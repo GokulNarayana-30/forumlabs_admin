@@ -30,6 +30,7 @@ export class TicketsListComponent implements OnInit, OnDestroy {
   readonly selectedStatus = signal<TicketStatusFilter>('all');
 
   private isDestroyed = false;
+  private loadGeneration = 0;
 
   readonly statusOptions: { label: string; value: TicketStatusFilter }[] = [
     { label: 'All', value: 'all' },
@@ -62,21 +63,22 @@ export class TicketsListComponent implements OnInit, OnDestroy {
   }
 
   async loadTickets(): Promise<void> {
+    const generation = ++this.loadGeneration;
     this.loading.set(true);
     this.errorMessage.set('');
 
     try {
       const status = this.selectedStatus();
       const data = await this.ticketsService.listTickets(status);
-      if (!this.isDestroyed) {
+      if (!this.isDestroyed && generation === this.loadGeneration) {
         this.tickets.set(data);
       }
     } catch (err: unknown) {
-      if (!this.isDestroyed) {
+      if (!this.isDestroyed && generation === this.loadGeneration) {
         this.errorMessage.set(errorText(err, 'Failed to load tickets. Please try again.'));
       }
     } finally {
-      if (!this.isDestroyed) {
+      if (!this.isDestroyed && generation === this.loadGeneration) {
         this.loading.set(false);
       }
     }
