@@ -52,6 +52,45 @@ describe('LoginComponent', () => {
     expect(el.querySelector('button[type="submit"]')).toBeTruthy();
   });
 
+  it('has a Show/Hide button that reveals and hides the typed password', () => {
+    const el = fixture.nativeElement as HTMLElement;
+    const input = el.querySelector('#password') as HTMLInputElement;
+    const toggle = el.querySelector('button[aria-label="Show password"]') as HTMLButtonElement;
+    expect(input.type).toBe('password');
+    expect(toggle).toBeTruthy();
+    expect(toggle.type).toBe('button'); // never submits the form
+
+    toggle.click();
+    fixture.detectChanges();
+    expect(input.type).toBe('text');
+    const hide = el.querySelector('button[aria-label="Hide password"]') as HTMLButtonElement;
+    expect(hide).toBeTruthy();
+    expect(hide.getAttribute('aria-pressed')).toBe('true');
+    expect(mockAuthService.signIn).not.toHaveBeenCalled();
+
+    hide.click();
+    fixture.detectChanges();
+    expect(input.type).toBe('password');
+  });
+
+  it('turns off phone auto-capitalisation and auto-correct on both fields', () => {
+    const el = fixture.nativeElement as HTMLElement;
+    for (const id of ['email', 'password']) {
+      const input = el.querySelector(`#${id}`) as HTMLInputElement;
+      expect(input.getAttribute('autocapitalize'), id).toBe('none');
+      expect(input.getAttribute('autocorrect'), id).toBe('off');
+      expect(input.getAttribute('spellcheck'), id).toBe('false');
+    }
+  });
+
+  it('sends the email without surrounding spaces and the password exactly as typed', async () => {
+    mockAuthService.signIn.mockResolvedValue({ session: null, error: new Error('x') });
+    component.email.set('  staff@forum.test ');
+    component.password.set(' pass word ');
+    await component.onSubmit();
+    expect(mockAuthService.signIn).toHaveBeenCalledWith('staff@forum.test', ' pass word ');
+  });
+
   it('contains NO self-service sign-up or forgot password links (D-01, D-02)', () => {
     const el = fixture.nativeElement as HTMLElement;
     const text = el.textContent?.toLowerCase() || '';

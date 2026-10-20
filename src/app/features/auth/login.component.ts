@@ -19,6 +19,8 @@ export class LoginComponent {
 
   readonly email = signal('');
   readonly password = signal('');
+  /** Shows the typed password as plain text (a phone keyboard makes typos easy). */
+  readonly showPassword = signal(false);
   readonly isSubmitting = signal(false);
   readonly errorMessage = signal('');
 
@@ -33,7 +35,11 @@ export class LoginComponent {
 
     try {
       // signIn never throws: it answers {session, error} (WR-15).
-      const { session, error } = await this.authService.signIn(this.email(), this.password());
+      // A phone keyboard often adds a space after the email; the password is sent exactly as typed.
+      const { session, error } = await this.authService.signIn(
+        this.email().trim(),
+        this.password(),
+      );
       if (error || !session) {
         this.errorMessage.set('Invalid email or password.');
         return;
