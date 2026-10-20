@@ -149,14 +149,16 @@
                   </div>
 
                   <div>
-                    <button
-                      type="button"
-                      (click)="openAssignModal(visit)"
-                      data-testid="calendar-assign-btn"
-                      class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 transition-colors shadow-xs"
-                    >
-                      {{ visit.assignee ? 'Reassign' : 'Assign Phlebotomist' }}
-                    </button>
+                    @if (canAssign(visit)) {
+                      <button
+                        type="button"
+                        (click)="openAssignModal(visit)"
+                        data-testid="calendar-assign-btn"
+                        class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 transition-colors shadow-xs"
+                      >
+                        {{ visit.assignee ? 'Reassign' : 'Assign Phlebotomist' }}
+                      </button>
+                    }
                   </div>
                 </div>
               }

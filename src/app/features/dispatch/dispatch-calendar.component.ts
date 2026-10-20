@@ -23,6 +23,7 @@ export interface SlotWindowGroup {
   visits: DispatchVisit[];
 }
 
+import { isAssignableStatus } from './assignable-status';
 @Component({
   selector: 'app-dispatch-calendar',
   standalone: true,
@@ -171,6 +172,11 @@ export class DispatchCalendarComponent implements OnInit, OnDestroy {
         return next;
       });
     }
+  }
+
+  /** Hidden once the sample is collected: the server refuses an assignment after that. */
+  canAssign(visit: DispatchVisit): boolean {
+    return isAssignableStatus(visit.status);
   }
 
   openAssignModal(visit: DispatchVisit): void {

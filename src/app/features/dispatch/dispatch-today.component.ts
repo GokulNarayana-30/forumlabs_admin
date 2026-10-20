@@ -11,6 +11,7 @@ export function getIstTodayString(date: Date = new Date()): string {
   return istDate.toISOString().slice(0, 10);
 }
 
+import { isAssignableStatus } from './assignable-status';
 @Component({
   selector: 'app-dispatch-today',
   standalone: true,
@@ -44,6 +45,11 @@ export class DispatchTodayComponent implements OnInit {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  /** Hidden once the sample is collected: the server refuses an assignment after that. */
+  canAssign(visit: DispatchVisit): boolean {
+    return isAssignableStatus(visit.status);
   }
 
   openAssignModal(visit: DispatchVisit): void {

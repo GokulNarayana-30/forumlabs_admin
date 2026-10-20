@@ -156,6 +156,17 @@ describe('BookingListComponent', () => {
       expect(mockBookingsService.getOrders).toHaveBeenCalledTimes(2); // reloaded
     });
 
+    it('tells staff to use the Samples screen when the booking has sample tubes (use_tube_scan)', async () => {
+      mockBookingsService.recordEvent = vi
+        .fn()
+        .mockResolvedValue({ kind: 'event_not_allowed', reason: 'use_tube_scan' });
+
+      await component.markReceivedAtLab(collected() as any);
+
+      expect(component.errorMessage()).toContain('Samples screen');
+      expect(component.errorMessage()).not.toContain('refresh the list');
+    });
+
     it('shows the success text only for a recorded event', async () => {
       mockBookingsService.recordEvent = vi.fn().mockResolvedValue({ kind: 'event_recorded' });
 
@@ -164,6 +175,38 @@ describe('BookingListComponent', () => {
       expect(component.successMessage()).toContain('marked as received at lab');
       expect(component.errorMessage()).toBe('');
     });
+  });
+
+  describe('Assign is offered only until the sample is collected', () => {
+    const assignButton = () =>
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(
+        (b) => (b.textContent ?? '').trim() === 'Assign',
+      );
+
+    for (const status of ['confirmed', 'phlebotomist_assigned', 'on_the_way', 'arrived']) {
+      it(`shows Assign while the booking is ${status}`, async () => {
+        mockBookingsService.getOrders.mockResolvedValue([{ ...mockOrders[0], status }]);
+        await component.loadOrders();
+        fixture.detectChanges();
+        expect(assignButton()).toBeDefined();
+      });
+    }
+
+    for (const status of [
+      'collected',
+      'received_by_lab',
+      'processing',
+      'report_ready',
+      'cancelled',
+      'collection_failed',
+    ]) {
+      it(`hides Assign once the booking is ${status}`, async () => {
+        mockBookingsService.getOrders.mockResolvedValue([{ ...mockOrders[0], status }]);
+        await component.loadOrders();
+        fixture.detectChanges();
+        expect(assignButton()).toBeUndefined();
+      });
+    }
   });
 
   describe('receive at lab needs a confirmation click (WR-22)', () => {

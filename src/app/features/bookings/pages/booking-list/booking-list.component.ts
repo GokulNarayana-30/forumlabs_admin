@@ -13,6 +13,7 @@ import {
   orderStatusLabel,
 } from '../../services/bookings.service';
 import { StaffStateService } from '../../../../core/state/staff-state.service';
+import { isAssignableStatus } from '../../../dispatch/assignable-status';
 import { AssignPhleboDialogComponent } from '../../components/assign-phlebo-dialog/assign-phlebo-dialog.component';
 import { BookingDetailDrawerComponent } from '../../components/booking-detail-drawer/booking-detail-drawer.component';
 import { errorText } from '../../../../core/api/error-text';
@@ -135,6 +136,11 @@ export class BookingListComponent implements OnInit {
   async onAssigned(): Promise<void> {
     this.successMessage.set('Phlebotomist assigned successfully.');
     await this.loadOrders();
+  }
+
+  /** A dispatcher can (re)assign only until the sample is collected: the server refuses it after that. */
+  canAssign(order: StaffOrderListItemDto): boolean {
+    return isAssignableStatus(order.status);
   }
 
   canMarkReceivedAtLab(order: StaffOrderListItemDto): boolean {

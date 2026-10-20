@@ -174,6 +174,14 @@ describe('DispatchTodayComponent', () => {
     expect(component.assigningVisit()?.booking_ref).toBe('FL-2026-1001');
   });
 
+  it('hides the assign button for a visit that is already collected', () => {
+    const base = component.todayData()!.unassigned[0]!;
+    expect(component.canAssign({ ...base, status: 'confirmed' })).toBe(true);
+    expect(component.canAssign({ ...base, status: 'arrived' })).toBe(true);
+    expect(component.canAssign({ ...base, status: 'collected' })).toBe(false);
+    expect(component.canAssign({ ...base, status: 'received_by_lab' })).toBe(false);
+  });
+
   it('reloads operational metrics when modal emits assigned', async () => {
     mockDispatchService.getTodayMetrics.mockClear();
     await component.onAssigned();

@@ -143,6 +143,10 @@ export function eventRefusalText(res: StaffOrderEventRecordResult | null | undef
     case 'phlebotomist_not_found':
       return 'That phlebotomist is no longer active, pick another.';
     case 'event_not_allowed':
+      // The server says WHY. A booking whose sample tubes were generated is received tube by tube.
+      if (res.reason === 'use_tube_scan') {
+        return 'This booking has sample tubes: scan and receive them on the Samples screen.';
+      }
       return 'This booking changed, refresh the list and try again.';
     case 'reason_not_listed':
       return 'That reason is not accepted for this booking.';
