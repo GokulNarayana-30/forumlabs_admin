@@ -1,0 +1,145 @@
+<p-dialog
+  header="Add Diagnostic Report"
+  [visible]="visible"
+  (visibleChange)="close()"
+  [modal]="true"
+  [closable]="true"
+  [style]="{ width: '32rem', maxWidth: '95vw' }"
+>
+  <div class="space-y-4 pt-2">
+    <!-- Patient Context -->
+    <div class="p-3 bg-surface-50 border border-surface-200 rounded-lg">
+      <div class="text-xs text-surface-500 font-medium">Patient</div>
+      <div class="text-sm font-semibold text-surface-900">{{ patientName }}</div>
+      <div class="text-xs text-surface-500 mt-1 font-mono">Order: {{ orderId }}</div>
+    </div>
+
+    <!-- Mode Selector -->
+    <div class="grid grid-cols-2 gap-2 bg-surface-100 p-1 rounded-lg">
+      <button
+        type="button"
+        (click)="setMode('upload')"
+        class="py-1.5 px-3 rounded text-sm font-medium transition-colors cursor-pointer"
+        [class.bg-surface-0]="mode() === 'upload'"
+        [class.text-surface-900]="mode() === 'upload'"
+        [class.shadow-xs]="mode() === 'upload'"
+        [class.text-surface-600]="mode() !== 'upload'"
+      >
+        Upload PDF File
+      </button>
+      <button
+        type="button"
+        (click)="setMode('link')"
+        class="py-1.5 px-3 rounded text-sm font-medium transition-colors cursor-pointer"
+        [class.bg-surface-0]="mode() === 'link'"
+        [class.text-surface-900]="mode() === 'link'"
+        [class.shadow-xs]="mode() === 'link'"
+        [class.text-surface-600]="mode() !== 'link'"
+      >
+        Paste LabSmart Link
+      </button>
+    </div>
+
+    <!-- Reg No Input -->
+    <div>
+      <label class="block text-xs font-semibold uppercase text-surface-700 mb-1">
+        LabSmart Reg No <span class="text-red-500">*</span>
+      </label>
+      <input
+        type="text"
+        pInputText
+        class="w-full text-sm font-mono"
+        placeholder="e.g. 2026/10/0042"
+        [ngModel]="regNo()"
+        (ngModelChange)="regNo.set($event)"
+      />
+      <p class="text-xs text-surface-500 mt-1">
+        Letters, digits, space, and symbols / _ . - (max 32 characters).
+      </p>
+      <p *ngIf="regNo() && !isRegNoValid()" class="text-xs text-red-600 mt-1">
+        Invalid Reg No format. Please follow the allowed character rules.
+      </p>
+    </div>
+
+    <!-- Upload Mode -->
+    <div *ngIf="mode() === 'upload'" class="space-y-2">
+      <label class="block text-xs font-semibold uppercase text-surface-700 mb-1">
+        Report PDF Document <span class="text-red-500">*</span>
+      </label>
+      <div
+        class="border-2 border-dashed border-surface-300 rounded-lg p-4 text-center hover:border-primary-400 transition-colors"
+      >
+        <input
+          type="file"
+          id="reportPdfFileInput"
+          accept=".pdf,application/pdf"
+          class="hidden"
+          (change)="onFileInputChange($event)"
+        />
+        <label for="reportPdfFileInput" class="cursor-pointer flex flex-col items-center">
+          <i class="pi pi-upload text-2xl text-surface-400 mb-2"></i>
+          <span class="text-sm font-medium text-primary-600">Click to choose PDF</span>
+          <span class="text-xs text-surface-500 mt-1">Maximum file size: 10 MB</span>
+        </label>
+      </div>
+
+      <div
+        *ngIf="selectedFile()"
+        class="p-2 bg-primary-50 rounded text-xs flex items-center justify-between text-primary-800"
+      >
+        <span class="truncate font-mono">{{ selectedFile()?.name }}</span>
+        <span>({{ ((selectedFile()?.size || 0) / 1024 / 1024).toFixed(2) }} MB)</span>
+      </div>
+
+      <p *ngIf="fileError()" class="text-xs text-red-600">
+        {{ fileError() }}
+      </p>
+    </div>
+
+    <!-- Link Mode -->
+    <div *ngIf="mode() === 'link'" class="space-y-2">
+      <label class="block text-xs font-semibold uppercase text-surface-700 mb-1">
+        LabSmart Report Link <span class="text-red-500">*</span>
+      </label>
+      <input
+        type="text"
+        pInputText
+        class="w-full text-sm font-mono"
+        placeholder="https://labsmart.example.com/reports/..."
+        [ngModel]="linkUrl()"
+        (ngModelChange)="linkUrl.set($event)"
+      />
+      <p class="text-xs text-surface-500">
+        Direct PDF download link from LabSmart system (max 2000 chars).
+      </p>
+    </div>
+
+    <!-- Error Alert -->
+    <div
+      *ngIf="errorMessage()"
+      class="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700"
+    >
+      {{ errorMessage() }}
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <div class="flex justify-end gap-2 pt-2">
+      <p-button
+        label="Cancel"
+        severity="secondary"
+        [outlined]="true"
+        size="small"
+        (onClick)="close()"
+      ></p-button>
+      <p-button
+        [label]="mode() === 'upload' ? 'Upload Report' : 'Save Report Link'"
+        icon="pi pi-check"
+        size="small"
+        [loading]="submitting()"
+        [disabled]="!canSubmit()"
+        (onClick)="submit()"
+      ></p-button>
+    </div>
+  </ng-template>
+</p-dialog>

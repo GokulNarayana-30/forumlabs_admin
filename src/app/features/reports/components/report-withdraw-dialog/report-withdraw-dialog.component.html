@@ -1,0 +1,98 @@
+<p-dialog
+  header="Withdraw Diagnostic Report"
+  [visible]="visible"
+  (visibleChange)="close()"
+  [modal]="true"
+  [closable]="true"
+  [style]="{ width: '32rem', maxWidth: '95vw' }"
+>
+  <div class="space-y-4 pt-2">
+    <!-- Notice -->
+    <div
+      class="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-800 flex items-start gap-2"
+    >
+      <i class="pi pi-exclamation-triangle text-red-600 mt-0.5"></i>
+      <div>
+        <span class="font-semibold">Irreversible Action:</span>
+        Withdrawing a report marks this version as withdrawn. If previously released, customer
+        access will be immediately revoked.
+      </div>
+    </div>
+
+    <!-- Target Context -->
+    <div
+      *ngIf="item"
+      class="p-3 bg-surface-50 border border-surface-200 rounded-lg space-y-1 text-xs"
+    >
+      <div class="flex justify-between">
+        <span class="text-surface-500">Booking Ref:</span>
+        <span class="font-mono font-bold text-surface-900">{{ item.booking_ref }}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-surface-500">Patient:</span>
+        <span class="font-semibold text-surface-900">{{ item.patient_name }}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-surface-500">Reg No:</span>
+        <span class="font-mono text-surface-800">{{ item.reg_no || '-' }}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-surface-500">Version:</span>
+        <span class="font-mono font-bold text-primary-700">v{{ item.version }}</span>
+      </div>
+    </div>
+
+    <!-- Reason Code Select -->
+    <div>
+      <label
+        for="withdrawReasonSelect"
+        class="block text-xs font-semibold uppercase text-surface-700 mb-1"
+      >
+        Withdrawal Reason <span class="text-red-500">*</span>
+      </label>
+      <select
+        id="withdrawReasonSelect"
+        [ngModel]="selectedReason()"
+        (ngModelChange)="selectedReason.set($event)"
+        class="w-full px-3 py-2 rounded-lg border border-surface-300 text-sm text-surface-900 bg-white focus:outline-hidden focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+      >
+        <option [ngValue]="null" disabled selected>-- Select a canonical reason --</option>
+        <option *ngFor="let opt of reasonOptions" [ngValue]="opt.value">
+          {{ opt.label }}
+        </option>
+      </select>
+      <p class="text-xs text-surface-500 mt-1">
+        Hospital audit compliance requires selecting one of the four approved withdrawal reasons.
+      </p>
+    </div>
+
+    <!-- Error Alert -->
+    <div
+      *ngIf="errorMessage()"
+      class="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700"
+    >
+      {{ errorMessage() }}
+    </div>
+  </div>
+
+  <ng-template pTemplate="footer">
+    <div class="flex justify-end gap-2 pt-2">
+      <p-button
+        label="Cancel"
+        severity="secondary"
+        [outlined]="true"
+        size="small"
+        (onClick)="close()"
+      ></p-button>
+      <p-button
+        label="Confirm Withdrawal"
+        icon="pi pi-ban"
+        severity="danger"
+        size="small"
+        [loading]="submitting()"
+        [disabled]="!canSubmit()"
+        (onClick)="submit()"
+      ></p-button>
+    </div>
+  </ng-template>
+</p-dialog>

@@ -1,0 +1,195 @@
+@if (visible) {
+  <div
+    class="fixed inset-0 z-50 overflow-hidden bg-surface-900/40 backdrop-blur-xs flex justify-end"
+  >
+    <div
+      class="w-full max-w-xl bg-white h-full shadow-2xl border-l border-surface-200 flex flex-col animate-in slide-in-from-right duration-200"
+    >
+      <!-- Drawer Header -->
+      <div
+        class="px-6 py-5 border-b border-surface-200 flex items-center justify-between bg-surface-50"
+      >
+        <div>
+          <div class="flex items-center gap-3">
+            <h2 class="text-lg font-bold text-surface-900 tracking-tight">
+              {{ order()?.booking_ref || 'Booking Details' }}
+            </h2>
+            @if (order()?.status) {
+              <span
+                [class]="
+                  'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ' +
+                  getStatusClass(order()!.status)
+                "
+              >
+                {{ order()!.status }}
+              </span>
+            }
+          </div>
+          <p class="text-xs text-surface-500 mt-0.5">
+            Payment Status:
+            <span class="font-medium text-surface-700">{{ order()?.payment_status }}</span>
+            @if (order(); as o) {
+              <span class="text-surface-500"> · Total ₹{{ (o.total_paise / 100).toFixed(2) }}</span>
+            }
+          </p>
+        </div>
+
+        <button
+          type="button"
+          (click)="close()"
+          class="p-2 text-surface-400 hover:text-surface-700 rounded-lg hover:bg-surface-100 transition-colors"
+          aria-label="Close drawer"
+        >
+          <span class="text-xl leading-none">&times;</span>
+        </button>
+      </div>
+
+      <!-- Drawer Content -->
+      <div class="flex-1 overflow-y-auto p-6 space-y-6">
+        @if (isLoading()) {
+          <div class="p-12 text-center text-sm text-surface-500">Loading booking details...</div>
+        } @else if (errorMessage()) {
+          <div
+            class="p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700"
+            role="alert"
+          >
+            {{ errorMessage() }}
+          </div>
+        } @else if (order(); as ord) {
+          <!-- Slot & Address Section -->
+          <div class="bg-surface-50 rounded-2xl p-5 border border-surface-200 space-y-3">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-surface-500">
+              Collection Appointment & Location
+            </h3>
+            <div class="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <span class="text-xs text-surface-500 block">Slot Window</span>
+                <span class="font-semibold text-surface-800" data-testid="slot-window"
+                  >{{ ord.slot.starts_at | date: 'dd MMM, hh:mm a' : '+0530' }} -
+                  {{ ord.slot.ends_at | date: 'hh:mm a' : '+0530' }}</span
+                >
+              </div>
+              <div>
+                <span class="text-xs text-surface-500 block">Pincode</span>
+                <span class="font-semibold text-surface-800">{{ ord.address.pincode }}</span>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-surface-200 text-sm space-y-1">
+              <span class="text-xs text-surface-500 block">Full Collection Address</span>
+              <p class="text-surface-800 font-medium">
+                {{ ord.address.house }}, {{ ord.address.street }}
+              </p>
+              <p class="text-surface-600 text-xs">
+                {{ ord.address.area }} - {{ ord.address.pincode }}
+              </p>
+              @if (ord.address.landmark) {
+                <p class="text-xs text-surface-500">
+                  <span class="font-medium">Landmark:</span> {{ ord.address.landmark }}
+                </p>
+              }
+              @if (ord.address.access_notes) {
+                <p class="text-xs text-surface-500">
+                  <span class="font-medium">Access Notes:</span> {{ ord.address.access_notes }}
+                </p>
+              }
+            </div>
+          </div>
+
+          <!-- Patients & Tests Section -->
+          <div class="space-y-3">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-surface-500">
+              Patients & Prescribed Tests
+            </h3>
+            <div class="space-y-3">
+              @for (pt of ord.patients; track pt.patient_id) {
+                <div class="p-4 rounded-xl border border-surface-200 bg-white shadow-xs space-y-2">
+                  <div class="flex items-start justify-between">
+                    <div>
+                      <h4 class="text-sm font-bold text-surface-900">{{ pt.name }}</h4>
+                      <p class="text-xs text-surface-500">
+                        Code:
+                        <span class="font-medium text-surface-700">{{ pt.patient_code }}</span>
+                        &bull; Relation:
+                        <span class="font-medium text-surface-700">{{ pt.relation }}</span>
+                      </p>
+                    </div>
+                    <div class="text-right text-xs text-surface-500">
+                      <span>{{ pt.gender || 'Gender unstated' }}</span>
+                      <span class="block text-surface-400">
+                        DOB: {{ pt.date_of_birth || 'Not recorded' }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="pt-2 border-t border-surface-100">
+                    <span class="text-xs font-medium text-surface-600 block mb-1"
+                      >Prescribed Tests:</span
+                    >
+                    <div class="flex flex-wrap gap-1.5">
+                      @for (test of pt.test_names; track test) {
+                        <span
+                          class="px-2.5 py-0.5 rounded-lg text-xs font-medium bg-primary-50 text-primary-700 border border-primary-200"
+                        >
+                          {{ test }}
+                        </span>
+                      }
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Chronological Timeline Section (B-10) -->
+          <div class="space-y-3">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-surface-500">
+              Order Event History
+            </h3>
+            <div class="border-l-2 border-surface-200 ml-3 pl-4 space-y-4">
+              @for (evt of ord.events; track evt.id) {
+                <div class="relative">
+                  <div
+                    class="absolute -left-[23px] top-1 w-2.5 h-2.5 rounded-full bg-primary-600 border-2 border-white"
+                  ></div>
+                  <div>
+                    <span class="text-xs font-bold text-surface-900 block">
+                      {{ evt.kind }}
+                    </span>
+                    <div class="text-xs text-surface-500 flex flex-wrap items-center gap-2 mt-0.5">
+                      <span>{{ evt.occurred_at | date: 'dd MMM, hh:mm a' : '+0530' }}</span>
+                      &bull;
+                      <span
+                        >Actor: <strong class="text-surface-700">{{ evt.actor_type }}</strong> ({{
+                          evt.actor_id || 'system'
+                        }})</span
+                      >
+                    </div>
+                    @if (evt.reason_code) {
+                      <div
+                        class="mt-1 text-xs text-amber-700 bg-amber-50 px-2 py-0.5 rounded inline-block"
+                      >
+                        Reason: {{ evt.reason_code }}
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Drawer Footer -->
+      <div class="p-4 border-t border-surface-200 bg-surface-50 flex justify-end">
+        <button
+          type="button"
+          (click)="close()"
+          class="px-4 py-2 rounded-xl text-xs font-medium text-surface-700 hover:bg-surface-200 transition-colors"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+}

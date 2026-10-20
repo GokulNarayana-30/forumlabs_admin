@@ -1,0 +1,166 @@
+<p-toast></p-toast>
+
+<div class="space-y-6">
+  <!-- Header -->
+  <div>
+    <h1 class="text-2xl font-bold tracking-tight text-surface-900">Patient Record Lookup</h1>
+    <p class="text-sm text-surface-500 mt-1">
+      Support desk and booking staff lookup for patient history, family records, and diagnostic
+      reports.
+    </p>
+  </div>
+
+  <!-- Privacy Audit Notice -->
+  <div
+    class="p-3 bg-primary-50 border border-primary-200 rounded-lg text-xs text-primary-800 flex items-center gap-2"
+  >
+    <i class="pi pi-shield text-primary-600"></i>
+    <span>All searches and record views are audited in the staff access log.</span>
+  </div>
+
+  <!-- Search Panel -->
+  <div class="bg-surface-0 border border-surface-200 rounded-xl p-4 shadow-xs space-y-3">
+    <div class="flex flex-col sm:flex-row gap-3">
+      <!-- Search Type Select -->
+      <div class="w-full sm:w-56">
+        <label
+          for="searchTypeSelect"
+          class="block text-xs font-semibold uppercase text-surface-600 mb-1"
+        >
+          Search By
+        </label>
+        <select
+          id="searchTypeSelect"
+          [ngModel]="searchType()"
+          (ngModelChange)="onTypeChange($event)"
+          class="w-full px-3 py-2 rounded-lg border border-surface-300 text-sm text-surface-900 bg-white focus:outline-hidden focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+        >
+          <option *ngFor="let opt of searchTypeOptions" [value]="opt.value">
+            {{ opt.label }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Search Query Input -->
+      <div class="flex-1">
+        <label
+          for="searchQueryInput"
+          class="block text-xs font-semibold uppercase text-surface-600 mb-1"
+        >
+          Search Query
+        </label>
+        <div class="flex gap-2">
+          <input
+            id="searchQueryInput"
+            type="text"
+            pInputText
+            class="flex-1 text-sm font-mono"
+            [placeholder]="currentPlaceholder"
+            [ngModel]="searchQuery()"
+            (ngModelChange)="searchQuery.set($event)"
+            (keyup.enter)="executeSearch()"
+          />
+          <p-button
+            label="Search"
+            icon="pi pi-search"
+            [loading]="loading()"
+            [disabled]="!isQueryValid() || loading()"
+            (onClick)="executeSearch()"
+          ></p-button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Validation Error -->
+    <div *ngIf="validationError()" class="text-xs text-red-600">
+      {{ validationError() }}
+    </div>
+
+    <!-- Ticket Ref Interim Notice -->
+    <div
+      *ngIf="ticketRefNotice()"
+      class="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-start gap-2"
+    >
+      <i class="pi pi-info-circle text-amber-600 mt-0.5"></i>
+      <div>{{ ticketRefNotice() }}</div>
+    </div>
+  </div>
+
+  <!-- Search Results Table -->
+  <div
+    *ngIf="searchExecuted()"
+    class="bg-surface-0 border border-surface-200 rounded-xl overflow-hidden shadow-xs"
+  >
+    <div class="p-4 border-b border-surface-100 flex items-center justify-between">
+      <h2 class="text-sm font-bold text-surface-900">
+        Matching Patients
+        <span class="text-xs font-normal text-surface-500 ml-1"
+          >({{ results().length }} found)</span
+        >
+      </h2>
+    </div>
+
+    @if (results().length === 0) {
+      <div class="text-center py-8 text-surface-500 text-sm">No matching patients found.</div>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-surface-700">
+          <thead
+            class="bg-surface-50 border-b border-surface-200 text-xs uppercase font-semibold text-surface-500 tracking-wider"
+          >
+            <tr>
+              <th class="py-3 px-4">Patient Code</th>
+              <th class="py-3 px-4">Masked Name</th>
+              <th class="py-3 px-4">Masked Phone</th>
+              <th class="py-3 px-4">Relation</th>
+              <th class="py-3 px-4">Bookings</th>
+              <th class="py-3 px-4 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-surface-100">
+            @for (item of results(); track item.patient_id) {
+              <tr class="hover:bg-surface-50 transition-colors">
+                <td class="py-3 px-4 font-mono font-semibold text-primary-700">
+                  {{ item.patient_code }}
+                </td>
+                <td class="py-3 px-4 font-medium text-surface-900">
+                  {{ item.name_masked }}
+                </td>
+                <td class="py-3 px-4 font-mono text-surface-700">
+                  {{ item.phone_masked }}
+                </td>
+                <td class="py-3 px-4 text-surface-600 capitalize">
+                  {{ item.relation }}
+                </td>
+                <td class="py-3 px-4 text-surface-700">
+                  <span
+                    class="inline-block px-2 py-0.5 bg-surface-100 rounded text-xs font-semibold"
+                  >
+                    {{ item.booking_count }}
+                  </span>
+                </td>
+                <td class="py-3 px-4 text-right">
+                  <p-button
+                    label="View Details"
+                    icon="pi pi-user"
+                    size="small"
+                    [outlined]="true"
+                    (onClick)="selectPatient(item)"
+                  ></p-button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+  <!-- Patient Record Detail Modal -->
+  <app-patient-detail-view
+    *ngIf="selectedPatient()"
+    [visible]="detailVisible()"
+    [patient]="selectedPatient()"
+    (visibleChange)="detailVisible.set($event)"
+  ></app-patient-detail-view>
+</div>

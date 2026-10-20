@@ -1,0 +1,226 @@
+@if (visible && item) {
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs overflow-y-auto"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="edit-dialog-title"
+  >
+    <div
+      class="bg-white rounded-2xl border border-surface-200 shadow-xl w-full max-w-lg overflow-hidden my-8"
+    >
+      <!-- Dialog Header -->
+      <div class="p-5 border-b border-surface-100 flex items-center justify-between bg-surface-50">
+        <div>
+          <h2 id="edit-dialog-title" class="text-base font-bold text-surface-900">
+            Edit Catalog Item
+          </h2>
+          <p class="text-xs text-surface-500 mt-0.5">
+            {{ item.name }}
+            @if (item.code) {
+              <span class="font-mono text-surface-700">({{ item.code }})</span>
+            }
+          </p>
+        </div>
+        <button
+          type="button"
+          (click)="close()"
+          class="text-surface-400 hover:text-surface-700 text-lg font-bold p-1 rounded-lg transition-colors"
+          aria-label="Close dialog"
+        >
+          &times;
+        </button>
+      </div>
+
+      <!-- Dialog Body -->
+      <div class="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
+        @if (errorMessage()) {
+          <div
+            class="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-medium"
+          >
+            {{ errorMessage() }}
+          </div>
+        }
+
+        <!-- Pricing Section -->
+        <div class="grid grid-cols-2 gap-4">
+          <div class="space-y-1.5">
+            <label for="edit-mrp" class="text-xs font-bold text-surface-700 block">
+              MRP (₹) <span class="text-red-500">*</span>
+            </label>
+            <input
+              id="edit-mrp"
+              type="number"
+              min="1"
+              step="1"
+              [ngModel]="mrpRupees()"
+              (ngModelChange)="mrpRupees.set($event)"
+              class="w-full px-3 py-2 rounded-xl border border-surface-300 text-sm text-surface-900 focus:outline-hidden focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+            />
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="edit-offer-price" class="text-xs font-bold text-surface-700 block">
+              Offer Price (₹) <span class="text-surface-400 font-normal">(Optional)</span>
+            </label>
+            <input
+              id="edit-offer-price"
+              type="number"
+              min="0"
+              step="1"
+              [ngModel]="offerPriceRupees()"
+              (ngModelChange)="offerPriceRupees.set($event === '' ? null : $event)"
+              placeholder="Leave blank for no offer"
+              class="w-full px-3 py-2 rounded-xl border border-surface-300 text-sm text-surface-900 focus:outline-hidden focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+            />
+          </div>
+        </div>
+
+        <!-- Gender Eligibility -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold text-surface-700 block"> Eligible Gender </label>
+          <div
+            class="grid grid-cols-3 gap-2 p-1 bg-surface-100 rounded-xl border border-surface-200 text-center"
+          >
+            <button
+              type="button"
+              (click)="eligibleGender.set('any')"
+              [class]="
+                eligibleGender() === 'any'
+                  ? 'py-2 px-3 rounded-lg text-xs font-bold bg-white text-primary-700 shadow-xs border border-surface-200 transition-all'
+                  : 'py-2 px-3 rounded-lg text-xs font-medium text-surface-600 hover:text-surface-900 transition-colors'
+              "
+            >
+              Any
+            </button>
+            <button
+              type="button"
+              (click)="eligibleGender.set('male')"
+              [class]="
+                eligibleGender() === 'male'
+                  ? 'py-2 px-3 rounded-lg text-xs font-bold bg-white text-primary-700 shadow-xs border border-surface-200 transition-all'
+                  : 'py-2 px-3 rounded-lg text-xs font-medium text-surface-600 hover:text-surface-900 transition-colors'
+              "
+            >
+              Male Only
+            </button>
+            <button
+              type="button"
+              (click)="eligibleGender.set('female')"
+              [class]="
+                eligibleGender() === 'female'
+                  ? 'py-2 px-3 rounded-lg text-xs font-bold bg-white text-primary-700 shadow-xs border border-surface-200 transition-all'
+                  : 'py-2 px-3 rounded-lg text-xs font-medium text-surface-600 hover:text-surface-900 transition-colors'
+              "
+            >
+              Female Only
+            </button>
+          </div>
+        </div>
+
+        <!-- Age Limits -->
+        <div class="grid grid-cols-2 gap-4">
+          <div class="space-y-1.5">
+            <label for="edit-min-age" class="text-xs font-bold text-surface-700 block">
+              Min Age (Years)
+            </label>
+            <input
+              id="edit-min-age"
+              type="number"
+              min="0"
+              max="150"
+              [ngModel]="minAgeYears()"
+              (ngModelChange)="minAgeYears.set($event === '' ? null : $event)"
+              placeholder="e.g. 18"
+              class="w-full px-3 py-2 rounded-xl border border-surface-300 text-sm text-surface-900 focus:outline-hidden focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+            />
+          </div>
+
+          <div class="space-y-1.5">
+            <label for="edit-max-age" class="text-xs font-bold text-surface-700 block">
+              Max Age (Years)
+            </label>
+            <input
+              id="edit-max-age"
+              type="number"
+              min="0"
+              max="150"
+              [ngModel]="maxAgeYears()"
+              (ngModelChange)="maxAgeYears.set($event === '' ? null : $event)"
+              placeholder="e.g. 65"
+              class="w-full px-3 py-2 rounded-xl border border-surface-300 text-sm text-surface-900 focus:outline-hidden focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-colors"
+            />
+          </div>
+        </div>
+
+        <!-- Categories Multiselect -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold text-surface-700 block"> Assigned Categories </label>
+          <div
+            class="max-h-36 overflow-y-auto p-2 rounded-xl border border-surface-300 bg-surface-50 space-y-1"
+          >
+            @for (cat of categories; track cat.id) {
+              <label
+                class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-white text-xs cursor-pointer select-none transition-colors"
+              >
+                <input
+                  type="checkbox"
+                  [checked]="selectedCategoryIds().includes(cat.id)"
+                  (change)="toggleCategory(cat.id)"
+                  class="rounded-sm border-surface-300 text-primary-600 focus:ring-primary-500"
+                />
+                <span class="text-surface-800 font-medium">{{ cat.name }}</span>
+              </label>
+            }
+          </div>
+        </div>
+
+        <!-- Active Toggle -->
+        <div
+          class="flex items-center justify-between p-3 rounded-xl bg-surface-50 border border-surface-200"
+        >
+          <div>
+            <span class="text-xs font-bold text-surface-800 block">Item Status</span>
+            <span class="text-xs text-surface-500">Available for customer search and booking</span>
+          </div>
+          <button
+            type="button"
+            (click)="active.set(!active())"
+            [class]="
+              active()
+                ? 'px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200'
+                : 'px-3 py-1.5 rounded-lg text-xs font-bold bg-surface-200 text-surface-600 border border-surface-300'
+            "
+          >
+            {{ active() ? 'Active' : 'Inactive' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Dialog Footer -->
+      <div
+        class="p-4 bg-surface-50 border-t border-surface-100 flex items-center justify-end gap-2"
+      >
+        <button
+          type="button"
+          (click)="close()"
+          [disabled]="isSubmitting()"
+          class="px-4 py-2 rounded-xl text-xs font-semibold text-surface-600 hover:text-surface-900 hover:bg-surface-200 transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          (click)="onSubmit()"
+          [disabled]="isSubmitting()"
+          class="px-5 py-2 rounded-xl text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 transition-colors shadow-xs"
+        >
+          @if (isSubmitting()) {
+            Saving...
+          } @else {
+            Save Changes
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}
