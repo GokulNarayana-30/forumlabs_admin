@@ -2,10 +2,10 @@ import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 import { PendingAuthOperations } from './pending-auth-operations.service';
 import { AuthService } from './auth.service';
-import { inMemoryStorage } from './supabase-client';
+import { inMemoryStorage, sessionTabStorage } from './supabase-client';
 import { ApiClient } from '../api/api-client.service';
 
-describe('AuthService (Memory-Only Session Security)', () => {
+describe('AuthService (tab-scoped session)', () => {
   let service: AuthService;
   let router: Router;
   let apiClient: { resetIdempotencyKeys: ReturnType<typeof vi.fn> };
@@ -13,6 +13,7 @@ describe('AuthService (Memory-Only Session Security)', () => {
   beforeEach(() => {
     apiClient = { resetIdempotencyKeys: vi.fn() };
     inMemoryStorage.clear();
+    sessionStorage.clear();
     // Seed an unrelated item in localStorage to prove we do not wipe foreign storage
     localStorage.setItem('unrelated_app_setting', 'keep_me');
 
@@ -35,7 +36,7 @@ describe('AuthService (Memory-Only Session Security)', () => {
     localStorage.removeItem('unrelated_app_setting');
   });
 
-  it('keeps session strictly in-memory and writes nothing to localStorage or sessionStorage after login', async () => {
+  it('keeps the session in the tab storage only: never localStorage, and no other data', async () => {
     // Spy on Supabase client auth methods
     const mockSession = {
       access_token: 'fake-jwt-token-12345',
@@ -51,7 +52,7 @@ describe('AuthService (Memory-Only Session Security)', () => {
     expect(result.error).toBeNull();
     expect(result.session?.access_token).toBe('fake-jwt-token-12345');
 
-    // Memory storage holds the session
+    // The signed-in session is available
     expect(service.getSession()?.access_token).toBe('fake-jwt-token-12345');
 
     // CRITICAL: verify localStorage and sessionStorage have zero tokens or PHI
@@ -65,16 +66,59 @@ describe('AuthService (Memory-Only Session Security)', () => {
     expect(localStorage.getItem('unrelated_app_setting')).toBe('keep_me');
   });
 
-  it('signOut clears in-memory session and redirects to /login', async () => {
-    vi.spyOn(service.supabase.auth, 'signOut').mockResolvedValueOnce({ error: null });
+  const KEY = 'sb-testproject-auth-token';
+  const soon = () => Math.floor(Date.now() / 1000) + 3600;
 
-    // Seed session in memory
-    inMemoryStorage.set('session', JSON.stringify({ access_token: 'jwt-to-clear' }));
+  it('a refresh keeps staff signed in: a stored session with a valid token is restored without the network', async () => {
+    sessionTabStorage.setItem(
+      KEY,
+      JSON.stringify({ access_token: 'stored-jwt', expires_at: soon() }),
+    );
+
+    expect(service.getSession()?.access_token).toBe('stored-jwt');
+    expect((await service.restoreSession())?.access_token).toBe('stored-jwt');
+    expect(localStorage.getItem(KEY)).toBeNull(); // tab storage only
+  });
+
+  it('an expired stored session is not used as it is; restore asks Supabase and answers signed out when that fails', async () => {
+    sessionTabStorage.setItem(
+      KEY,
+      JSON.stringify({ access_token: 'old-jwt', expires_at: Math.floor(Date.now() / 1000) - 5 }),
+    );
+    vi.spyOn(service.supabase.auth, 'getSession').mockResolvedValueOnce({
+      data: { session: null },
+      error: null,
+    } as never);
+
+    expect(service.getSession()).toBeNull();
+    expect(await service.restoreSession()).toBeNull();
+  });
+
+  it('an expired stored session is renewed by Supabase (refresh token) and the new one is used', async () => {
+    sessionTabStorage.setItem(
+      KEY,
+      JSON.stringify({ access_token: 'old-jwt', expires_at: Math.floor(Date.now() / 1000) - 5 }),
+    );
+    vi.spyOn(service.supabase.auth, 'getSession').mockResolvedValueOnce({
+      data: { session: { access_token: 'renewed-jwt', expires_at: soon() } },
+      error: null,
+    } as never);
+
+    expect((await service.restoreSession())?.access_token).toBe('renewed-jwt');
+    expect(service.getSession()?.access_token).toBe('renewed-jwt');
+  });
+
+  it('signOut removes the stored session (and only that) and redirects to /login', async () => {
+    vi.spyOn(service.supabase.auth, 'signOut').mockResolvedValueOnce({ error: null });
+    sessionTabStorage.setItem(KEY, JSON.stringify({ access_token: 'jwt-to-clear' }));
+    sessionStorage.setItem('unrelated_tab_value', 'keep_me');
 
     await service.signOut();
 
     expect(service.getSession()).toBeNull();
+    expect(sessionStorage.getItem(KEY)).toBeNull();
     expect(inMemoryStorage.size).toBe(0);
+    expect(sessionStorage.getItem('unrelated_tab_value')).toBe('keep_me');
     expect(router.navigateByUrl).toHaveBeenCalledWith('/login');
   });
 

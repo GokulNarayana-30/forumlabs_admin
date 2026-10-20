@@ -1,7 +1,7 @@
+import { UiTagComponent } from '../../shared/ui/ui-tag.component';
 import { Component, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { TagModule } from 'primeng/tag';
 import {
   TicketsService,
   StaffTicketSummaryDto,
@@ -15,7 +15,7 @@ export type TicketStatusFilter = 'all' | 'open' | 'in_progress' | 'resolved' | '
 @Component({
   selector: 'app-tickets-list',
   standalone: true,
-  imports: [CommonModule, RouterModule, TagModule],
+  imports: [CommonModule, RouterModule, UiTagComponent],
   templateUrl: './tickets-list.component.html',
 })
 export class TicketsListComponent implements OnInit, OnDestroy {

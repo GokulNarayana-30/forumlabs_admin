@@ -77,10 +77,10 @@
             <h1 class="text-xl font-bold text-surface-900 font-mono">
               {{ data.ticket.reference }}
             </h1>
-            <p-tag
+            <ui-tag
               [value]="data.ticket.status"
               [severity]="getStatusSeverity(data.ticket.status)"
-            ></p-tag>
+            ></ui-tag>
           </div>
           <p class="text-xs text-surface-500 mt-1">
             Topic: <span class="font-medium text-surface-700">{{ data.ticket.category }}</span>

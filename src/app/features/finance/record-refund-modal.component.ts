@@ -1,7 +1,6 @@
 import { Component, EventEmitter, Input, Output, signal, inject, OnChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { DialogModule } from 'primeng/dialog';
 import {
   RefundsService,
   RefundOrderLookupResult,
@@ -14,7 +13,7 @@ import { errorText } from '../../core/api/error-text';
 @Component({
   selector: 'app-record-refund-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, DialogModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './record-refund-modal.component.html',
 })
 export class RecordRefundModalComponent implements OnChanges {

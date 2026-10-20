@@ -11,8 +11,6 @@ const repoRoot = path.resolve(adminRoot, '../..');
 
 export const APPROVED_PACKAGES = {
   dependencies: {
-    primeng: '22.1.2',
-    '@primeuix/themes': '3.0.1',
     primeicons: '8.0.2',
     '@supabase/supabase-js': '2.117.2',
   },
@@ -23,12 +21,7 @@ export const APPROVED_PACKAGES = {
   },
 };
 
-export function validatePackageInventory({
-  currentPkg,
-  basePkg,
-  lockfile,
-  readInstalledVersion,
-}) {
+export function validatePackageInventory({ currentPkg, basePkg, lockfile, readInstalledVersion }) {
   const errors = [];
 
   // 1. Check approved dependencies in current package.json
@@ -92,25 +85,33 @@ export function validatePackageInventory({
 
     for (const [name, expectedVersion] of Object.entries(APPROVED_PACKAGES.dependencies)) {
       if (rootLockDeps[name] !== expectedVersion) {
-        errors.push(`package-lock.json root dependency mismatch for ${name}: expected ${expectedVersion}, got ${rootLockDeps[name]}`);
+        errors.push(
+          `package-lock.json root dependency mismatch for ${name}: expected ${expectedVersion}, got ${rootLockDeps[name]}`,
+        );
       }
       const pkgEntry = lockfile.packages?.[`node_modules/${name}`];
       if (!pkgEntry) {
         errors.push(`package-lock.json missing node_modules/${name}`);
       } else if (pkgEntry.version !== expectedVersion) {
-        errors.push(`package-lock.json node_modules/${name} version mismatch: expected ${expectedVersion}, got ${pkgEntry.version}`);
+        errors.push(
+          `package-lock.json node_modules/${name} version mismatch: expected ${expectedVersion}, got ${pkgEntry.version}`,
+        );
       }
     }
 
     for (const [name, expectedVersion] of Object.entries(APPROVED_PACKAGES.devDependencies)) {
       if (rootLockDevDeps[name] !== expectedVersion) {
-        errors.push(`package-lock.json root devDependency mismatch for ${name}: expected ${expectedVersion}, got ${rootLockDevDeps[name]}`);
+        errors.push(
+          `package-lock.json root devDependency mismatch for ${name}: expected ${expectedVersion}, got ${rootLockDevDeps[name]}`,
+        );
       }
       const pkgEntry = lockfile.packages?.[`node_modules/${name}`];
       if (!pkgEntry) {
         errors.push(`package-lock.json missing node_modules/${name}`);
       } else if (pkgEntry.version !== expectedVersion) {
-        errors.push(`package-lock.json node_modules/${name} version mismatch: expected ${expectedVersion}, got ${pkgEntry.version}`);
+        errors.push(
+          `package-lock.json node_modules/${name} version mismatch: expected ${expectedVersion}, got ${pkgEntry.version}`,
+        );
       }
     }
   }
@@ -125,7 +126,9 @@ export function validatePackageInventory({
       if (!installed) {
         errors.push(`Installed package not found on disk: ${name}`);
       } else if (installed !== expectedVersion) {
-        errors.push(`Installed package version mismatch for ${name}: expected ${expectedVersion}, got ${installed}`);
+        errors.push(
+          `Installed package version mismatch for ${name}: expected ${expectedVersion}, got ${installed}`,
+        );
       }
     }
   }
@@ -189,14 +192,17 @@ export function runSelfTest() {
 
   // Negative control 1: incorrect pin
   const badPinPkg = structuredClone(validCurrentPkg);
-  badPinPkg.dependencies.primeng = '22.1.3';
+  badPinPkg.dependencies.primeicons = '8.0.3';
   const badPinErrors = validatePackageInventory({
     currentPkg: badPinPkg,
     basePkg: validBasePkg,
     lockfile: validLockfile,
     readInstalledVersion: validReader,
   });
-  if (badPinErrors.length === 0 || !badPinErrors.some((e) => e.includes('Wrong version for primeng'))) {
+  if (
+    badPinErrors.length === 0 ||
+    !badPinErrors.some((e) => e.includes('Wrong version for primeicons'))
+  ) {
     throw new Error('Self-test failed: incorrect pin was not rejected');
   }
 
@@ -209,20 +215,28 @@ export function runSelfTest() {
     lockfile: validLockfile,
     readInstalledVersion: validReader,
   });
-  if (extraDepErrors.length === 0 || !extraDepErrors.some((e) => e.includes('Unapproved root dependency added: lodash'))) {
+  if (
+    extraDepErrors.length === 0 ||
+    !extraDepErrors.some((e) => e.includes('Unapproved root dependency added: lodash'))
+  ) {
     throw new Error('Self-test failed: unapproved extra dependency was not rejected');
   }
 
   // Negative control 3: lockfile mismatch
   const badLockfile = structuredClone(validLockfile);
-  badLockfile.packages['node_modules/primeng'].version = '22.1.1';
+  badLockfile.packages['node_modules/primeicons'].version = '8.0.1';
   const badLockErrors = validatePackageInventory({
     currentPkg: validCurrentPkg,
     basePkg: validBasePkg,
     lockfile: badLockfile,
     readInstalledVersion: validReader,
   });
-  if (badLockErrors.length === 0 || !badLockErrors.some((e) => e.includes('package-lock.json node_modules/primeng version mismatch'))) {
+  if (
+    badLockErrors.length === 0 ||
+    !badLockErrors.some((e) =>
+      e.includes('package-lock.json node_modules/primeicons version mismatch'),
+    )
+  ) {
     throw new Error('Self-test failed: mismatching lock entry was not rejected');
   }
 
@@ -255,7 +269,9 @@ function main() {
   }
 
   const currentPkg = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8'));
-  const lockfile = fs.existsSync(lockJsonPath) ? JSON.parse(fs.readFileSync(lockJsonPath, 'utf8')) : null;
+  const lockfile = fs.existsSync(lockJsonPath)
+    ? JSON.parse(fs.readFileSync(lockJsonPath, 'utf8'))
+    : null;
 
   let basePkg = { dependencies: {}, devDependencies: {} };
   if (baseCommit) {
@@ -267,7 +283,9 @@ function main() {
       });
       basePkg = JSON.parse(basePkgRaw);
     } catch (err) {
-      console.error(`Failed to load base package.json from git commit ${baseCommit}: ${err.message}`);
+      console.error(
+        `Failed to load base package.json from git commit ${baseCommit}: ${err.message}`,
+      );
       process.exit(1);
     }
   }
@@ -300,7 +318,9 @@ function main() {
     process.exit(1);
   }
 
-  console.log('[check-approved-packages] PASSED: All 7 approved packages match exact pins and base dependencies are preserved.');
+  console.log(
+    '[check-approved-packages] PASSED: All 7 approved packages match exact pins and base dependencies are preserved.',
+  );
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(__filename)) {

@@ -154,12 +154,13 @@ describe('TicketsListComponent', () => {
     };
     const list = namesOf(TicketsListComponent);
     const thread = namesOf(TicketThreadComponent);
-    expect(list).toContain('TagModule');
-    expect(list).not.toEqual(expect.arrayContaining(['ButtonModule']));
-    expect(list).not.toEqual(expect.arrayContaining(['TableModule']));
+    // The test build prefixes a decorated class name with an underscore.
+    expect(list.some((name) => name.endsWith('UiTagComponent'))).toBe(true);
+    expect(list).not.toEqual(expect.arrayContaining(['UiButtonComponent']));
+    expect(list).not.toEqual(expect.arrayContaining(['TableModule', 'UiDialogComponent']));
     expect(list).not.toEqual(expect.arrayContaining(['FormsModule']));
     expect(thread).toContain('FormsModule');
-    expect(thread).not.toEqual(expect.arrayContaining(['ButtonModule']));
+    expect(thread).not.toEqual(expect.arrayContaining(['UiButtonComponent']));
   });
 
   it('displays empty state when no tickets are returned', async () => {

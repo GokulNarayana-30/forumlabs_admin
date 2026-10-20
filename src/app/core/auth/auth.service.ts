@@ -1,7 +1,7 @@
 import { Injectable, Injector, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Session, SupabaseClient } from '@supabase/supabase-js';
-import { createSupabaseAuthClient, inMemoryStorage } from './supabase-client';
+import { clearStoredSession, createSupabaseAuthClient, readStoredSession } from './supabase-client';
 import { PendingAuthOperations } from './pending-auth-operations.service';
 import { ApiClient } from '../api/api-client.service';
 
@@ -38,31 +38,47 @@ export class AuthService {
       await this.supabase.auth.signOut();
     } finally {
       this.currentSession = null;
-      inMemoryStorage.clear();
+      clearStoredSession();
       // Keys belong to the signed-out user's actions; the next user must never replay them.
       this.injector.get(ApiClient).resetIdempotencyKeys();
       await this.router.navigateByUrl('/login');
     }
   }
 
+  /**
+   * The session of this tab, read without waiting: the one signed in during this page load, or the one
+   * a refresh left in the tab storage while its access token is still valid.
+   */
   getSession(): Session | null {
-    if (this.currentSession) {
-      return this.currentSession;
-    }
-    // Check if inMemoryStorage has a session
-    for (const [key, value] of inMemoryStorage.entries()) {
-      if (key.includes('session') || key.includes('token') || key.includes('auth')) {
-        try {
-          const parsed = JSON.parse(value);
-          if (parsed && typeof parsed === 'object' && 'access_token' in parsed) {
-            this.currentSession = parsed as Session;
-            return this.currentSession;
-          }
-        } catch {
-          // ignore
-        }
-      }
+    if (this.currentSession && !this.isExpired(this.currentSession)) return this.currentSession;
+    const stored = readStoredSession() as Session | null;
+    if (stored && !this.isExpired(stored)) {
+      this.currentSession = stored;
+      return stored;
     }
     return null;
+  }
+
+  /**
+   * After a page refresh: loads the stored session and, when its access token has run out, asks Supabase
+   * for a new one with the refresh token. Answers null (signed out) when there is nothing usable.
+   */
+  async restoreSession(): Promise<Session | null> {
+    const ready = this.getSession();
+    if (ready) return ready;
+    try {
+      const { data, error } = await this.supabase.auth.getSession();
+      if (error || !data.session) return null;
+      this.currentSession = data.session;
+      return data.session;
+    } catch {
+      return null;
+    }
+  }
+
+  private isExpired(session: Session): boolean {
+    const expiresAt = (session as { expires_at?: number }).expires_at;
+    // Ten seconds of margin so a request never leaves with a token that dies on the way.
+    return typeof expiresAt === 'number' && expiresAt * 1000 <= Date.now() + 10_000;
   }
 }

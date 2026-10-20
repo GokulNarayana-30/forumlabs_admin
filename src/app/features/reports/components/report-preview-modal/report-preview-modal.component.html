@@ -1,4 +1,4 @@
-<p-dialog
+<ui-dialog
   header="Diagnostic Report Preview & Approval"
   [visible]="visible"
   (visibleChange)="close()"
@@ -93,39 +93,39 @@
     </div>
   </div>
 
-  <ng-template pTemplate="footer">
+  <div dialog-footer>
     <div class="flex items-center justify-between w-full pt-2">
       <div>
-        <p-button
+        <ui-button
           label="Withdraw"
           icon="pi pi-ban"
           severity="danger"
           [outlined]="true"
           size="small"
           (onClick)="requestWithdraw()"
-        ></p-button>
+        ></ui-button>
       </div>
 
       <div class="flex items-center gap-2">
-        <p-button
+        <ui-button
           label="Close"
           severity="secondary"
           [outlined]="true"
           size="small"
           (onClick)="close()"
-        ></p-button>
+        ></ui-button>
 
         @if (confirmingRelease()) {
           <span class="text-xs text-surface-700">Release this report to the patient?</span>
-          <p-button
+          <ui-button
             label="Cancel"
             severity="secondary"
             size="small"
             [text]="true"
             styleClass="btn-release-cancel"
             (onClick)="confirmingRelease.set(false)"
-          ></p-button>
-          <p-button
+          ></ui-button>
+          <ui-button
             label="Confirm Release"
             icon="pi pi-check"
             size="small"
@@ -133,20 +133,20 @@
             [disabled]="!canRelease() || releasing()"
             [loading]="releasing()"
             (onClick)="release()"
-          ></p-button>
+          ></ui-button>
         } @else {
-          <span [pTooltip]="releaseTooltip()" tooltipPosition="top">
-            <p-button
+          <span [attr.title]="releaseTooltip()">
+            <ui-button
               label="Release Report"
               icon="pi pi-check"
               size="small"
               styleClass="btn-release"
               [disabled]="!canRelease() || releasing()"
               (onClick)="release()"
-            ></p-button>
+            ></ui-button>
           </span>
         }
       </div>
     </div>
-  </ng-template>
-</p-dialog>
+  </div>
+</ui-dialog>

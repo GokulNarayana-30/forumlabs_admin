@@ -1,8 +1,8 @@
+import { UiTagComponent } from '../../../../shared/ui/ui-tag.component';
+import { UiDialogComponent } from '../../../../shared/ui/ui-dialog.component';
+import { UiButtonComponent } from '../../../../shared/ui/ui-button.component';
 import { Component, EventEmitter, Input, Output, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DialogModule } from 'primeng/dialog';
-import { ButtonModule } from 'primeng/button';
-import { TagModule } from 'primeng/tag';
 import {
   PatientsService,
   StaffPatientDetail,
@@ -14,7 +14,7 @@ import { errorText } from '../../../../core/api/error-text';
 @Component({
   selector: 'app-patient-detail-view',
   standalone: true,
-  imports: [CommonModule, DialogModule, ButtonModule, TagModule],
+  imports: [CommonModule, UiDialogComponent, UiButtonComponent, UiTagComponent],
   templateUrl: './patient-detail-view.component.html',
 })
 export class PatientDetailViewComponent {

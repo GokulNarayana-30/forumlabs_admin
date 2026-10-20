@@ -1,9 +1,8 @@
+import { UiDialogComponent } from '../../../../shared/ui/ui-dialog.component';
+import { UiButtonComponent } from '../../../../shared/ui/ui-button.component';
 import { Component, EventEmitter, Input, Output, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { DialogModule } from 'primeng/dialog';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
 import { ReportsService, AddReportResult } from '../../services/reports.service';
 import { errorText } from '../../../../core/api/error-text';
 
@@ -13,7 +12,7 @@ export const MAX_REPORT_FILE_SIZE = 10485760; // 10 MB
 @Component({
   selector: 'app-report-upload-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, DialogModule, ButtonModule, InputTextModule],
+  imports: [CommonModule, FormsModule, UiDialogComponent, UiButtonComponent],
   templateUrl: './report-upload-dialog.component.html',
 })
 export class ReportUploadDialogComponent {

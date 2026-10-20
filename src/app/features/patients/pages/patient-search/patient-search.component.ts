@@ -1,11 +1,8 @@
+import { UiButtonComponent } from '../../../../shared/ui/ui-button.component';
+import { ToastService } from '../../../../shared/ui/toast.service';
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { TableModule } from 'primeng/table';
-import { ToastModule } from 'primeng/toast';
-import { MessageService } from 'primeng/api';
 import {
   PatientsService,
   PatientSearchType,
@@ -24,21 +21,12 @@ export interface SearchTypeOption {
 @Component({
   selector: 'app-patient-search',
   standalone: true,
-  imports: [
-    CommonModule,
-    FormsModule,
-    ButtonModule,
-    InputTextModule,
-    TableModule,
-    ToastModule,
-    PatientDetailViewComponent,
-  ],
-  providers: [MessageService],
+  imports: [CommonModule, FormsModule, UiButtonComponent, PatientDetailViewComponent],
   templateUrl: './patient-search.component.html',
 })
 export class PatientSearchComponent {
   private readonly patientsService = inject(PatientsService);
-  private readonly messageService = inject(MessageService);
+  private readonly messageService = inject(ToastService);
 
   readonly searchTypeOptions: SearchTypeOption[] = [
     { label: 'Patient ID', value: 'patient_id', placeholder: 'e.g. FL-P-104928' },

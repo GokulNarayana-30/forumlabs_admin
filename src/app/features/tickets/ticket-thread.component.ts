@@ -1,9 +1,9 @@
+import { UiTagComponent } from '../../shared/ui/ui-tag.component';
 import { Component, ElementRef, inject, OnInit, OnDestroy, signal, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { FormsModule } from '@angular/forms';
-import { TagModule } from 'primeng/tag';
 import {
   TicketsService,
   StaffTicketDetailDto,
@@ -15,7 +15,7 @@ import { assigneeLabelFor } from './assignee-label';
 @Component({
   selector: 'app-ticket-thread',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, TagModule],
+  imports: [CommonModule, RouterModule, FormsModule, UiTagComponent],
   templateUrl: './ticket-thread.component.html',
 })
 export class TicketThreadComponent implements OnInit, OnDestroy {

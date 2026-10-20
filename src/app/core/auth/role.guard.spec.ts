@@ -13,12 +13,14 @@ describe('authGuard & roleGuard', () => {
 
   beforeEach(() => {
     mockAuthService = {
-      getSession: vi.fn(),
+      restoreSession: vi.fn(),
     };
 
     mockStaffState = {
       hasRole: vi.fn(),
       roles: vi.fn().mockReturnValue([]),
+      // The profile is already in memory (the refresh path is covered in auth.guard.spec.ts).
+      currentUser: vi.fn().mockReturnValue({ user_id: 'u1' }),
     };
 
     mockRouter = {
@@ -36,17 +38,17 @@ describe('authGuard & roleGuard', () => {
   });
 
   describe('authGuard', () => {
-    it('permits navigation when session exists', () => {
-      mockAuthService.getSession.mockReturnValue({ access_token: 'valid' });
-      const result = TestBed.runInInjectionContext(() =>
+    it('permits navigation when session exists', async () => {
+      mockAuthService.restoreSession.mockResolvedValue({ access_token: 'valid' });
+      const result = await TestBed.runInInjectionContext(() =>
         authGuard({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot),
       );
       expect(result).toBe(true);
     });
 
-    it('redirects to /login when session does not exist', () => {
-      mockAuthService.getSession.mockReturnValue(null);
-      const result = TestBed.runInInjectionContext(() =>
+    it('redirects to /login when session does not exist', async () => {
+      mockAuthService.restoreSession.mockResolvedValue(null);
+      const result = await TestBed.runInInjectionContext(() =>
         authGuard({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot),
       );
       expect(result).toEqual({ path: '/login' });
@@ -156,9 +158,9 @@ describe('authGuard & roleGuard', () => {
       expect(routeTreeProblems(widened)[0]).toContain('reports: roles');
     });
 
-    it('ensures /no-access is reachable without redirect loop for authenticated staff', () => {
-      mockAuthService.getSession.mockReturnValue({ access_token: 'valid' });
-      const authResult = TestBed.runInInjectionContext(() =>
+    it('ensures /no-access is reachable without redirect loop for authenticated staff', async () => {
+      mockAuthService.restoreSession.mockResolvedValue({ access_token: 'valid' });
+      const authResult = await TestBed.runInInjectionContext(() =>
         authGuard({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot),
       );
       expect(authResult).toBe(true);

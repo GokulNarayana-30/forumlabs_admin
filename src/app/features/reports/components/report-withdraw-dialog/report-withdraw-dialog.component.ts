@@ -1,8 +1,8 @@
+import { UiDialogComponent } from '../../../../shared/ui/ui-dialog.component';
+import { UiButtonComponent } from '../../../../shared/ui/ui-button.component';
 import { Component, EventEmitter, Input, Output, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { DialogModule } from 'primeng/dialog';
-import { ButtonModule } from 'primeng/button';
 import {
   ReportsService,
   StaffReportQueueItem,
@@ -19,7 +19,7 @@ export interface WithdrawReasonOption {
 @Component({
   selector: 'app-report-withdraw-dialog',
   standalone: true,
-  imports: [CommonModule, FormsModule, DialogModule, ButtonModule],
+  imports: [CommonModule, FormsModule, UiDialogComponent, UiButtonComponent],
   templateUrl: './report-withdraw-dialog.component.html',
 })
 export class ReportWithdrawDialogComponent {

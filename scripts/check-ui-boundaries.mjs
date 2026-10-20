@@ -17,7 +17,10 @@ export const FORBIDDEN_PATTERNS = [
   {
     name: 'browser storage write (localStorage / sessionStorage)',
     regex: /(localStorage|sessionStorage)\s*\.\s*(setItem|clear)/g,
-    fileFilter: (filePath) => !filePath.endsWith('.spec.ts'),
+    // Owner decision 2026-10-20: the sign-in session lives in the TAB storage so a refresh keeps staff
+    // signed in. Only the one file that holds it may write; nothing else may store anything.
+    fileFilter: (filePath) =>
+      !filePath.endsWith('.spec.ts') && !filePath.endsWith('core/auth/supabase-client.ts'),
   },
   {
     name: 'arbitrary console logging',
@@ -28,10 +31,7 @@ export const FORBIDDEN_PATTERNS = [
     name: 'literal hex/rgb/hsl/oklch colour',
     // Matches #fff, #ffffff, rgb(...), rgba(...), hsl(...), oklch(...)
     regex: /(#[0-9a-fA-F]{3,8}\b|\brgba?\s*\(|\bhsla?\s*\(|\boklch\s*\()/g,
-    fileFilter: (filePath) =>
-      !filePath.endsWith('.spec.ts') &&
-      !filePath.endsWith('forum-theme.preset.ts') &&
-      !filePath.endsWith('styles.scss'), // Tailwind import/variables allowed in styles.scss
+    fileFilter: (filePath) => !filePath.endsWith('.spec.ts') && !filePath.endsWith('styles.scss'), // Tailwind import/variables allowed in styles.scss
   },
 ];
 
@@ -53,7 +53,7 @@ export function scanSource(content, filePath) {
 // Tailwind 4 emits a colour utility only when its `--color-*` theme variable
 // exists. `primary` and `surface` are not Tailwind colours, so every shade a
 // template uses must be declared in styles.scss (the @theme bridge to the
-// PrimeNG preset); otherwise the class is silently dropped from the bundle.
+// colour scales); otherwise the class is silently dropped from the bundle.
 const THEME_CLASS_REGEX =
   /(?<![\w-])(?:[a-z]+:)*(?:bg|text|border(?:-[trblxy])?|ring|ring-offset|from|via|to|divide|outline|fill|stroke|placeholder|accent|caret|decoration|shadow)-(primary|surface)-(\d+)(?![\w-])/g;
 
@@ -127,12 +127,12 @@ export function runSelfTest() {
     throw new Error('Self-test failed: Supabase table query was not rejected');
   }
 
-  // 5. Allowed in preset file
-  const allowedInPreset = 'const primary = { 500: "#714EA0" };';
-  const pErrors = scanSource(allowedInPreset, 'src/app/core/theme/forum-theme.preset.ts');
+  // 5. Allowed in the global styles file (where the colour scales are declared)
+  const allowedInStyles = '@theme { --color-primary-500: #714ea0; }';
+  const pErrors = scanSource(allowedInStyles, 'src/styles.scss');
   if (pErrors.length > 0) {
     throw new Error(
-      `Self-test failed: preset colours were wrongly rejected: ${pErrors.join(', ')}`,
+      `Self-test failed: colours in styles.scss were wrongly rejected: ${pErrors.join(', ')}`,
     );
   }
 
@@ -151,7 +151,7 @@ export function runSelfTest() {
   }
   const bridged = checkThemeTokens(
     usage,
-    '@theme inline { --color-primary-600: var(--p-primary-600); --color-surface-200: var(--p-surface-200); }',
+    '@theme { --color-primary-600: #7f50a0; --color-surface-200: #e2e8f0; }',
   );
   if (bridged.length > 0) {
     throw new Error(
@@ -160,7 +160,7 @@ export function runSelfTest() {
   }
 
   console.log(
-    '[check-ui-boundaries] Self-test PASSED (all planted offenders rejected, preset allowed).',
+    '[check-ui-boundaries] Self-test PASSED (all planted offenders rejected, styles.scss colours allowed).',
   );
 }
 

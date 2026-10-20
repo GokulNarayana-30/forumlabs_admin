@@ -1,4 +1,4 @@
-<p-dialog
+<ui-dialog
   header="Patient Record Details"
   [visible]="visible"
   (visibleChange)="close()"
@@ -127,7 +127,7 @@
                 {{ b.order_number }}
               </td>
               <td class="py-2.5 px-3">
-                <p-tag [value]="b.status" severity="info"></p-tag>
+                <ui-tag [value]="b.status" severity="info"></ui-tag>
               </td>
               <td class="py-2.5 px-3 text-surface-500">{{ b.created_at | date: 'mediumDate' }}</td>
             </tr>
@@ -169,7 +169,7 @@
                 <span class="text-surface-500 font-normal">v{{ r.version }}</span>
               </td>
               <td class="py-2.5 px-3">
-                <p-tag [value]="r.status" severity="success"></p-tag>
+                <ui-tag [value]="r.status" severity="success"></ui-tag>
               </td>
               <td class="py-2.5 px-3 text-right">
                 <div
@@ -179,7 +179,7 @@
                   Withdrawn, not openable
                 </div>
                 <div *ngIf="canAccessReportDocuments() && isReportOpenable(r)">
-                  <p-button
+                  <ui-button
                     label="Preview PDF"
                     icon="pi pi-external-link"
                     size="small"
@@ -187,7 +187,7 @@
                     styleClass="btn-report-preview"
                     [loading]="loadingReportLink() === r.report_id"
                     (onClick)="openReportDocument(r)"
-                  ></p-button>
+                  ></ui-button>
                 </div>
                 <div *ngIf="!canAccessReportDocuments()" class="text-surface-400 italic text-xs">
                   Restricted to Lab / Approvers
@@ -200,15 +200,15 @@
     </div>
   </div>
 
-  <ng-template pTemplate="footer">
+  <div dialog-footer>
     <div class="flex justify-end pt-2">
-      <p-button
+      <ui-button
         label="Close"
         severity="secondary"
         [outlined]="true"
         size="small"
         (onClick)="close()"
-      ></p-button>
+      ></ui-button>
     </div>
-  </ng-template>
-</p-dialog>
+  </div>
+</ui-dialog>

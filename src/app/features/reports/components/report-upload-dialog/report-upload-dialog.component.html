@@ -1,4 +1,4 @@
-<p-dialog
+<ui-dialog
   header="Add Diagnostic Report"
   [visible]="visible"
   (visibleChange)="close()"
@@ -47,7 +47,6 @@
       </label>
       <input
         type="text"
-        pInputText
         class="w-full text-sm font-mono"
         placeholder="e.g. 2026/10/0042"
         [ngModel]="regNo()"
@@ -103,7 +102,6 @@
       </label>
       <input
         type="text"
-        pInputText
         class="w-full text-sm font-mono"
         placeholder="https://labsmart.example.com/reports/..."
         [ngModel]="linkUrl()"
@@ -123,23 +121,23 @@
     </div>
   </div>
 
-  <ng-template pTemplate="footer">
+  <div dialog-footer>
     <div class="flex justify-end gap-2 pt-2">
-      <p-button
+      <ui-button
         label="Cancel"
         severity="secondary"
         [outlined]="true"
         size="small"
         (onClick)="close()"
-      ></p-button>
-      <p-button
+      ></ui-button>
+      <ui-button
         [label]="mode() === 'upload' ? 'Upload Report' : 'Save Report Link'"
         icon="pi pi-check"
         size="small"
         [loading]="submitting()"
         [disabled]="!canSubmit()"
         (onClick)="submit()"
-      ></p-button>
+      ></ui-button>
     </div>
-  </ng-template>
-</p-dialog>
+  </div>
+</ui-dialog>

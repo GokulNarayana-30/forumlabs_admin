@@ -1,3 +1,5 @@
+import { UiDialogComponent } from '../../../../shared/ui/ui-dialog.component';
+import { UiButtonComponent } from '../../../../shared/ui/ui-button.component';
 import {
   Component,
   EventEmitter,
@@ -11,9 +13,6 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { DialogModule } from 'primeng/dialog';
-import { ButtonModule } from 'primeng/button';
-import { TooltipModule } from 'primeng/tooltip';
 import { ReportsService, StaffReportQueueItem } from '../../services/reports.service';
 import { StaffStateService } from '../../../../core/state/staff-state.service';
 import { errorText } from '../../../../core/api/error-text';
@@ -21,7 +20,7 @@ import { errorText } from '../../../../core/api/error-text';
 @Component({
   selector: 'app-report-preview-modal',
   standalone: true,
-  imports: [CommonModule, DialogModule, ButtonModule, TooltipModule],
+  imports: [CommonModule, UiDialogComponent, UiButtonComponent],
   templateUrl: './report-preview-modal.component.html',
 })
 export class ReportPreviewModalComponent implements OnChanges {

@@ -1,12 +1,9 @@
+import { UiTagComponent } from '../../../../shared/ui/ui-tag.component';
+import { UiButtonComponent } from '../../../../shared/ui/ui-button.component';
+import { ToastService } from '../../../../shared/ui/toast.service';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TableModule } from 'primeng/table';
-import { ButtonModule } from 'primeng/button';
-import { TagModule } from 'primeng/tag';
-import { TooltipModule } from 'primeng/tooltip';
-import { ToastModule } from 'primeng/toast';
-import { MessageService } from 'primeng/api';
 import {
   ReportsService,
   StaffReportQueueItem,
@@ -23,22 +20,18 @@ import { ReportWithdrawDialogComponent } from '../../components/report-withdraw-
   imports: [
     CommonModule,
     FormsModule,
-    TableModule,
-    ButtonModule,
-    TagModule,
-    TooltipModule,
-    ToastModule,
+    UiButtonComponent,
+    UiTagComponent,
     ReportUploadDialogComponent,
     ReportPreviewModalComponent,
     ReportWithdrawDialogComponent,
   ],
-  providers: [MessageService],
   templateUrl: './reports-dashboard.component.html',
 })
 export class ReportsDashboardComponent implements OnInit {
   private readonly reportsService = inject(ReportsService);
   readonly staffState = inject(StaffStateService);
-  private readonly messageService = inject(MessageService);
+  private readonly messageService = inject(ToastService);
 
   readonly activeTab = signal<'intake' | 'approval'>('intake');
   readonly loading = signal<boolean>(false);

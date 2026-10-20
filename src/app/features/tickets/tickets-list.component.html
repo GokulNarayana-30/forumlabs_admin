@@ -98,7 +98,7 @@
                   {{ t.category }}
                 </td>
                 <td class="px-4 py-3">
-                  <p-tag [value]="t.status" [severity]="getStatusSeverity(t.status)"></p-tag>
+                  <ui-tag [value]="t.status" [severity]="getStatusSeverity(t.status)"></ui-tag>
                 </td>
                 <td class="px-4 py-3 text-surface-600 font-mono text-xs">
                   {{ t.booking_ref || t.report_id || '—' }}
