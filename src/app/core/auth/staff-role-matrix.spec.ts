@@ -5,7 +5,7 @@ import { roleGuard } from './role.guard';
 import { StaffStateService } from '../state/staff-state.service';
 import { AuthService } from './auth.service';
 import { AdminLayoutComponent } from '../../layout/admin-layout.component';
-import { routes } from '../../app.routes';
+import { routes, refundFinanceGuard } from '../../app.routes';
 
 export const ALL_NINE_STAFF_ROLES = [
   'super_admin',
@@ -38,57 +38,173 @@ export const ROLE_MATRIX_EXPECTATIONS: readonly RoleMatrixExpectation[] = [
       'Reports',
       'Patient Search',
       'Tickets',
+      'Dispatch',
+      'Slots',
+      'Samples',
+      'Cash Close',
+      'Members',
     ],
-    allowedRoutes: ['bookings', 'field', 'catalog', 'reports', 'patients', 'tickets'],
+    allowedRoutes: [
+      'bookings',
+      'field',
+      'catalog',
+      'reports',
+      'patients',
+      'tickets',
+      'dispatch',
+      'dispatch/calendar',
+      'slots',
+      'samples',
+      'finance/cash-close',
+      'finance/refunds',
+      'members',
+    ],
     deniedRoutes: [],
   },
   {
     role: 'booking_dispatch',
-    expectedNavLabels: ['Bookings', 'Patient Search'],
-    allowedRoutes: ['bookings', 'patients'],
-    deniedRoutes: ['field', 'catalog', 'reports', 'tickets'],
+    expectedNavLabels: ['Bookings', 'Patient Search', 'Dispatch', 'Slots', 'Samples'],
+    allowedRoutes: ['bookings', 'patients', 'dispatch', 'dispatch/calendar', 'slots', 'samples'],
+    deniedRoutes: [
+      'field',
+      'catalog',
+      'reports',
+      'tickets',
+      'finance/cash-close',
+      'finance/refunds',
+      'members',
+    ],
   },
   {
     role: 'phlebotomist',
     expectedNavLabels: ['Field / Collection'],
     allowedRoutes: ['field'],
-    deniedRoutes: ['bookings', 'catalog', 'reports', 'patients', 'tickets'],
+    deniedRoutes: [
+      'bookings',
+      'catalog',
+      'reports',
+      'patients',
+      'tickets',
+      'dispatch',
+      'dispatch/calendar',
+      'slots',
+      'samples',
+      'finance/cash-close',
+      'finance/refunds',
+      'members',
+    ],
   },
   {
     role: 'lab_staff',
-    expectedNavLabels: ['Reports'],
-    allowedRoutes: ['reports'],
-    deniedRoutes: ['bookings', 'field', 'catalog', 'patients', 'tickets'],
+    expectedNavLabels: ['Reports', 'Samples'],
+    allowedRoutes: ['reports', 'samples'],
+    deniedRoutes: [
+      'bookings',
+      'field',
+      'catalog',
+      'patients',
+      'tickets',
+      'dispatch',
+      'dispatch/calendar',
+      'slots',
+      'finance/cash-close',
+      'finance/refunds',
+      'members',
+    ],
   },
   {
     role: 'report_approver',
     expectedNavLabels: ['Reports'],
     allowedRoutes: ['reports'],
-    deniedRoutes: ['bookings', 'field', 'catalog', 'patients', 'tickets'],
+    deniedRoutes: [
+      'bookings',
+      'field',
+      'catalog',
+      'patients',
+      'tickets',
+      'dispatch',
+      'dispatch/calendar',
+      'slots',
+      'samples',
+      'finance/cash-close',
+      'finance/refunds',
+      'members',
+    ],
   },
   {
     role: 'catalog_manager',
     expectedNavLabels: ['Catalog'],
     allowedRoutes: ['catalog'],
-    deniedRoutes: ['bookings', 'field', 'reports', 'patients', 'tickets'],
+    deniedRoutes: [
+      'bookings',
+      'field',
+      'reports',
+      'patients',
+      'tickets',
+      'dispatch',
+      'dispatch/calendar',
+      'slots',
+      'samples',
+      'finance/cash-close',
+      'finance/refunds',
+      'members',
+    ],
   },
   {
     role: 'support',
     expectedNavLabels: ['Patient Search', 'Tickets'],
     allowedRoutes: ['patients', 'tickets'],
-    deniedRoutes: ['bookings', 'field', 'catalog', 'reports'],
+    deniedRoutes: [
+      'bookings',
+      'field',
+      'catalog',
+      'reports',
+      'dispatch',
+      'dispatch/calendar',
+      'slots',
+      'samples',
+      'finance/cash-close',
+      'finance/refunds',
+      'members',
+    ],
   },
   {
     role: 'finance',
-    expectedNavLabels: [],
-    allowedRoutes: [],
-    deniedRoutes: ['bookings', 'field', 'catalog', 'reports', 'patients', 'tickets'],
+    expectedNavLabels: ['Cash Close', 'Refunds'],
+    allowedRoutes: ['finance/cash-close', 'finance/refunds'],
+    deniedRoutes: [
+      'bookings',
+      'field',
+      'catalog',
+      'reports',
+      'patients',
+      'tickets',
+      'dispatch',
+      'dispatch/calendar',
+      'slots',
+      'samples',
+      'members',
+    ],
   },
   {
     role: 'marketing',
     expectedNavLabels: [],
     allowedRoutes: [],
-    deniedRoutes: ['bookings', 'field', 'catalog', 'reports', 'patients', 'tickets'],
+    deniedRoutes: [
+      'bookings',
+      'field',
+      'catalog',
+      'reports',
+      'patients',
+      'tickets',
+      'dispatch',
+      'dispatch/calendar',
+      'slots',
+      'samples',
+      'finance/cash-close',
+      'finance/refunds',
+      'members',
+    ],
   },
 ];
 
@@ -177,6 +293,40 @@ describe('Admin Staff Role Matrix (All 9 Roles) (W-08)', () => {
       }
     },
   );
+
+  describe('Refunds route finance guard (refundFinanceGuard)', () => {
+    it('denies super_admin who does not hold the finance role', () => {
+      mockStaffState.roles.mockReturnValue(['super_admin']);
+      const result = TestBed.runInInjectionContext(() =>
+        refundFinanceGuard({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot),
+      );
+      expect(result).toEqual({ path: '/no-access' });
+    });
+
+    it('allows staff with the finance role', () => {
+      mockStaffState.roles.mockReturnValue(['finance']);
+      const result = TestBed.runInInjectionContext(() =>
+        refundFinanceGuard({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot),
+      );
+      expect(result).toBe(true);
+    });
+
+    it('allows super_admin who also holds the finance role', () => {
+      mockStaffState.roles.mockReturnValue(['super_admin', 'finance']);
+      const result = TestBed.runInInjectionContext(() =>
+        refundFinanceGuard({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot),
+      );
+      expect(result).toBe(true);
+    });
+
+    it('denies other staff roles without finance', () => {
+      mockStaffState.roles.mockReturnValue(['booking_dispatch', 'support']);
+      const result = TestBed.runInInjectionContext(() =>
+        refundFinanceGuard({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot),
+      );
+      expect(result).toEqual({ path: '/no-access' });
+    });
+  });
 
   describe('Negative controls on role matrix logic', () => {
     it('rejects navigation if route requires role not held by staff member', () => {

@@ -1,0 +1,162 @@
+<div
+  *ngIf="visible"
+  class="fixed inset-0 z-50 flex items-center justify-center bg-surface-900/50 p-4"
+  role="dialog"
+  aria-modal="true"
+>
+  <div class="w-full max-w-lg rounded-2xl bg-surface-0 p-6 shadow-xl border border-surface-200">
+    <div class="flex items-center justify-between border-b border-surface-200 pb-4">
+      <div>
+        <h3 class="text-lg font-semibold text-surface-900">Slot Override</h3>
+        <p class="text-xs text-surface-500">
+          Date: <span class="font-medium text-surface-700">{{ targetDate }}</span> | Window:
+          <span class="font-medium text-surface-700">{{ window?.window_id }}</span>
+        </p>
+      </div>
+      <button
+        type="button"
+        (click)="closeModal()"
+        class="rounded-lg p-1.5 text-surface-400 hover:bg-surface-100 hover:text-surface-700"
+      >
+        <span class="sr-only">Close</span>
+        <i class="pi pi-times text-base"></i>
+      </button>
+    </div>
+
+    <!-- Error Banner -->
+    <div
+      *ngIf="errorMessage()"
+      class="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700 border border-red-200"
+    >
+      {{ errorMessage() }}
+    </div>
+
+    <!-- Existing Bookings Warning -->
+    <div
+      *ngIf="window && window.booked_count > 0"
+      class="mt-4 rounded-lg bg-amber-50 p-3 text-xs text-amber-800 border border-amber-200"
+    >
+      <div class="font-semibold flex items-center gap-1.5">
+        <i class="pi pi-exclamation-triangle"></i>
+        <span>Notice: {{ window.booked_count }} existing booking(s)</span>
+      </div>
+      <p class="mt-1">
+        Closing or reducing capacity prevents NEW bookings only. All
+        {{ window.booked_count }} existing booking(s) remain confirmed and are kept. Manual
+        rescheduling may be performed from the dispatch screen.
+      </p>
+      <div
+        *ngIf="window.existing_bookings_kept.length > 0"
+        class="mt-1.5 text-xs text-amber-900 font-mono"
+      >
+        Bookings: {{ window.existing_bookings_kept.join(', ') }}
+      </div>
+    </div>
+
+    <div class="mt-4 space-y-4">
+      <!-- Current Status Card -->
+      <div
+        class="rounded-lg bg-surface-50 p-3 text-xs border border-surface-200 grid grid-cols-3 gap-2 text-center"
+      >
+        <div>
+          <span class="text-surface-500 block">Default Capacity</span>
+          <span class="text-sm font-semibold text-surface-800">{{ window?.capacity }}</span>
+        </div>
+        <div>
+          <span class="text-surface-500 block">Booked</span>
+          <span class="text-sm font-semibold text-surface-800">{{ window?.booked_count }}</span>
+        </div>
+        <div>
+          <span class="text-surface-500 block">Held</span>
+          <span class="text-sm font-semibold text-surface-800">{{ window?.held_count }}</span>
+        </div>
+      </div>
+
+      <!-- Capacity Override Input -->
+      <div>
+        <label for="overrideCapacity" class="block text-xs font-medium text-surface-700">
+          Window Capacity (1 - 100)
+        </label>
+        <input
+          id="overrideCapacity"
+          type="number"
+          min="1"
+          max="100"
+          [ngModel]="customCapacity()"
+          (ngModelChange)="customCapacity.set($event)"
+          [disabled]="isClosed() || isSubmitting()"
+          class="mt-1 block w-full rounded-lg border border-surface-300 bg-surface-0 px-3 py-2 text-sm text-surface-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:bg-surface-100 disabled:text-surface-400"
+        />
+        <p class="mt-1 text-xs text-surface-500">
+          Leave as default or set a custom capacity for this specific day.
+        </p>
+      </div>
+
+      <!-- Close Window Toggle -->
+      <div class="rounded-lg border border-surface-200 p-3 bg-surface-50">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            [ngModel]="isClosed()"
+            (ngModelChange)="isClosed.set($event)"
+            [disabled]="isSubmitting()"
+            class="h-4 w-4 rounded border-surface-300 text-primary-600 focus:ring-primary-500"
+          />
+          <span class="text-sm font-medium text-surface-800">Close this window for the day</span>
+        </label>
+
+        <!-- Closure Reason (Required when closed) -->
+        <div *ngIf="isClosed()" class="mt-3">
+          <label for="closureReason" class="block text-xs font-medium text-surface-700">
+            Closure Reason <span class="text-red-500">*</span>
+          </label>
+          <input
+            id="closureReason"
+            type="text"
+            maxlength="200"
+            placeholder="e.g. Phlebotomist shortage, local restriction"
+            [ngModel]="closureReason()"
+            (ngModelChange)="closureReason.set($event)"
+            [disabled]="isSubmitting()"
+            class="mt-1 block w-full rounded-lg border border-surface-300 bg-surface-0 px-3 py-2 text-sm text-surface-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          />
+          <p class="mt-1 text-xs text-surface-500">
+            Reason is required and recorded in the audit log (max 200 chars).
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="mt-6 flex items-center justify-between border-t border-surface-200 pt-4">
+      <button
+        type="button"
+        (click)="clearOverride()"
+        [disabled]="isSubmitting()"
+        class="rounded-full px-4 py-2 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+      >
+        Clear Override
+      </button>
+
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          (click)="closeModal()"
+          [disabled]="isSubmitting()"
+          class="rounded-full border border-surface-300 bg-surface-0 px-4 py-2 text-xs font-medium text-surface-700 hover:bg-surface-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          (click)="saveOverride()"
+          [disabled]="isSubmitting()"
+          class="rounded-full bg-primary-600 px-5 py-2 text-xs font-medium text-surface-0 hover:bg-primary-700 disabled:opacity-50"
+        >
+          <span *ngIf="!isSubmitting()">Save Override</span>
+          <span *ngIf="isSubmitting()">Saving...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

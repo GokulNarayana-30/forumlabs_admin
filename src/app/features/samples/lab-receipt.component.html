@@ -1,0 +1,268 @@
+<div class="space-y-6">
+  <!-- Header Bar -->
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h2 class="text-xl font-bold text-surface-900">Lab Specimen Receipt</h2>
+      <p class="text-xs text-surface-500">
+        Scan collection tube barcodes, verify patient/test integrity, confirm physical receipt, or
+        log specimen rejections.
+      </p>
+    </div>
+
+    <!-- Tab Buttons -->
+    <div class="flex rounded-full border border-surface-200 bg-surface-100 p-1">
+      <button
+        type="button"
+        (click)="setTab('scan')"
+        [class.bg-surface-0]="activeTab() === 'scan'"
+        [class.shadow-sm]="activeTab() === 'scan'"
+        [class.text-surface-900]="activeTab() === 'scan'"
+        [class.text-surface-600]="activeTab() !== 'scan'"
+        class="rounded-full px-4 py-1.5 text-xs font-medium transition-all"
+      >
+        <i class="pi pi-qrcode mr-1.5"></i>
+        <span>Scan & Receive</span>
+      </button>
+      <button
+        type="button"
+        (click)="setTab('overdue')"
+        [class.bg-surface-0]="activeTab() === 'overdue'"
+        [class.shadow-sm]="activeTab() === 'overdue'"
+        [class.text-surface-900]="activeTab() === 'overdue'"
+        [class.text-surface-600]="activeTab() !== 'overdue'"
+        class="rounded-full px-4 py-1.5 text-xs font-medium transition-all"
+      >
+        <i class="pi pi-clock mr-1.5"></i>
+        <span>Overdue Samples</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <div
+    *ngIf="successMessage()"
+    class="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700 flex items-center justify-between"
+  >
+    <div class="flex items-center gap-2">
+      <i class="pi pi-check-circle text-base"></i>
+      <span>{{ successMessage() }}</span>
+    </div>
+    <button
+      type="button"
+      (click)="successMessage.set('')"
+      class="text-green-800 hover:text-green-950"
+    >
+      <i class="pi pi-times"></i>
+    </button>
+  </div>
+
+  <div
+    *ngIf="orderTransitionNote()"
+    class="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800 flex items-center gap-2"
+  >
+    <i class="pi pi-info-circle text-base text-blue-600"></i>
+    <span>{{ orderTransitionNote() }}</span>
+  </div>
+
+  <!-- Tab 1: Scan & Receive -->
+  <div *ngIf="activeTab() === 'scan'" class="space-y-6">
+    <!-- Barcode Scanner Input Card -->
+    <div class="rounded-2xl border border-surface-200 bg-surface-0 p-6 shadow-sm">
+      <h3 class="text-sm font-semibold text-surface-800 mb-2">Scan or Enter Tube Barcode</h3>
+      <p class="text-xs text-surface-500 mb-4">
+        Supports handheld barcode scanner keyboard input or manual code entry (e.g. FLT-XXXX-XXXX).
+        Press Enter to lookup.
+      </p>
+
+      <form (ngSubmit)="onSearchOrScan()" class="flex flex-col sm:flex-row gap-3">
+        <div class="relative flex-1">
+          <i
+            class="pi pi-barcode absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 text-lg"
+          ></i>
+          <input
+            #barcodeInput
+            type="text"
+            name="tubeBarcode"
+            placeholder="Scan tube barcode or type code..."
+            [ngModel]="tubeCodeInput()"
+            (ngModelChange)="tubeCodeInput.set($event)"
+            [disabled]="isLookingUp()"
+            autofocus
+            class="w-full rounded-xl border border-surface-300 bg-surface-0 pl-10 pr-4 py-2.5 text-sm font-mono text-surface-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:bg-surface-100"
+          />
+        </div>
+        <button
+          type="submit"
+          [disabled]="isLookingUp() || !tubeCodeInput().trim()"
+          class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-6 py-2.5 text-xs font-semibold text-surface-0 hover:bg-primary-700 disabled:opacity-50"
+        >
+          <i class="pi pi-search" [class.pi-spin]="isLookingUp()"></i>
+          <span>Lookup Specimen</span>
+        </button>
+      </form>
+
+      <!-- Scan Error -->
+      <div
+        *ngIf="scanErrorMessage()"
+        class="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 flex items-center gap-2"
+      >
+        <i class="pi pi-exclamation-circle text-base"></i>
+        <span>{{ scanErrorMessage() }}</span>
+      </div>
+    </div>
+
+    <!-- Loaded Tube Card -->
+    <div
+      *ngIf="currentTube()"
+      class="rounded-2xl border border-surface-200 bg-surface-0 p-6 shadow-sm space-y-6"
+    >
+      <div
+        class="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-surface-200 pb-4"
+      >
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-mono text-lg font-bold text-surface-900">
+              {{ currentTube()!.tube_code }}
+            </span>
+            <span
+              [ngClass]="{
+                'bg-green-100 text-green-800': currentTube()!.status === 'received',
+                'bg-amber-100 text-amber-800':
+                  currentTube()!.status === 'scanned_at_collection' ||
+                  currentTube()!.status === 'handed_over',
+                'bg-red-100 text-red-800': currentTube()!.status === 'rejected',
+                'bg-surface-100 text-surface-700': currentTube()!.status === 'generated',
+              }"
+              class="rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize"
+            >
+              {{ currentTube()!.status.replace('_', ' ') }}
+            </span>
+          </div>
+          <p class="text-xs text-surface-500 mt-1">
+            Booking Ref:
+            <strong class="font-mono text-surface-800">{{ currentTube()!.booking_ref }}</strong>
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2 mt-3 sm:mt-0">
+          <button
+            type="button"
+            (click)="openRejectModal()"
+            [disabled]="isLookingUp() || isSubmittingReceipt()"
+            class="rounded-full border border-red-300 bg-surface-0 px-4 py-2 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+          >
+            <i class="pi pi-times mr-1"></i>
+            <span>Reject Specimen</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Specimen Info Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="rounded-xl border border-surface-200 bg-surface-50 p-3">
+          <span class="text-xs text-surface-500 block">Patient</span>
+          <span class="text-sm font-semibold text-surface-800 mt-1 block">
+            {{ currentTube()!.patient_label }}
+          </span>
+        </div>
+
+        <div class="rounded-xl border border-surface-200 bg-surface-50 p-3">
+          <span class="text-xs text-surface-500 block">Test Name</span>
+          <span class="text-sm font-semibold text-surface-800 mt-1 block">
+            {{ currentTube()!.test_name }}
+          </span>
+        </div>
+
+        <div class="rounded-xl border border-surface-200 bg-surface-50 p-3">
+          <span class="text-xs text-surface-500 block">Phlebotomist</span>
+          <span class="text-sm font-semibold text-surface-800 mt-1 block">
+            {{ currentTube()!.collector?.display_name || 'Not assigned' }}
+          </span>
+        </div>
+
+        <div class="rounded-xl border border-surface-200 bg-surface-50 p-3">
+          <span class="text-xs text-surface-500 block">Collected At</span>
+          <span class="text-xs font-semibold text-surface-800 mt-1 block">
+            {{ formatDate(currentTube()!.collected_at) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Physical Receipt Action Box -->
+      <div class="rounded-xl border border-surface-200 bg-surface-50 p-4">
+        <h4 class="text-xs font-semibold text-surface-800 uppercase tracking-wider mb-2">
+          Confirm Specimen Arrival
+        </h4>
+
+        <div
+          *ngIf="receiptErrorMessage()"
+          class="mb-3 rounded-lg bg-red-50 p-2.5 text-xs text-red-700 border border-red-200"
+        >
+          {{ receiptErrorMessage() }}
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label for="receiptReasonInput" class="block text-xs font-medium text-surface-700">
+              Receipt Confirmation Note <span class="text-red-500">*</span>
+            </label>
+            <input
+              id="receiptReasonInput"
+              type="text"
+              maxlength="300"
+              placeholder="e.g. Specimen received in lab intact"
+              [ngModel]="receiptReason()"
+              (ngModelChange)="receiptReason.set($event)"
+              [disabled]="
+                isLookingUp() ||
+                isSubmittingReceipt() ||
+                currentTube()!.status === 'received' ||
+                currentTube()!.status === 'rejected'
+              "
+              class="mt-1 block w-full rounded-lg border border-surface-300 bg-surface-0 px-3 py-2 text-xs text-surface-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:bg-surface-100 disabled:text-surface-400"
+            />
+          </div>
+
+          <div class="flex items-center justify-between pt-2">
+            <span class="text-xs text-surface-500">
+              Verifying physical receipt transitions specimen state to 'received'.
+            </span>
+            <button
+              type="button"
+              (click)="onReceiveTube()"
+              [disabled]="
+                isLookingUp() ||
+                isSubmittingReceipt() ||
+                !receiptReason().trim() ||
+                currentTube()!.status === 'received' ||
+                currentTube()!.status === 'rejected'
+              "
+              class="rounded-full bg-green-600 px-5 py-2 text-xs font-semibold text-surface-0 hover:bg-green-700 disabled:opacity-50 inline-flex items-center gap-1.5"
+            >
+              <i class="pi pi-check" [class.pi-spin]="isSubmittingReceipt()"></i>
+              <span *ngIf="currentTube()!.status === 'received'">Already Received</span>
+              <span *ngIf="currentTube()!.status === 'rejected'">Specimen Rejected</span>
+              <span
+                *ngIf="currentTube()!.status !== 'received' && currentTube()!.status !== 'rejected'"
+              >
+                {{ isSubmittingReceipt() ? 'Confirming...' : 'Confirm Receipt' }}
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 2: Overdue Samples -->
+  <div *ngIf="activeTab() === 'overdue'">
+    <app-overdue-samples (selectTubeForReceipt)="onSelectOverdueTube($event)"></app-overdue-samples>
+  </div>
+
+  <!-- Sample Reject Modal -->
+  <app-sample-reject-modal
+    [(visible)]="isRejectModalVisible"
+    [tube]="currentTube()"
+    (rejected)="onRejectionCompleted()"
+  ></app-sample-reject-modal>
+</div>

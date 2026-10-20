@@ -1,0 +1,319 @@
+<div class="space-y-6">
+  <!-- Header Bar -->
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h2 class="text-xl font-bold text-surface-900">Cash Close & Daily Reconciliation</h2>
+      <p class="text-xs text-surface-500">
+        Reconcile cash and UPI collections from field phlebotomists against system ledger
+        expectations.
+      </p>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- Date Selector -->
+      <div
+        class="flex items-center gap-2 rounded-full border border-surface-200 bg-surface-0 px-3 py-1.5 text-xs"
+      >
+        <span class="text-surface-500">Date (IST):</span>
+        <input
+          type="date"
+          [ngModel]="selectedDate()"
+          (ngModelChange)="onDateChanged($event)"
+          class="border-none bg-transparent p-0 text-xs font-semibold text-surface-900 focus:outline-none"
+        />
+      </div>
+
+      <button
+        type="button"
+        (click)="openExport()"
+        class="inline-flex items-center gap-1.5 rounded-full border border-surface-300 bg-surface-0 px-4 py-2 text-xs font-medium text-surface-700 hover:bg-surface-50"
+      >
+        <i class="pi pi-download"></i>
+        <span>Export</span>
+      </button>
+
+      <button
+        type="button"
+        (click)="loadDaySummary()"
+        [disabled]="isLoading()"
+        class="inline-flex items-center gap-1.5 rounded-full bg-primary-600 px-4 py-2 text-xs font-medium text-surface-0 hover:bg-primary-700 disabled:opacity-50"
+      >
+        <i class="pi pi-refresh" [class.pi-spin]="isLoading()"></i>
+        <span>Refresh</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <div
+    *ngIf="errorMessage()"
+    class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+  >
+    {{ errorMessage() }}
+  </div>
+
+  <div
+    *ngIf="successMessage()"
+    class="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700 flex items-center justify-between"
+  >
+    <span>{{ successMessage() }}</span>
+    <button
+      type="button"
+      (click)="successMessage.set('')"
+      class="text-green-800 hover:text-green-950"
+    >
+      <i class="pi pi-times"></i>
+    </button>
+  </div>
+
+  <!-- Summary Table Card -->
+  <div class="overflow-hidden rounded-2xl border border-surface-200 bg-surface-0 shadow-sm">
+    <div class="p-4 border-b border-surface-200 flex items-center justify-between">
+      <h3 class="text-xs font-semibold text-surface-700 uppercase tracking-wider">
+        Phlebotomist Collections for {{ selectedDate() }}
+      </h3>
+      <span
+        *ngIf="!isPastDay(selectedDate())"
+        class="text-xs text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200"
+      >
+        Today's collections are active. Reconciliation unlocks at midnight IST.
+      </span>
+    </div>
+
+    <!-- Empty State -->
+    <div
+      *ngIf="!isLoading() && days().length === 0"
+      class="p-8 text-center text-xs text-surface-500"
+    >
+      No collection activity recorded for {{ selectedDate() }}.
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="isLoading()" class="p-12 text-center text-xs text-surface-500">
+      <i class="pi pi-spin pi-spinner text-xl text-primary-600 block mb-2"></i>
+      <span>Loading daily close summary...</span>
+    </div>
+
+    <!-- Table -->
+    <div *ngIf="!isLoading() && days().length > 0" class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-surface-200 text-left text-xs">
+        <thead class="bg-surface-50 font-semibold text-surface-700">
+          <tr>
+            <th class="px-4 py-3">Collector / Phlebotomist</th>
+            <th class="px-4 py-3">Expected (Cash / UPI)</th>
+            <th class="px-4 py-3">Handed Over</th>
+            <th class="px-4 py-3">Differences</th>
+            <th class="px-4 py-3">Status</th>
+            <th class="px-4 py-3 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-surface-200 bg-surface-0">
+          <tr *ngFor="let day of days()" class="hover:bg-surface-50 transition-colors">
+            <td class="px-4 py-3">
+              <span class="font-medium text-surface-900 block">
+                {{ day.recorder.display_name }}
+              </span>
+              <span
+                *ngIf="day.custody_review_required"
+                class="mt-1 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800"
+              >
+                Recorded by dispatch (Review)
+              </span>
+            </td>
+
+            <td class="px-4 py-3 text-surface-700">
+              <div>
+                Cash:
+                <strong class="text-surface-900"
+                  >₹{{ formatPaise(day.cash_expected_paise) }}</strong
+                >
+              </div>
+              <div>
+                UPI:
+                <strong class="text-surface-900">₹{{ formatPaise(day.upi_expected_paise) }}</strong>
+              </div>
+            </td>
+
+            <td class="px-4 py-3 text-surface-700">
+              <div *ngIf="day.latest_entry">
+                <div>Cash: ₹{{ formatPaise(day.latest_entry.cash_handed_over_paise) }}</div>
+                <div>UPI: ₹{{ formatPaise(day.latest_entry.upi_confirmed_paise) }}</div>
+              </div>
+              <span *ngIf="!day.latest_entry" class="text-surface-400 italic">None recorded</span>
+            </td>
+
+            <td class="px-4 py-3">
+              <div *ngIf="day.latest_entry">
+                <span
+                  class="font-medium block"
+                  [ngClass]="{
+                    'text-green-700': day.latest_entry.cash_difference_paise === 0,
+                    'text-red-700': day.latest_entry.cash_difference_paise !== 0,
+                  }"
+                >
+                  Cash: {{ day.latest_entry.cash_difference_paise >= 0 ? '+' : '' }}₹{{
+                    formatPaise(day.latest_entry.cash_difference_paise)
+                  }}
+                </span>
+                <span
+                  class="font-medium block"
+                  [ngClass]="{
+                    'text-green-700': day.latest_entry.upi_difference_paise === 0,
+                    'text-red-700': day.latest_entry.upi_difference_paise !== 0,
+                  }"
+                >
+                  UPI: {{ day.latest_entry.upi_difference_paise >= 0 ? '+' : '' }}₹{{
+                    formatPaise(day.latest_entry.upi_difference_paise)
+                  }}
+                </span>
+              </div>
+              <span *ngIf="!day.latest_entry" class="text-surface-400">—</span>
+            </td>
+
+            <td class="px-4 py-3">
+              <span
+                [ngClass]="{
+                  'bg-surface-100 text-surface-700': day.state === 'open',
+                  'bg-blue-100 text-blue-800': day.state === 'handover_recorded',
+                  'bg-green-100 text-green-800': day.state === 'reconciled',
+                  'bg-amber-100 text-amber-800': day.state === 'reopened',
+                }"
+                class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold capitalize"
+              >
+                {{ day.state.replace('_', ' ') }}
+              </span>
+            </td>
+
+            <td class="px-4 py-3 text-right">
+              <div class="flex items-center justify-end gap-1.5">
+                <button
+                  type="button"
+                  (click)="openHandover(day)"
+                  [disabled]="day.state === 'reconciled'"
+                  class="rounded-full border border-surface-300 bg-surface-0 px-2.5 py-1 text-xs font-medium text-surface-700 hover:bg-surface-50 disabled:opacity-40"
+                >
+                  Handover
+                </button>
+
+                <button
+                  type="button"
+                  (click)="openReconcile(day)"
+                  [disabled]="!isPastDay(day.date) || day.state !== 'handover_recorded'"
+                  class="rounded-full bg-green-600 px-2.5 py-1 text-xs font-medium text-surface-0 hover:bg-green-700 disabled:opacity-40"
+                >
+                  Reconcile
+                </button>
+
+                <button
+                  *ngIf="day.state === 'reconciled'"
+                  type="button"
+                  (click)="openReopenModal(day)"
+                  class="rounded-full border border-amber-300 bg-surface-0 px-2.5 py-1 text-xs font-medium text-amber-800 hover:bg-amber-50"
+                >
+                  Reopen
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Reopen Modal Dialog -->
+  <div
+    *ngIf="isReopenModalVisible()"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-surface-900/50 p-4"
+    role="dialog"
+    aria-modal="true"
+  >
+    <div class="w-full max-w-md rounded-2xl bg-surface-0 p-6 shadow-xl border border-surface-200">
+      <div class="flex items-center justify-between border-b border-surface-200 pb-3">
+        <h3 class="text-base font-semibold text-amber-800 flex items-center gap-2">
+          <i class="pi pi-refresh"></i>
+          <span>Reopen Reconciled Day</span>
+        </h3>
+        <button
+          type="button"
+          (click)="closeReopenModal()"
+          class="rounded-lg p-1.5 text-surface-400 hover:bg-surface-100 hover:text-surface-700"
+        >
+          <span class="sr-only">Close</span>
+          <i class="pi pi-times"></i>
+        </button>
+      </div>
+
+      <div
+        *ngIf="reopenError()"
+        class="mt-3 rounded-lg bg-red-50 p-3 text-xs text-red-700 border border-red-200"
+      >
+        {{ reopenError() }}
+      </div>
+
+      <div class="mt-4 space-y-3">
+        <p class="text-xs text-surface-600">
+          Reopening will return
+          <strong class="text-surface-900">{{ reopenTargetDay()?.recorder?.display_name }}</strong
+          >'s collections for
+          <strong class="text-surface-900 font-mono">{{ reopenTargetDay()?.date }}</strong> to the
+          'reopened' state for adjustment.
+        </p>
+
+        <div>
+          <label for="reopenNoteInput" class="block text-xs font-medium text-surface-700">
+            Mandatory Reopening Reason <span class="text-red-500">*</span>
+          </label>
+          <textarea
+            id="reopenNoteInput"
+            rows="3"
+            maxlength="300"
+            placeholder="Explain why this reconciled collection is being reopened..."
+            [ngModel]="reopenNote()"
+            (ngModelChange)="reopenNote.set($event)"
+            [disabled]="isSubmittingReopen()"
+            class="mt-1 block w-full rounded-lg border border-surface-300 bg-surface-0 p-2 text-xs text-surface-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          ></textarea>
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-end gap-2 border-t border-surface-200 pt-3">
+        <button
+          type="button"
+          (click)="closeReopenModal()"
+          [disabled]="isSubmittingReopen()"
+          class="rounded-full border border-surface-300 bg-surface-0 px-4 py-2 text-xs font-medium text-surface-700 hover:bg-surface-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          (click)="submitReopen()"
+          [disabled]="isSubmittingReopen() || !reopenNote().trim()"
+          class="rounded-full bg-amber-600 px-5 py-2 text-xs font-medium text-surface-0 hover:bg-amber-700 disabled:opacity-50"
+        >
+          <span *ngIf="!isSubmittingReopen()">Confirm Reopen</span>
+          <span *ngIf="isSubmittingReopen()">Reopening...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modals -->
+  <app-handover-modal
+    [(visible)]="isHandoverModalVisible"
+    [day]="selectedDay()"
+    (saved)="onHandoverSaved()"
+  ></app-handover-modal>
+
+  <app-reconcile-modal
+    [(visible)]="isReconcileModalVisible"
+    [day]="selectedDay()"
+    [todayIst]="todayIst()"
+    (reconciled)="onReconciled()"
+  ></app-reconcile-modal>
+
+  <app-cash-close-export-modal
+    [(visible)]="isExportModalVisible"
+    [defaultDate]="selectedDate()"
+  ></app-cash-close-export-modal>
+</div>

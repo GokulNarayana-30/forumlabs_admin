@@ -1,0 +1,228 @@
+<div class="space-y-6">
+  <!-- Top bar with date navigation & view toggle -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-surface-900 tracking-tight">Dispatch Calendar</h1>
+      <p class="text-xs text-surface-500 mt-1">
+        Slot window view and phlebotomist roster (Asia/Kolkata)
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      <a
+        routerLink="/dispatch"
+        class="inline-flex items-center px-4 py-2 rounded-xl text-xs font-semibold text-primary-700 bg-primary-50 hover:bg-primary-100 border border-primary-200 transition-colors"
+      >
+        &larr; Today Overview
+      </a>
+      <button
+        type="button"
+        (click)="loadData()"
+        [disabled]="isLoading()"
+        class="inline-flex items-center px-3.5 py-2 rounded-xl text-xs font-medium text-surface-700 bg-white border border-surface-300 hover:bg-surface-50 disabled:opacity-50 transition-colors"
+      >
+        Refresh
+      </button>
+    </div>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700" role="alert">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  <!-- Controls: Date navigation & Filters -->
+  <div
+    class="bg-white p-4 rounded-2xl border border-surface-200 shadow-xs flex flex-wrap items-center justify-between gap-4"
+  >
+    <!-- Date switcher -->
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        (click)="previousDay()"
+        class="px-3 py-1.5 rounded-xl border border-surface-300 text-xs font-medium text-surface-700 hover:bg-surface-50"
+      >
+        &larr; Prev
+      </button>
+      <input
+        type="date"
+        [ngModel]="selectedDate()"
+        (ngModelChange)="onDateChange($event)"
+        class="px-3 py-1.5 rounded-xl border border-surface-300 text-xs font-medium text-surface-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
+      />
+      <button
+        type="button"
+        (click)="nextDay()"
+        class="px-3 py-1.5 rounded-xl border border-surface-300 text-xs font-medium text-surface-700 hover:bg-surface-50"
+      >
+        Next &rarr;
+      </button>
+    </div>
+
+    <!-- Filters -->
+    <div class="flex items-center gap-3">
+      <input
+        type="text"
+        placeholder="Filter by area..."
+        [ngModel]="selectedArea()"
+        (ngModelChange)="selectedArea.set($event); onFilterChange()"
+        class="px-3 py-1.5 rounded-xl border border-surface-300 text-xs text-surface-800 placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+      />
+      <select
+        [ngModel]="selectedStatus()"
+        (ngModelChange)="selectedStatus.set($event); onFilterChange()"
+        class="px-3 py-1.5 rounded-xl border border-surface-300 text-xs text-surface-800 focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
+      >
+        <option value="">All Statuses</option>
+        <option value="confirmed">Confirmed</option>
+        <option value="phlebotomist_assigned">Assigned</option>
+        <option value="on_the_way">On The Way</option>
+        <option value="arrived">Arrived</option>
+        <option value="collected">Collected</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Main grid: Visits by Window + Phlebotomist Roster -->
+  <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <!-- Slot Windows & Visits (3 cols) -->
+    <div class="lg:col-span-3 space-y-4">
+      @let groups = getGroupedVisits();
+      @if (groups.length === 0) {
+        <div
+          class="bg-white rounded-2xl border border-surface-200 p-12 text-center text-sm text-surface-500 shadow-xs"
+        >
+          No visits found for the selected date and filters.
+        </div>
+      } @else {
+        @for (group of groups; track group.windowLabel) {
+          <div class="bg-white rounded-2xl border border-surface-200 shadow-xs overflow-hidden">
+            <div
+              class="bg-surface-50 px-5 py-3 border-b border-surface-200 flex items-center justify-between"
+            >
+              <span class="text-xs font-bold text-surface-800 uppercase tracking-wider">
+                Window: {{ group.windowLabel }} (IST)
+              </span>
+              <span class="text-xs font-medium text-surface-500">
+                {{ group.visits.length }} visit(s)
+              </span>
+            </div>
+
+            <div class="divide-y divide-surface-100">
+              @for (visit of group.visits; track visit.order_id) {
+                <div
+                  class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-surface-50 transition-colors"
+                >
+                  <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs font-bold text-surface-900">{{
+                        visit.booking_ref
+                      }}</span>
+                      <span
+                        class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium"
+                        [class.bg-amber-50]="visit.is_late"
+                        [class.text-amber-800]="visit.is_late"
+                        [class.bg-surface-100]="!visit.is_late"
+                        [class.text-surface-700]="!visit.is_late"
+                      >
+                        {{ visit.status }}
+                      </span>
+                    </div>
+                    <div class="text-xs text-surface-600">
+                      Patient:
+                      <span class="font-medium text-surface-800">{{
+                        visit.patients[0]?.first_name || 'N/A'
+                      }}</span>
+                      &bull; Area:
+                      <span>{{ visit.address.area }}, {{ visit.address.pincode }}</span>
+                    </div>
+                    <div class="text-xs text-surface-500">
+                      Assigned to:
+                      @if (visit.assignee) {
+                        <span class="font-semibold text-primary-700">{{
+                          visit.assignee.display_name
+                        }}</span>
+                      } @else {
+                        <span class="text-amber-700 font-medium">Unassigned</span>
+                      }
+                    </div>
+                  </div>
+
+                  <div>
+                    <button
+                      type="button"
+                      (click)="openAssignModal(visit)"
+                      data-testid="calendar-assign-btn"
+                      class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 transition-colors shadow-xs"
+                    >
+                      {{ visit.assignee ? 'Reassign' : 'Assign Phlebotomist' }}
+                    </button>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      }
+    </div>
+
+    <!-- Phlebotomists Roster Sidebar (1 col) -->
+    <div class="lg:col-span-1 space-y-4">
+      <div class="bg-white rounded-2xl border border-surface-200 shadow-xs p-4">
+        <h2 class="text-sm font-bold text-surface-900 border-b border-surface-200 pb-3 mb-3">
+          Phlebotomists On Duty
+        </h2>
+
+        @if (phlebotomists().length === 0) {
+          <p class="text-xs text-surface-500 text-center py-4">
+            No phlebotomists rostered for this day.
+          </p>
+        } @else {
+          <div class="space-y-3">
+            @for (p of phlebotomists(); track p.member.member_id) {
+              <div class="p-3 rounded-xl border border-surface-200 bg-surface-50 space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-surface-900">{{
+                    p.member.display_name
+                  }}</span>
+                  <span
+                    class="text-[11px] font-medium px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 border border-primary-200"
+                  >
+                    {{ p.active_workload }} active
+                  </span>
+                </div>
+
+                <div
+                  class="flex items-center justify-between text-xs pt-1 border-t border-surface-200/60"
+                >
+                  <label [for]="'avail-' + p.member.member_id" class="text-surface-600 text-[11px]">
+                    Available Today
+                  </label>
+                  <input
+                    type="checkbox"
+                    [id]="'avail-' + p.member.member_id"
+                    [checked]="p.is_available"
+                    (change)="toggleAvailability(p, $event)"
+                    data-testid="availability-toggle"
+                    [disabled]="
+                      pendingAvailability().has(selectedDate() + ':' + p.member.member_id)
+                    "
+                    class="rounded text-primary-600 focus:ring-primary-500 h-4 w-4"
+                  />
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Assign Phlebotomist Modal -->
+<app-assign-phlebotomist-modal
+  [(visible)]="assignModalVisible"
+  [visit]="assigningVisit()"
+  [targetDate]="selectedDate()"
+  (assigned)="onAssigned()"
+/>

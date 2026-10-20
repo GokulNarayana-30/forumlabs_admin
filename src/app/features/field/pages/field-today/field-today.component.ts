@@ -1,21 +1,33 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FieldService } from '../../services/field.service';
-import { StaffOrderListItemDto } from '../../../bookings/services/bookings.service';
+import { RouterLink } from '@angular/router';
+import {
+  FieldService,
+  FieldVisit,
+  FieldVisitAddress,
+  FieldVisitTest,
+} from '../../services/field.service';
 import { CollectPaymentModalComponent } from '../../components/collect-payment-modal/collect-payment-modal.component';
 import { NotCollectedModalComponent } from '../../components/not-collected-modal/not-collected-modal.component';
+import { TubeScanModalComponent } from '../../tube-scan-modal.component';
 import { errorText } from '../../../../core/api/error-text';
 
 @Component({
   selector: 'app-field-today',
   standalone: true,
-  imports: [CommonModule, CollectPaymentModalComponent, NotCollectedModalComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    CollectPaymentModalComponent,
+    NotCollectedModalComponent,
+    TubeScanModalComponent,
+  ],
   templateUrl: './field-today.component.html',
 })
 export class FieldTodayComponent implements OnInit {
   private readonly fieldService = inject(FieldService);
 
-  readonly visits = signal<StaffOrderListItemDto[]>([]);
+  readonly visits = signal<FieldVisit[]>([]);
   readonly isLoading = signal<boolean>(false);
   readonly errorMessage = signal<string>('');
   readonly successMessage = signal<string>('');
@@ -23,10 +35,13 @@ export class FieldTodayComponent implements OnInit {
 
   // Modal states
   readonly paymentModalVisible = signal<boolean>(false);
-  readonly selectedOrderForPayment = signal<StaffOrderListItemDto | null>(null);
+  readonly selectedVisitForPayment = signal<FieldVisit | null>(null);
 
   readonly notCollectedModalVisible = signal<boolean>(false);
-  readonly selectedOrderForFailure = signal<StaffOrderListItemDto | null>(null);
+  readonly selectedVisitForFailure = signal<FieldVisit | null>(null);
+
+  readonly tubeScanModalVisible = signal<boolean>(false);
+  readonly selectedVisitForTubes = signal<FieldVisit | null>(null);
 
   ngOnInit(): void {
     void this.loadVisits();
@@ -36,8 +51,12 @@ export class FieldTodayComponent implements OnInit {
     this.isLoading.set(true);
     this.errorMessage.set('');
     try {
-      const data = await this.fieldService.getTodayVisits();
-      this.visits.set(data);
+      const res = await this.fieldService.getTodayVisits();
+      // Sort visits stably by slot_starts_at
+      const sorted = [...res.visits].sort((a, b) =>
+        a.slot_starts_at.localeCompare(b.slot_starts_at),
+      );
+      this.visits.set(sorted);
     } catch (err: unknown) {
       const message = errorText(err, 'Failed to load visits');
       this.errorMessage.set(message);
@@ -46,14 +65,39 @@ export class FieldTodayComponent implements OnInit {
     }
   }
 
-  openPaymentModal(order: StaffOrderListItemDto): void {
-    this.selectedOrderForPayment.set(order);
+  async acceptVisit(visit: FieldVisit): Promise<void> {
+    this.actionInProgressOrderId.set(visit.order_id);
+    this.errorMessage.set('');
+    this.successMessage.set('');
+
+    try {
+      const res = await this.fieldService.acceptVisit(visit.order_id);
+      this.successMessage.set(`Visit for ${visit.booking_ref} accepted.`);
+      // Update local state cleanly
+      const updated = this.visits().map((v) =>
+        v.order_id === visit.order_id ? { ...v, accepted_at: res.accepted_at } : v,
+      );
+      this.visits.set(updated);
+    } catch (err: unknown) {
+      this.errorMessage.set(errorText(err, 'Failed to accept visit'));
+    } finally {
+      this.actionInProgressOrderId.set(null);
+    }
+  }
+
+  openPaymentModal(visit: FieldVisit): void {
+    this.selectedVisitForPayment.set(visit);
     this.paymentModalVisible.set(true);
   }
 
-  openNotCollectedModal(order: StaffOrderListItemDto): void {
-    this.selectedOrderForFailure.set(order);
+  openNotCollectedModal(visit: FieldVisit): void {
+    this.selectedVisitForFailure.set(visit);
     this.notCollectedModalVisible.set(true);
+  }
+
+  openTubeModal(visit: FieldVisit): void {
+    this.selectedVisitForTubes.set(visit);
+    this.tubeScanModalVisible.set(true);
   }
 
   onCollectionSuccess(): void {
@@ -66,25 +110,58 @@ export class FieldTodayComponent implements OnInit {
     void this.loadVisits();
   }
 
-  canMarkOnTheWay(status: string): boolean {
-    return ['confirmed', 'phlebotomist_assigned', 'on_the_way'].includes(status);
+  onTubesUpdated(): void {
+    void this.loadVisits();
   }
 
-  canMarkArrived(status: string): boolean {
-    return ['confirmed', 'phlebotomist_assigned', 'on_the_way', 'arrived'].includes(status);
+  canMarkOnTheWay(visit: FieldVisit): boolean {
+    return (
+      Boolean(visit.accepted_at) && ['confirmed', 'phlebotomist_assigned'].includes(visit.status)
+    );
+  }
+
+  canMarkArrived(visit: FieldVisit): boolean {
+    return (
+      Boolean(visit.accepted_at) &&
+      ['confirmed', 'phlebotomist_assigned', 'on_the_way'].includes(visit.status)
+    );
+  }
+
+  allTubesScanned(visit: FieldVisit): boolean {
+    return (
+      visit.tubes.length > 0 &&
+      visit.tubes.every(
+        (t) =>
+          t.status === 'scanned_at_collection' ||
+          t.status === 'received' ||
+          t.status === 'handed_over',
+      )
+    );
+  }
+
+  canCollectAndPay(visit: FieldVisit): boolean {
+    return (
+      Boolean(visit.accepted_at) &&
+      this.allTubesScanned(visit) &&
+      ['arrived', 'on_the_way', 'phlebotomist_assigned', 'confirmed'].includes(visit.status)
+    );
   }
 
   isActionable(status: string): boolean {
     return !['collected', 'collection_failed', 'cancelled'].includes(status);
   }
 
-  async markOnTheWay(order: StaffOrderListItemDto): Promise<void> {
-    this.actionInProgressOrderId.set(order.order_id);
+  getPatientTests(visit: FieldVisit, patientRowId: string): FieldVisitTest[] {
+    return visit.tests.filter((t) => t.patient_row_id === patientRowId);
+  }
+
+  async markOnTheWay(visit: FieldVisit): Promise<void> {
+    this.actionInProgressOrderId.set(visit.order_id);
     this.errorMessage.set('');
     this.successMessage.set('');
 
     try {
-      const res = await this.fieldService.recordEvent(order.order_id, {
+      const res = await this.fieldService.recordEvent(visit.order_id, {
         kind: 'on_the_way',
         expected_in_minutes: 15,
       });
@@ -103,18 +180,18 @@ export class FieldTodayComponent implements OnInit {
     }
   }
 
-  async markArrived(order: StaffOrderListItemDto): Promise<void> {
-    this.actionInProgressOrderId.set(order.order_id);
+  async markArrived(visit: FieldVisit): Promise<void> {
+    this.actionInProgressOrderId.set(visit.order_id);
     this.errorMessage.set('');
     this.successMessage.set('');
 
     try {
-      const res = await this.fieldService.recordEvent(order.order_id, {
+      const res = await this.fieldService.recordEvent(visit.order_id, {
         kind: 'arrived',
       });
 
       if (res.kind === 'event_recorded' || res.kind === 'event_already_recorded') {
-        this.successMessage.set('Status updated: Arrived at location');
+        this.successMessage.set('Status updated: Arrived at customer location');
         await this.loadVisits();
       } else {
         this.errorMessage.set(`Unable to update status: ${res.kind}`);
@@ -127,28 +204,25 @@ export class FieldTodayComponent implements OnInit {
     }
   }
 
-  getMapsLink(address: StaffOrderListItemDto['address']): string {
-    const parts = [address.house, address.street, address.area, address.pincode].filter(Boolean);
+  getMapsLink(addr: FieldVisitAddress): string {
+    const parts = [addr.house, addr.street, addr.area, addr.pincode].filter(Boolean);
     const query = encodeURIComponent(parts.join(', '));
     return `https://www.google.com/maps/search/?api=1&query=${query}`;
   }
 
   getStatusClass(status: string): string {
     switch (status) {
-      case 'phlebotomist_assigned':
-        return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'on_the_way':
-        return 'bg-amber-50 text-amber-700 border-amber-200';
-      case 'arrived':
-        return 'bg-purple-50 text-purple-700 border-purple-200';
       case 'collected':
         return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'received_by_lab':
-        return 'bg-teal-50 text-teal-700 border-teal-200';
       case 'collection_failed':
+      case 'cancelled':
         return 'bg-rose-50 text-rose-700 border-rose-200';
+      case 'arrived':
+        return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+      case 'on_the_way':
+        return 'bg-amber-50 text-amber-700 border-amber-200';
       default:
-        return 'bg-surface-100 text-surface-700 border-surface-200';
+        return 'bg-blue-50 text-blue-700 border-blue-200';
     }
   }
 }

@@ -68,7 +68,7 @@ describe('AdminLayoutComponent', () => {
     expect(mockAuthService.signOut).toHaveBeenCalled();
   });
 
-  it('displays all nav links for super_admin', () => {
+  it('displays all nav links for super_admin except refunds unless finance role is held', () => {
     rolesSignal.set(['super_admin']);
     fixture.detectChanges();
     const navText = fixture.nativeElement.textContent;
@@ -78,6 +78,16 @@ describe('AdminLayoutComponent', () => {
     expect(navText).toContain('Reports');
     expect(navText).toContain('Patient Search');
     expect(navText).toContain('Tickets');
+    expect(navText).toContain('Dispatch');
+    expect(navText).toContain('Slots');
+    expect(navText).toContain('Samples');
+    expect(navText).toContain('Cash Close');
+    expect(navText).toContain('Members');
+    expect(navText).not.toContain('Refunds');
+
+    rolesSignal.set(['super_admin', 'finance']);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('Refunds');
   });
 
   it('filters navigation strictly for phlebotomist role', () => {
@@ -90,6 +100,12 @@ describe('AdminLayoutComponent', () => {
     expect(labels).not.toContain('Reports');
     expect(labels).not.toContain('Bookings');
     expect(labels).not.toContain('Tickets');
+    expect(labels).not.toContain('Dispatch');
+    expect(labels).not.toContain('Slots');
+    expect(labels).not.toContain('Samples');
+    expect(labels).not.toContain('Cash Close');
+    expect(labels).not.toContain('Refunds');
+    expect(labels).not.toContain('Members');
   });
 
   it('filters navigation strictly for catalog_manager role', () => {
@@ -101,6 +117,12 @@ describe('AdminLayoutComponent', () => {
     expect(labels).not.toContain('Field / Collection');
     expect(labels).not.toContain('Reports');
     expect(labels).not.toContain('Tickets');
+    expect(labels).not.toContain('Dispatch');
+    expect(labels).not.toContain('Slots');
+    expect(labels).not.toContain('Samples');
+    expect(labels).not.toContain('Cash Close');
+    expect(labels).not.toContain('Refunds');
+    expect(labels).not.toContain('Members');
   });
 
   it('filters navigation strictly for lab_staff and report_approver roles', () => {
@@ -108,15 +130,27 @@ describe('AdminLayoutComponent', () => {
     fixture.detectChanges();
     let labels = component.navItems().map((i: { label: string }) => i.label);
     expect(labels).toContain('Reports');
+    expect(labels).toContain('Samples');
     expect(labels).not.toContain('Field / Collection');
     expect(labels).not.toContain('Tickets');
+    expect(labels).not.toContain('Dispatch');
+    expect(labels).not.toContain('Slots');
+    expect(labels).not.toContain('Cash Close');
+    expect(labels).not.toContain('Refunds');
+    expect(labels).not.toContain('Members');
 
     rolesSignal.set(['report_approver']);
     fixture.detectChanges();
     labels = component.navItems().map((i: { label: string }) => i.label);
     expect(labels).toContain('Reports');
+    expect(labels).not.toContain('Samples');
     expect(labels).not.toContain('Field / Collection');
     expect(labels).not.toContain('Tickets');
+    expect(labels).not.toContain('Dispatch');
+    expect(labels).not.toContain('Slots');
+    expect(labels).not.toContain('Cash Close');
+    expect(labels).not.toContain('Refunds');
+    expect(labels).not.toContain('Members');
   });
 
   it('filters navigation strictly for support role', () => {
@@ -127,5 +161,25 @@ describe('AdminLayoutComponent', () => {
     expect(labels).toContain('Tickets');
     expect(labels).not.toContain('Catalog');
     expect(labels).not.toContain('Field / Collection');
+    expect(labels).not.toContain('Dispatch');
+    expect(labels).not.toContain('Slots');
+    expect(labels).not.toContain('Samples');
+    expect(labels).not.toContain('Cash Close');
+    expect(labels).not.toContain('Refunds');
+    expect(labels).not.toContain('Members');
+  });
+
+  it('filters navigation strictly for booking_dispatch role', () => {
+    rolesSignal.set(['booking_dispatch']);
+    fixture.detectChanges();
+    const labels = component.navItems().map((i: { label: string }) => i.label);
+    expect(labels).toEqual(['Bookings', 'Patient Search', 'Dispatch', 'Slots', 'Samples']);
+  });
+
+  it('filters navigation strictly for finance role', () => {
+    rolesSignal.set(['finance']);
+    fixture.detectChanges();
+    const labels = component.navItems().map((i: { label: string }) => i.label);
+    expect(labels).toEqual(['Cash Close', 'Refunds']);
   });
 });

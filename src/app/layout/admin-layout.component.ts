@@ -35,14 +35,27 @@ export class AdminLayoutComponent {
       roles: ['support', 'booking_dispatch', 'super_admin'],
     },
     { label: 'Tickets', path: '/tickets', roles: ['support', 'super_admin'] },
+    { label: 'Dispatch', path: '/dispatch', roles: ['booking_dispatch', 'super_admin'] },
+    { label: 'Slots', path: '/slots', roles: ['booking_dispatch', 'super_admin'] },
+    { label: 'Samples', path: '/samples', roles: ['lab_staff', 'booking_dispatch', 'super_admin'] },
+    { label: 'Cash Close', path: '/finance/cash-close', roles: ['finance', 'super_admin'] },
+    { label: 'Refunds', path: '/finance/refunds', roles: ['finance'] },
+    { label: 'Members', path: '/members', roles: ['super_admin'] },
   ];
 
   readonly navItems = computed(() => {
     const userRoles = this.roles();
-    if (userRoles.includes('super_admin')) {
-      return this.allNavItems;
-    }
-    return this.allNavItems.filter((item) => item.roles.some((r) => userRoles.includes(r)));
+    const isSuperAdmin = userRoles.includes('super_admin');
+    return this.allNavItems.filter((item) => {
+      // Refunds nav requires explicit finance role, even for super_admin
+      if (item.path === '/finance/refunds') {
+        return userRoles.includes('finance');
+      }
+      if (isSuperAdmin) {
+        return true;
+      }
+      return item.roles.some((r) => userRoles.includes(r));
+    });
   });
 
   async signOut(): Promise<void> {

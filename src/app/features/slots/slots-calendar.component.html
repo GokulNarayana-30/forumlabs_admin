@@ -1,0 +1,357 @@
+<div class="space-y-6">
+  <!-- Header Bar -->
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h2 class="text-xl font-bold text-surface-900">Slots & Capacity Management</h2>
+      <p class="text-xs text-surface-500">
+        Monitor slot window utilization, adjust daily capacity, configure lead times, and manage
+        closures.
+      </p>
+    </div>
+    <div class="flex items-center gap-3">
+      <div
+        *ngIf="settings()"
+        class="hidden md:flex items-center gap-2 rounded-full border border-surface-200 bg-surface-50 px-3 py-1.5 text-xs text-surface-700"
+      >
+        <i class="pi pi-clock text-primary-600"></i>
+        <span
+          >Lead Time:
+          <strong class="text-surface-900">{{ settings()?.lead_time_minutes }} mins</strong></span
+        >
+      </div>
+      <button
+        type="button"
+        (click)="openSettingsModal()"
+        [disabled]="isLoading() || !settings()"
+        class="inline-flex items-center gap-1.5 rounded-full border border-surface-300 bg-surface-0 px-4 py-2 text-xs font-medium text-surface-700 hover:bg-surface-50"
+      >
+        <i class="pi pi-cog"></i>
+        <span>Settings</span>
+      </button>
+      <button
+        type="button"
+        (click)="loadOverview()"
+        [disabled]="isLoading()"
+        class="inline-flex items-center gap-1.5 rounded-full bg-primary-600 px-4 py-2 text-xs font-medium text-surface-0 hover:bg-primary-700 disabled:opacity-50"
+      >
+        <i class="pi pi-refresh" [class.pi-spin]="isLoading()"></i>
+        <span>Refresh</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <div
+    *ngIf="errorMessage()"
+    class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+  >
+    {{ errorMessage() }}
+  </div>
+
+  <div
+    *ngIf="successMessage()"
+    class="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700 flex items-center justify-between"
+  >
+    <span>{{ successMessage() }}</span>
+    <button
+      type="button"
+      (click)="successMessage.set('')"
+      class="text-green-800 hover:text-green-950"
+    >
+      <i class="pi pi-times"></i>
+    </button>
+  </div>
+
+  <!-- 14-Day Date Selector Bar -->
+  <div class="rounded-2xl border border-surface-200 bg-surface-0 p-4 shadow-sm">
+    <div class="flex items-center justify-between pb-3 border-b border-surface-100">
+      <h3 class="text-xs font-semibold text-surface-700 uppercase tracking-wider">
+        14-Day Horizon (IST)
+      </h3>
+      <span class="text-xs text-surface-400">Click a date to manage windows</span>
+    </div>
+
+    <div class="mt-3 flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+      <button
+        *ngFor="let day of days()"
+        type="button"
+        (click)="selectDay(day)"
+        [class.ring-2]="selectedDay()?.date === day.date"
+        [class.ring-primary-500]="selectedDay()?.date === day.date"
+        [class.bg-primary-50]="selectedDay()?.date === day.date"
+        [class.border-primary-300]="selectedDay()?.date === day.date"
+        [class.bg-surface-50]="day.closed && selectedDay()?.date !== day.date"
+        class="flex flex-col items-center min-w-[88px] rounded-xl border border-surface-200 p-2.5 text-center transition-all hover:bg-surface-50"
+      >
+        <span class="text-xs font-medium text-surface-500">{{ formatDateHeader(day.date) }}</span>
+        <span class="text-sm font-bold text-surface-800 mt-1">{{ day.date.substring(8) }}</span>
+
+        <span
+          *ngIf="day.closed"
+          class="mt-1.5 inline-block rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-700"
+        >
+          Closed
+        </span>
+        <span *ngIf="!day.closed" class="mt-1.5 text-[11px] font-medium text-surface-600">
+          {{ getTotalBookings(day) }} / {{ getTotalCapacity(day) }}
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Selected Day Detail View -->
+  <div
+    *ngIf="selectedDay()"
+    class="rounded-2xl border border-surface-200 bg-surface-0 p-6 shadow-sm"
+  >
+    <div
+      class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-surface-200 pb-4"
+    >
+      <div>
+        <div class="flex items-center gap-2">
+          <h3 class="text-lg font-bold text-surface-900">
+            {{ formatDateHeader(selectedDay()!.date) }}
+          </h3>
+          <span class="text-xs font-mono text-surface-500">({{ selectedDay()!.date }})</span>
+          <span
+            *ngIf="selectedDay()!.closed"
+            class="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-700"
+          >
+            Entire Day Closed
+          </span>
+        </div>
+        <p *ngIf="selectedDay()!.closed" class="mt-1 text-xs text-red-600 font-medium">
+          Closure reason: {{ selectedDay()!.reason }}
+        </p>
+        <p class="mt-1 text-xs text-surface-500">
+          Total Bookings:
+          <strong class="text-surface-800">{{ getTotalBookings(selectedDay()!) }}</strong> | Total
+          Capacity:
+          <strong class="text-surface-800">{{ getTotalCapacity(selectedDay()!) }}</strong>
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button
+          *ngIf="!selectedDay()!.closed"
+          type="button"
+          (click)="openCloseDayModal(selectedDay()!)"
+          class="rounded-full border border-red-300 bg-surface-0 px-4 py-2 text-xs font-medium text-red-700 hover:bg-red-50"
+        >
+          <i class="pi pi-ban mr-1"></i>
+          <span>Close Entire Day</span>
+        </button>
+        <button
+          *ngIf="selectedDay()!.closed"
+          type="button"
+          (click)="reopenDay(selectedDay()!)"
+          [disabled]="isLoading()"
+          class="rounded-full bg-green-600 px-4 py-2 text-xs font-medium text-surface-0 hover:bg-green-700 disabled:opacity-50"
+        >
+          <i class="pi pi-check mr-1"></i>
+          <span>Reopen Day</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Closed Day Banner -->
+    <div
+      *ngIf="selectedDay()!.closed"
+      class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-800"
+    >
+      <div class="flex items-center gap-2 font-semibold text-sm">
+        <i class="pi pi-info-circle"></i>
+        <span>Day is closed for new bookings</span>
+      </div>
+      <p class="mt-1">
+        No new customer bookings will be accepted for {{ selectedDay()!.date }}. Existing bookings
+        are NOT cancelled or dropped. They remain confirmed on the phlebotomist dispatch calendar.
+      </p>
+    </div>
+
+    <!-- Windows Grid / Table -->
+    <div class="mt-6 overflow-hidden rounded-xl border border-surface-200">
+      <table class="min-w-full divide-y divide-surface-200 text-left text-xs">
+        <thead class="bg-surface-50 font-semibold text-surface-700">
+          <tr>
+            <th class="px-4 py-3">Slot Window</th>
+            <th class="px-4 py-3">Status</th>
+            <th class="px-4 py-3">Capacity</th>
+            <th class="px-4 py-3">Booked</th>
+            <th class="px-4 py-3">Held</th>
+            <th class="px-4 py-3">Existing Bookings Kept</th>
+            <th class="px-4 py-3 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-surface-200 bg-surface-0">
+          <tr
+            *ngFor="let window of selectedDay()!.windows"
+            class="hover:bg-surface-50 transition-colors"
+          >
+            <td class="px-4 py-3">
+              <span class="font-medium text-surface-900 block">
+                {{ formatWindowLabel(window.window_id) }}
+              </span>
+              <span class="text-[11px] font-mono text-surface-400">{{ window.window_id }}</span>
+            </td>
+
+            <td class="px-4 py-3">
+              <span
+                *ngIf="window.closed"
+                class="inline-block rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700"
+              >
+                Closed
+              </span>
+              <span
+                *ngIf="!window.closed && window.booked_count >= window.capacity"
+                class="inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800"
+              >
+                Full
+              </span>
+              <span
+                *ngIf="!window.closed && window.booked_count < window.capacity"
+                class="inline-block rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-semibold text-green-800"
+              >
+                Open
+              </span>
+              <span
+                *ngIf="window.reason"
+                class="block text-[11px] text-surface-500 mt-0.5 truncate max-w-xs"
+                [title]="window.reason"
+              >
+                {{ window.reason }}
+              </span>
+            </td>
+
+            <td class="px-4 py-3 font-semibold text-surface-900">
+              {{ window.capacity }}
+            </td>
+
+            <td class="px-4 py-3 text-surface-800">
+              <span class="font-semibold">{{ window.booked_count }}</span>
+            </td>
+
+            <td class="px-4 py-3 text-surface-500">
+              {{ window.held_count }}
+            </td>
+
+            <td class="px-4 py-3 text-surface-600">
+              <span *ngIf="window.existing_bookings_kept.length === 0" class="text-surface-400"
+                >None</span
+              >
+              <span *ngIf="window.existing_bookings_kept.length > 0" class="font-mono text-[11px]">
+                {{ window.existing_bookings_kept.join(', ') }}
+              </span>
+            </td>
+
+            <td class="px-4 py-3 text-right">
+              <button
+                type="button"
+                (click)="openOverrideModal(window)"
+                class="rounded-full border border-surface-300 bg-surface-0 px-3 py-1.5 text-xs font-medium text-surface-700 hover:bg-surface-50"
+              >
+                Override
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Close Entire Day Modal Dialog -->
+  <div
+    *ngIf="isCloseDayModalVisible()"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-surface-900/50 p-4"
+    role="dialog"
+    aria-modal="true"
+  >
+    <div class="w-full max-w-md rounded-2xl bg-surface-0 p-6 shadow-xl border border-surface-200">
+      <div class="flex items-center justify-between border-b border-surface-200 pb-3">
+        <h3 class="text-base font-semibold text-surface-900">Close Entire Day</h3>
+        <button
+          type="button"
+          (click)="closeCloseDayModal()"
+          class="rounded-lg p-1.5 text-surface-400 hover:bg-surface-100 hover:text-surface-700"
+        >
+          <span class="sr-only">Close</span>
+          <i class="pi pi-times"></i>
+        </button>
+      </div>
+
+      <div
+        *ngIf="closeDayError()"
+        class="mt-3 rounded-lg bg-red-50 p-3 text-xs text-red-700 border border-red-200"
+      >
+        {{ closeDayError() }}
+      </div>
+
+      <div class="mt-4 space-y-3">
+        <p class="text-xs text-surface-600">
+          You are about to close
+          <strong class="text-surface-900">{{ closeDayTarget()?.date }}</strong> for all slot
+          windows. New bookings will be prevented.
+        </p>
+
+        <div
+          *ngIf="closeDayTarget() && getTotalBookings(closeDayTarget()!) > 0"
+          class="rounded-lg bg-amber-50 p-3 text-xs text-amber-800 border border-amber-200"
+        >
+          ⚠️ <strong>Notice:</strong> This day contains
+          {{ getTotalBookings(closeDayTarget()!) }} existing booking(s). Closing this day will NOT
+          cancel or remove these bookings; they remain confirmed and kept.
+        </div>
+
+        <div>
+          <label for="closeReasonInput" class="block text-xs font-medium text-surface-700">
+            Closure Reason <span class="text-red-500">*</span>
+          </label>
+          <input
+            id="closeReasonInput"
+            type="text"
+            maxlength="200"
+            placeholder="e.g. Public Holiday, Lab maintenance"
+            [ngModel]="closeDayReason()"
+            (ngModelChange)="closeDayReason.set($event)"
+            [disabled]="isSubmittingCloseDay()"
+            class="mt-1 block w-full rounded-lg border border-surface-300 bg-surface-0 px-3 py-2 text-xs text-surface-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          />
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-end gap-2 border-t border-surface-200 pt-3">
+        <button
+          type="button"
+          (click)="closeCloseDayModal()"
+          [disabled]="isSubmittingCloseDay()"
+          class="rounded-full border border-surface-300 bg-surface-0 px-4 py-2 text-xs font-medium text-surface-700 hover:bg-surface-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          (click)="submitCloseDay()"
+          [disabled]="isSubmittingCloseDay() || !closeDayReason().trim()"
+          class="rounded-full bg-red-600 px-4 py-2 text-xs font-medium text-surface-0 hover:bg-red-700 disabled:opacity-50"
+        >
+          <span *ngIf="!isSubmittingCloseDay()">Confirm Closure</span>
+          <span *ngIf="isSubmittingCloseDay()">Closing...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sub Modals -->
+  <app-slot-override-modal
+    [(visible)]="isOverrideModalVisible"
+    [targetDate]="selectedDay()?.date || ''"
+    [window]="selectedWindow()"
+    (saved)="onOverrideSaved()"
+  ></app-slot-override-modal>
+
+  <app-slot-settings-modal
+    [(visible)]="isSettingsModalVisible"
+    [currentLeadTime]="settings()?.lead_time_minutes || 120"
+    (saved)="onSettingsSaved()"
+  ></app-slot-settings-modal>
+</div>

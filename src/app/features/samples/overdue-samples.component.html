@@ -1,0 +1,113 @@
+<div class="space-y-4">
+  <!-- Controls -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+    <div>
+      <h3 class="text-base font-semibold text-surface-900">Overdue Collected Samples</h3>
+      <p class="text-xs text-surface-500">
+        Specimens collected in the field that have not yet been scanned and received at the lab
+        within expected timeframe.
+      </p>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <input
+        type="date"
+        [ngModel]="filterDate()"
+        (ngModelChange)="filterDate.set($event); loadOverdueTubes()"
+        class="rounded-lg border border-surface-300 bg-surface-0 px-3 py-1.5 text-xs text-surface-900 focus:border-primary-500 focus:outline-none"
+      />
+      <button
+        type="button"
+        (click)="loadOverdueTubes()"
+        [disabled]="isLoading()"
+        class="inline-flex items-center gap-1.5 rounded-full border border-surface-300 bg-surface-0 px-3 py-1.5 text-xs font-medium text-surface-700 hover:bg-surface-50 disabled:opacity-50"
+      >
+        <i class="pi pi-refresh" [class.pi-spin]="isLoading()"></i>
+        <span>Refresh</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Error Message -->
+  <div
+    *ngIf="errorMessage()"
+    class="rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-700"
+  >
+    {{ errorMessage() }}
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading()" class="py-12 text-center text-xs text-surface-500">
+    <i class="pi pi-spin pi-spinner text-xl text-primary-600 block mb-2"></i>
+    <span>Loading overdue samples...</span>
+  </div>
+
+  <!-- Empty State -->
+  <div
+    *ngIf="!isLoading() && tubes().length === 0"
+    class="rounded-2xl border border-surface-200 bg-surface-0 p-8 text-center"
+  >
+    <i class="pi pi-check-circle text-3xl text-green-600 block mb-2"></i>
+    <h4 class="text-sm font-semibold text-surface-800">All specimens received promptly</h4>
+    <p class="text-xs text-surface-500 mt-1">No overdue collected samples pending lab arrival.</p>
+  </div>
+
+  <!-- Table -->
+  <div
+    *ngIf="!isLoading() && tubes().length > 0"
+    class="overflow-hidden rounded-xl border border-surface-200 bg-surface-0 shadow-sm"
+  >
+    <table class="min-w-full divide-y divide-surface-200 text-left text-xs">
+      <thead class="bg-surface-50 font-semibold text-surface-700">
+        <tr>
+          <th class="px-4 py-3">Tube Code</th>
+          <th class="px-4 py-3">Booking Ref</th>
+          <th class="px-4 py-3">Patient</th>
+          <th class="px-4 py-3">Test</th>
+          <th class="px-4 py-3">Phlebotomist</th>
+          <th class="px-4 py-3">Collected At</th>
+          <th class="px-4 py-3">Status</th>
+          <th class="px-4 py-3 text-right">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-surface-200 bg-surface-0">
+        <tr *ngFor="let tube of tubes()" class="hover:bg-surface-50 transition-colors">
+          <td class="px-4 py-3 font-mono font-medium text-surface-900">
+            {{ tube.tube_code }}
+          </td>
+          <td class="px-4 py-3 font-mono text-surface-700">
+            {{ tube.booking_ref }}
+          </td>
+          <td class="px-4 py-3 text-surface-800">
+            {{ tube.patient_label }}
+          </td>
+          <td class="px-4 py-3 text-surface-800">
+            {{ tube.test_name }}
+          </td>
+          <td class="px-4 py-3 text-surface-600">
+            {{ tube.collector?.display_name || 'Unassigned' }}
+          </td>
+          <td class="px-4 py-3 text-surface-600">
+            {{ formatDate(tube.collected_at) }}
+          </td>
+          <td class="px-4 py-3">
+            <span
+              class="inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800"
+            >
+              {{ tube.status }}
+            </span>
+          </td>
+          <td class="px-4 py-3 text-right">
+            <button
+              type="button"
+              (click)="handleSelect(tube.tube_code)"
+              class="rounded-full bg-primary-600 px-3 py-1 text-xs font-medium text-surface-0 hover:bg-primary-700"
+            >
+              Scan / Receive
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

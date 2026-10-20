@@ -1,0 +1,102 @@
+<div
+  *ngIf="visible"
+  class="fixed inset-0 z-50 flex items-center justify-center bg-surface-900/50 p-4"
+  role="dialog"
+  aria-modal="true"
+>
+  <div class="w-full max-w-lg rounded-2xl bg-surface-0 p-6 shadow-xl border border-surface-200">
+    <div class="flex items-center justify-between border-b border-surface-200 pb-3">
+      <div>
+        <h3 class="text-base font-semibold text-red-700 flex items-center gap-2">
+          <i class="pi pi-times-circle"></i>
+          <span>Reject Specimen Sample</span>
+        </h3>
+        <p class="text-xs text-surface-500">
+          Tube: <strong class="font-mono text-surface-800">{{ tube?.tube_code }}</strong> | Test:
+          <strong class="text-surface-800">{{ tube?.test_name }}</strong>
+        </p>
+      </div>
+      <button
+        type="button"
+        (click)="closeModal()"
+        class="rounded-lg p-1.5 text-surface-400 hover:bg-surface-100 hover:text-surface-700"
+      >
+        <span class="sr-only">Close</span>
+        <i class="pi pi-times"></i>
+      </button>
+    </div>
+
+    <!-- Error Banner -->
+    <div
+      *ngIf="errorMessage()"
+      class="mt-3 rounded-lg bg-red-50 p-3 text-xs text-red-700 border border-red-200"
+    >
+      {{ errorMessage() }}
+    </div>
+
+    <!-- Rejection Impact Warning -->
+    <div
+      class="mt-4 rounded-xl bg-amber-50 p-3 text-xs text-amber-900 border border-amber-200 space-y-1"
+    >
+      <div class="font-semibold flex items-center gap-1.5">
+        <i class="pi pi-exclamation-triangle"></i>
+        <span>Recollection Required Impact</span>
+      </div>
+      <p>
+        Recording a specimen rejection logs a <strong>sample_rejected</strong> event and marks the
+        order status as <strong>recollection_required</strong>. A customer service follow-up and
+        fresh sample recollection will be initiated.
+      </p>
+    </div>
+
+    <div class="mt-4 space-y-4">
+      <div>
+        <label for="rejectionReasonSelect" class="block text-xs font-medium text-surface-700">
+          Reason Code <span class="text-red-500">*</span>
+        </label>
+        <select
+          id="rejectionReasonSelect"
+          [ngModel]="selectedReasonCode()"
+          (ngModelChange)="selectedReasonCode.set($event)"
+          [disabled]="isSubmitting()"
+          class="mt-1 block w-full rounded-lg border border-surface-300 bg-surface-0 px-3 py-2 text-xs text-surface-900 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+        >
+          <option *ngFor="let opt of rejectionOptions" [value]="opt.code">
+            {{ opt.label }}
+          </option>
+        </select>
+        <p class="mt-1 text-[11px] text-surface-500">
+          Reason code is canonical and recorded for diagnostic quality control.
+        </p>
+      </div>
+
+      <div class="rounded-lg bg-surface-50 p-3 text-xs border border-surface-200">
+        <span class="text-surface-500 block">Patient</span>
+        <span class="font-medium text-surface-800">{{ tube?.patient_label }}</span>
+        <span class="text-surface-500 block mt-2">Booking Reference</span>
+        <span class="font-mono text-surface-800">{{ tube?.booking_ref }}</span>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="mt-6 flex items-center justify-end gap-2 border-t border-surface-200 pt-3">
+      <button
+        type="button"
+        (click)="closeModal()"
+        [disabled]="isSubmitting()"
+        class="rounded-full border border-surface-300 bg-surface-0 px-4 py-2 text-xs font-medium text-surface-700 hover:bg-surface-50"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        (click)="submitRejection()"
+        [disabled]="isSubmitting()"
+        class="rounded-full bg-red-600 px-5 py-2 text-xs font-medium text-surface-0 hover:bg-red-700 disabled:opacity-50"
+      >
+        <span *ngIf="!isSubmitting()">Confirm Rejection</span>
+        <span *ngIf="isSubmitting()">Submitting...</span>
+      </button>
+    </div>
+  </div>
+</div>

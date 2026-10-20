@@ -1,0 +1,179 @@
+<div
+  *ngIf="visible"
+  class="fixed inset-0 z-50 flex items-center justify-center bg-surface-900/50 p-4"
+  role="dialog"
+  aria-modal="true"
+>
+  <div class="w-full max-w-lg rounded-2xl bg-surface-0 p-6 shadow-xl border border-surface-200">
+    <div class="flex items-center justify-between border-b border-surface-200 pb-3">
+      <div>
+        <h3 class="text-base font-semibold text-surface-900">Record Customer Refund</h3>
+        <p class="text-xs text-surface-500">
+          Booking: <strong class="text-surface-800 font-mono">{{ order?.booking_ref }}</strong>
+        </p>
+      </div>
+      <button
+        type="button"
+        (click)="close()"
+        class="rounded-lg p-1.5 text-surface-400 hover:bg-surface-100 hover:text-surface-700"
+      >
+        <span class="sr-only">Close</span>
+        <i class="pi pi-times"></i>
+      </button>
+    </div>
+
+    <!-- Error Banner -->
+    <div
+      *ngIf="errorMessage()"
+      class="mt-3 rounded-lg bg-red-50 p-3 text-xs text-red-700 border border-red-200"
+    >
+      {{ errorMessage() }}
+    </div>
+
+    <p *ngIf="pending()" role="status" class="mt-3 text-sm">
+      Refund unresolved. Editing is locked. Retry exactly this refund to check its result.
+    </p>
+    <!-- Refund Summary Box -->
+    <div
+      class="mt-4 rounded-xl border border-surface-200 bg-surface-50 p-3.5 grid grid-cols-3 gap-2 text-xs"
+    >
+      <div>
+        <span class="text-surface-500 block">Total Paid</span>
+        <span class="text-sm font-bold text-surface-900 mt-0.5 block">
+          ₹{{ formatPaise(order?.total_paid_paise || 0) }}
+        </span>
+      </div>
+      <div>
+        <span class="text-surface-500 block">Already Refunded</span>
+        <span class="text-sm font-bold text-surface-700 mt-0.5 block">
+          ₹{{ formatPaise(order?.refunded_paise || 0) }}
+        </span>
+      </div>
+      <div>
+        <span class="text-surface-500 block">Remaining</span>
+        <span class="text-sm font-bold text-emerald-600 mt-0.5 block">
+          ₹{{ formatPaise(order?.remaining_paise || 0) }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Form Fields -->
+    <div class="mt-4 space-y-4">
+      <div>
+        <label for="refundAmount" class="block text-xs font-medium text-surface-700">
+          Refund Amount (₹) <span class="text-red-500 font-bold">*</span>
+        </label>
+        <div class="relative mt-1">
+          <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-surface-400 text-xs">
+            ₹
+          </span>
+          <input
+            id="refundAmount"
+            type="text"
+            placeholder="0.00"
+            [ngModel]="amountRs()"
+            (ngModelChange)="amountRs.set($event)"
+            [disabled]="isSubmitting() || pending()"
+            class="block w-full rounded-lg border border-surface-300 bg-surface-0 pl-7 pr-3 py-2 text-xs text-surface-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          />
+        </div>
+        <p class="mt-1 text-[11px] text-surface-500">
+          Maximum refundable: {{ formattedRemaining }}
+        </p>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-surface-700 mb-1">
+          Refund Method <span class="text-red-500 font-bold">*</span>
+        </label>
+        <div class="flex items-center gap-4">
+          <label class="inline-flex items-center gap-2 text-xs text-surface-700 cursor-pointer">
+            <input
+              type="radio"
+              name="refundMethod"
+              value="cash"
+              [checked]="method() === 'cash'"
+              (change)="method.set('cash')"
+              [disabled]="isSubmitting() || pending()"
+              class="text-primary-600 focus:ring-primary-500"
+            />
+            <span>Cash</span>
+          </label>
+          <label class="inline-flex items-center gap-2 text-xs text-surface-700 cursor-pointer">
+            <input
+              type="radio"
+              name="refundMethod"
+              value="upi"
+              [checked]="method() === 'upi'"
+              (change)="method.set('upi')"
+              [disabled]="isSubmitting() || pending()"
+              class="text-primary-600 focus:ring-primary-500"
+            />
+            <span>UPI</span>
+          </label>
+        </div>
+      </div>
+
+      <div *ngIf="method() === 'upi'">
+        <label for="upiRef" class="block text-xs font-medium text-surface-700">
+          UPI Reference / Transaction ID
+        </label>
+        <input
+          id="upiRef"
+          type="text"
+          placeholder="e.g. UPI-987654321"
+          maxlength="64"
+          [ngModel]="reference()"
+          (ngModelChange)="reference.set($event)"
+          [disabled]="isSubmitting() || pending()"
+          class="mt-1 block w-full rounded-lg border border-surface-300 bg-surface-0 p-2 text-xs text-surface-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+        />
+        <p class="mt-1 text-[11px] text-surface-500">
+          Optional. Up to 64 alphanumeric characters and hyphens.
+        </p>
+      </div>
+
+      <div>
+        <label for="refundReason" class="block text-xs font-medium text-surface-700">
+          Reason for Refund <span class="text-red-500 font-bold">*</span>
+        </label>
+        <textarea
+          id="refundReason"
+          rows="3"
+          maxlength="300"
+          placeholder="Enter reason for customer refund (e.g. customer cancelled test, duplicate charge)..."
+          [ngModel]="reason()"
+          (ngModelChange)="reason.set($event)"
+          [disabled]="isSubmitting() || pending()"
+          class="mt-1 block w-full rounded-lg border border-surface-300 bg-surface-0 p-2.5 text-xs text-surface-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+        ></textarea>
+        <p class="mt-1 text-[11px] text-surface-500">
+          Mandatory reason (1 to 300 characters). Stored in finance audit trail.
+        </p>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="mt-6 flex items-center justify-end gap-2 border-t border-surface-200 pt-3">
+      <button
+        type="button"
+        (click)="close()"
+        [disabled]="isSubmitting() || pending()"
+        class="rounded-full border border-surface-300 bg-surface-0 px-4 py-2 text-xs font-medium text-surface-700 hover:bg-surface-50"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        (click)="submitRefund()"
+        [disabled]="isSubmitting() || !amountRs().trim() || !reason().trim()"
+        class="rounded-full bg-primary-600 px-5 py-2 text-xs font-medium text-surface-0 hover:bg-primary-700 disabled:opacity-50"
+      >
+        <span *ngIf="!isSubmitting()">{{
+          pending() ? 'Retry exact refund' : 'Confirm Refund'
+        }}</span>
+        <span *ngIf="isSubmitting()">Processing...</span>
+      </button>
+    </div>
+  </div>
+</div>

@@ -30,7 +30,9 @@ export interface CollectPaymentPayload {
 export class CollectPaymentModalComponent {
   private readonly fieldService = inject(FieldService);
 
-  @Input() order: StaffOrderListItemDto | null = null;
+  @Input() order:
+    (Pick<StaffOrderListItemDto, 'order_id' | 'payment_status'> & { booking_ref?: string }) | null =
+    null;
   @Input() visible = false;
   /** Exact order total in paise from the API; null when the list did not provide it. */
   @Input() totalPaise: number | null = null;

@@ -1,0 +1,225 @@
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h2 class="text-xl font-bold text-surface-900">Customer Refunds & Adjustments</h2>
+      <p class="text-xs text-surface-500">
+        Lookup customer orders to issue manual cash or UPI refunds within available collection
+        balances.
+      </p>
+    </div>
+  </div>
+
+  <!-- Success Message -->
+  <div
+    *ngIf="successMessage()"
+    class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-medium text-emerald-800 flex items-center justify-between"
+  >
+    <div class="flex items-center gap-2">
+      <i class="pi pi-check-circle text-emerald-600"></i>
+      <span>{{ successMessage() }}</span>
+    </div>
+    <button
+      type="button"
+      (click)="successMessage.set('')"
+      class="text-emerald-600 hover:text-emerald-900"
+    >
+      <i class="pi pi-times"></i>
+    </button>
+  </div>
+
+  <!-- Search Card -->
+  <div class="rounded-2xl border border-surface-200 bg-surface-0 p-5 shadow-sm space-y-4">
+    <h3 class="text-sm font-semibold text-surface-900">Order Lookup</h3>
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div class="relative flex-1">
+        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-surface-400">
+          <i class="pi pi-search text-xs"></i>
+        </span>
+        <input
+          type="text"
+          placeholder="Enter Booking Reference (e.g. FL-20261018-0001)..."
+          [ngModel]="bookingRefInput()"
+          (ngModelChange)="bookingRefInput.set($event)"
+          (keyup.enter)="lookupOrder()"
+          class="w-full rounded-xl border border-surface-300 bg-surface-0 pl-9 pr-3 py-2 text-xs text-surface-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+        />
+      </div>
+      <button
+        type="button"
+        (click)="lookupOrder()"
+        [disabled]="isLookingUp() || !bookingRefInput().trim()"
+        class="inline-flex items-center justify-center gap-1.5 rounded-full bg-primary-600 px-5 py-2 text-xs font-medium text-surface-0 hover:bg-primary-700 disabled:opacity-50"
+      >
+        <i class="pi pi-search" [class.pi-spin]="isLookingUp()"></i>
+        <span>Lookup Order</span>
+      </button>
+    </div>
+
+    <!-- Lookup Error -->
+    <div
+      *ngIf="lookupError()"
+      class="rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700"
+    >
+      {{ lookupError() }}
+    </div>
+
+    <!-- Order Card (when loaded) -->
+    <div
+      *ngIf="currentOrder() as order"
+      class="mt-4 rounded-xl border border-surface-200 bg-surface-50 p-4 space-y-3"
+    >
+      <div
+        class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-surface-200 pb-3"
+      >
+        <div>
+          <span class="text-xs text-surface-500">Booking Reference</span>
+          <p class="text-sm font-bold font-mono text-surface-900">{{ order.booking_ref }}</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span
+            class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+            [ngClass]="{
+              'bg-emerald-100 text-emerald-800': order.payment_status === 'paid',
+              'bg-amber-100 text-amber-800': order.payment_status === 'pending',
+              'bg-surface-200 text-surface-700':
+                order.payment_status !== 'paid' && order.payment_status !== 'pending',
+            }"
+          >
+            {{ order.payment_status }}
+          </span>
+
+          <button
+            type="button"
+            (click)="openRecordRefund()"
+            [disabled]="!isRefundable(order)"
+            class="inline-flex items-center gap-1.5 rounded-full bg-primary-600 px-4 py-1.5 text-xs font-medium text-surface-0 hover:bg-primary-700 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <i class="pi pi-arrow-circle-down"></i>
+            <span>Issue Refund</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div>
+          <span class="text-xs text-surface-500">Total Collected</span>
+          <p class="text-sm font-semibold text-surface-900">
+            {{ formatPaise(order.total_paid_paise) }}
+          </p>
+        </div>
+        <div>
+          <span class="text-xs text-surface-500">Total Refunded</span>
+          <p class="text-sm font-semibold text-surface-700">
+            {{ formatPaise(order.refunded_paise) }}
+          </p>
+        </div>
+        <div>
+          <span class="text-xs text-surface-500">Remaining Balance</span>
+          <p class="text-sm font-bold text-emerald-600">{{ formatPaise(order.remaining_paise) }}</p>
+        </div>
+      </div>
+
+      <p *ngIf="!isRefundable(order)" class="text-xs text-amber-700 font-medium">
+        <span *ngIf="order.payment_status !== 'paid'"
+          >Cannot refund: Order payment status is {{ order.payment_status }}.</span
+        >
+        <span *ngIf="order.payment_status === 'paid' && order.remaining_paise <= 0"
+          >Order is fully refunded. No remaining refundable balance.</span
+        >
+      </p>
+    </div>
+  </div>
+
+  <!-- Recent Refunds Table -->
+  <div class="rounded-2xl border border-surface-200 bg-surface-0 shadow-sm overflow-hidden">
+    <div class="flex items-center justify-between border-b border-surface-200 px-5 py-4">
+      <div>
+        <h3 class="text-sm font-semibold text-surface-900">Recent Refunds</h3>
+        <p class="text-xs text-surface-500">
+          History of customer refunds processed by finance staff.
+        </p>
+      </div>
+      <button
+        type="button"
+        (click)="loadRecentRefunds()"
+        [disabled]="isLoadingRefunds()"
+        class="inline-flex items-center gap-1.5 rounded-full border border-surface-300 bg-surface-0 px-3 py-1.5 text-xs font-medium text-surface-700 hover:bg-surface-50 disabled:opacity-50"
+      >
+        <i class="pi pi-refresh" [class.pi-spin]="isLoadingRefunds()"></i>
+        <span>Refresh</span>
+      </button>
+    </div>
+
+    <!-- Refunds Error -->
+    <div
+      *ngIf="refundsError()"
+      class="m-4 rounded-lg border border-red-200 bg-red-50 p-3 text-xs text-red-700"
+    >
+      {{ refundsError() }}
+    </div>
+
+    <!-- Loading -->
+    <div *ngIf="isLoadingRefunds()" class="p-8 text-center text-xs text-surface-500">
+      Loading recent refunds...
+    </div>
+
+    <!-- Table -->
+    <div *ngIf="!isLoadingRefunds()" class="overflow-x-auto">
+      <table class="w-full text-left text-xs text-surface-700">
+        <thead
+          class="border-b border-surface-200 bg-surface-50 text-[11px] font-medium uppercase text-surface-500"
+        >
+          <tr>
+            <th class="px-5 py-3">Date (IST)</th>
+            <th class="px-5 py-3">Amount</th>
+            <th class="px-5 py-3">Method</th>
+            <th class="px-5 py-3">Reference</th>
+            <th class="px-5 py-3">Reason</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-surface-200">
+          <tr *ngFor="let refund of recentRefunds()" class="hover:bg-surface-50/50">
+            <td class="px-5 py-3 font-mono text-surface-600 whitespace-nowrap">
+              {{ formatDate(refund.recorded_at) }}
+            </td>
+            <td class="px-5 py-3 font-bold text-surface-900 whitespace-nowrap">
+              {{ formatPaise(refund.amount_paise) }}
+            </td>
+            <td class="px-5 py-3 uppercase font-medium">
+              <span
+                class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                [ngClass]="{
+                  'bg-sky-100 text-sky-800': refund.method === 'upi',
+                  'bg-amber-100 text-amber-800': refund.method === 'cash',
+                }"
+              >
+                {{ refund.method }}
+              </span>
+            </td>
+            <td class="px-5 py-3 font-mono text-surface-600">
+              {{ refund.reference || '—' }}
+            </td>
+            <td class="px-5 py-3 text-surface-700 max-w-xs truncate" [title]="refund.reason">
+              {{ refund.reason }}
+            </td>
+          </tr>
+
+          <tr *ngIf="recentRefunds().length === 0">
+            <td colspan="5" class="px-5 py-8 text-center text-surface-400">
+              No refunds recorded yet.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Record Refund Modal -->
+  <app-record-refund-modal
+    [visible]="isRefundModalVisible()"
+    (visibleChange)="isRefundModalVisible.set($event)"
+    [order]="currentOrder()"
+    (refundRecorded)="onRefundRecorded($event)"
+  ></app-record-refund-modal>
+</div>

@@ -12,37 +12,8 @@ describe('NotCollectedModalComponent', () => {
   let fixture: ComponentFixture<NotCollectedModalComponent>;
   let mockFieldService: { recordEvent: ReturnType<typeof vi.fn> };
 
-  const mockOrder: StaffOrderListItemDto = {
+  const mockOrder: Pick<StaffOrderListItemDto, 'order_id'> = {
     order_id: 'order-fail-1',
-    booking_ref: 'FL-2026-0002',
-    status: 'arrived',
-    payment_status: 'pending',
-    total_paise: 89900,
-    slot: {
-      slot_key: '0700-0800',
-      starts_at: '2026-10-19T07:00:00Z',
-      ends_at: '2026-10-19T08:00:00Z',
-    },
-    address: {
-      house: '45',
-      street: '100ft Road',
-      area: 'Koramangala',
-      pincode: '560034',
-      landmark: null,
-      access_notes: null,
-    },
-    patients: [
-      {
-        patient_id: 'p1',
-        patient_code: 'PT-01',
-        name: 'Asha Rao',
-        gender: null,
-        date_of_birth: null,
-        relation: 'Self',
-        test_names: ['Lipid Profile'],
-      },
-    ],
-    assigned_phlebotomist: { id: 'phlebo-1', name: 'Ravi Kumar' },
   };
 
   beforeEach(async () => {

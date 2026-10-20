@@ -9,6 +9,12 @@
     </div>
 
     <div class="flex items-center gap-2">
+      <a
+        routerLink="summary"
+        class="px-3 py-1.5 rounded-xl text-xs font-semibold text-primary-700 bg-white border border-primary-200 hover:bg-primary-50 transition-colors shadow-2xs"
+      >
+        Daily Summary &rarr;
+      </a>
       <span
         class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-primary-50 text-primary-700 border border-primary-200"
       >
@@ -65,22 +71,31 @@
           >
             <div>
               <span class="text-xs font-bold text-primary-700 tracking-wide uppercase">
-                Slot: {{ visit.slot.starts_at | date: 'hh:mm a' : '+0530' }} -
-                {{ visit.slot.ends_at | date: 'hh:mm a' : '+0530' }}
+                Slot: {{ visit.slot_starts_at | date: 'hh:mm a' : '+0530' }} -
+                {{ visit.slot_ends_at | date: 'hh:mm a' : '+0530' }}
               </span>
               <div class="text-sm font-bold text-surface-900">
                 {{ visit.booking_ref }}
               </div>
             </div>
 
-            <span
-              [class]="
-                'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ' +
-                getStatusClass(visit.status)
-              "
-            >
-              {{ visit.status }}
-            </span>
+            <div class="flex items-center gap-1.5">
+              @if (!visit.accepted_at) {
+                <span
+                  class="inline-flex items-center px-2 py-0.5 rounded-full text-2xs font-bold bg-amber-50 text-amber-700 border border-amber-200"
+                >
+                  Unaccepted
+                </span>
+              }
+              <span
+                [class]="
+                  'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ' +
+                  getStatusClass(visit.status)
+                "
+              >
+                {{ visit.status }}
+              </span>
+            </div>
           </div>
 
           <!-- Card Body -->
@@ -121,7 +136,7 @@
               </div>
             </div>
 
-            <!-- Patients & Tests -->
+            <!-- Amount Due & Patients & Tests -->
             <div class="space-y-2">
               <div class="text-xs font-semibold text-surface-700" data-testid="amount-due">
                 @if (visit.payment_status === 'paid') {
@@ -130,21 +145,24 @@
                   Collect ₹{{ (visit.total_paise / 100).toFixed(2) }} (cash or UPI)
                 }
               </div>
-              <span class="text-xs text-surface-400 font-semibold block uppercase"
-                >Patients & Tests</span
-              >
-              @for (pt of visit.patients; track pt.patient_id) {
+
+              <span class="text-xs text-surface-400 font-semibold block uppercase">
+                Patients & Tests
+              </span>
+
+              @for (pt of visit.patients; track pt.patient_row_id) {
                 <div class="text-xs border-l-2 border-primary-500 pl-2.5 py-0.5 space-y-0.5">
                   <div class="font-bold text-surface-800">
-                    {{ pt.name }}
+                    {{ pt.first_name }}
                     <span class="font-normal text-surface-500">({{ pt.relation }})</span>
-                  </div>
-                  <div class="text-surface-500">
-                    {{ pt.gender || 'Gender unstated' }} · DOB
-                    {{ pt.date_of_birth || 'not recorded' }}
+                    <span class="text-surface-400 font-mono text-2xs ml-1"
+                      >[{{ pt.patient_code }}]</span
+                    >
                   </div>
                   <div class="text-surface-600">
-                    {{ pt.test_names.join(', ') }}
+                    @for (test of getPatientTests(visit, pt.patient_row_id); track test.position) {
+                      <span class="inline-block mr-2">{{ test.item_name }}</span>
+                    }
                   </div>
                 </div>
               }
@@ -165,12 +183,29 @@
                   &cross; Collection Failed
                 </span>
               } @else {
+                <!-- Prominent Accept Visit button if not accepted -->
+                @if (!visit.accepted_at) {
+                  <button
+                    type="button"
+                    (click)="acceptVisit(visit)"
+                    [disabled]="actionInProgressOrderId() === visit.order_id"
+                    class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 transition-colors shadow-xs"
+                    data-testid="accept-visit-btn"
+                  >
+                    @if (actionInProgressOrderId() === visit.order_id) {
+                      Accepting...
+                    } @else {
+                      Accept Visit
+                    }
+                  </button>
+                }
+
                 <!-- On the Way button -->
                 <button
                   type="button"
                   (click)="markOnTheWay(visit)"
                   [disabled]="
-                    actionInProgressOrderId() === visit.order_id || !canMarkOnTheWay(visit.status)
+                    actionInProgressOrderId() === visit.order_id || !canMarkOnTheWay(visit)
                   "
                   class="px-3 py-1.5 rounded-xl text-xs font-semibold text-surface-700 bg-surface-100 hover:bg-surface-200 border border-surface-200 disabled:opacity-40 transition-colors"
                 >
@@ -188,7 +223,7 @@
                   type="button"
                   (click)="markArrived(visit)"
                   [disabled]="
-                    actionInProgressOrderId() === visit.order_id || !canMarkArrived(visit.status)
+                    actionInProgressOrderId() === visit.order_id || !canMarkArrived(visit)
                   "
                   class="px-3 py-1.5 rounded-xl text-xs font-semibold text-surface-700 bg-surface-100 hover:bg-surface-200 border border-surface-200 disabled:opacity-40 transition-colors"
                 >
@@ -201,12 +236,30 @@
                   }
                 </button>
 
-                <!-- Collected & Paid modal trigger -->
+                <!-- Scan Samples button -->
+                <button
+                  type="button"
+                  (click)="openTubeModal(visit)"
+                  [disabled]="actionInProgressOrderId() === visit.order_id || !visit.accepted_at"
+                  class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-primary-700 bg-primary-50 hover:bg-primary-100 border border-primary-200 disabled:opacity-40 transition-colors"
+                  data-testid="scan-samples-btn"
+                >
+                  Scan Samples
+                  @if (visit.tubes.length > 0) {
+                    ({{ visit.tubes.length }})
+                  }
+                </button>
+
+                <!-- Collected & Paid modal trigger (only enabled after all tubes are scanned) -->
                 <button
                   type="button"
                   (click)="openPaymentModal(visit)"
-                  [disabled]="actionInProgressOrderId() === visit.order_id"
-                  class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 transition-colors shadow-2xs"
+                  [disabled]="
+                    actionInProgressOrderId() === visit.order_id || !canCollectAndPay(visit)
+                  "
+                  class="px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-40 transition-colors shadow-2xs"
+                  title="Enabled after all sample tubes are scanned"
+                  data-testid="collect-pay-btn"
                 >
                   Collected & Paid
                 </button>
@@ -230,8 +283,8 @@
 
   <!-- Collect Payment Modal -->
   <app-collect-payment-modal
-    [order]="selectedOrderForPayment()"
-    [totalPaise]="selectedOrderForPayment()?.total_paise ?? null"
+    [order]="selectedVisitForPayment()"
+    [totalPaise]="selectedVisitForPayment()?.total_paise ?? null"
     [visible]="paymentModalVisible()"
     (visibleChange)="paymentModalVisible.set($event)"
     (collected)="onCollectionSuccess()"
@@ -239,9 +292,17 @@
 
   <!-- Not Collected Modal -->
   <app-not-collected-modal
-    [order]="selectedOrderForFailure()"
+    [order]="selectedVisitForFailure()"
     [visible]="notCollectedModalVisible()"
     (visibleChange)="notCollectedModalVisible.set($event)"
     (notCollected)="onNotCollectedSuccess()"
+  />
+
+  <!-- Tube Scan Modal -->
+  <app-tube-scan-modal
+    [visit]="selectedVisitForTubes()"
+    [visible]="tubeScanModalVisible()"
+    (visibleChange)="tubeScanModalVisible.set($event)"
+    (tubesUpdated)="onTubesUpdated()"
   />
 </div>

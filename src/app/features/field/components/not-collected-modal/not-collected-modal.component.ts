@@ -31,7 +31,8 @@ export class NotCollectedModalComponent {
 
   readonly reasons = CANONICAL_FAILURE_REASONS;
 
-  @Input() order: StaffOrderListItemDto | null = null;
+  @Input() order: (Pick<StaffOrderListItemDto, 'order_id'> & { booking_ref?: string }) | null =
+    null;
   @Input() visible = false;
   @Output() readonly visibleChange = new EventEmitter<boolean>();
   @Output() readonly notCollected = new EventEmitter<void>();

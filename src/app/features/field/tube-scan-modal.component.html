@@ -1,0 +1,251 @@
+@if (visible) {
+  <div
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-surface-950/60 backdrop-blur-xs overflow-y-auto"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="tube-modal-title"
+  >
+    <div
+      class="bg-white rounded-2xl border border-surface-200 shadow-xl max-w-lg w-full p-6 space-y-4 my-8"
+    >
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-surface-100 pb-3">
+        <div>
+          <h2 id="tube-modal-title" class="text-lg font-bold text-surface-900 tracking-tight">
+            Sample Collection Tubes
+          </h2>
+          @if (visit) {
+            <p class="text-xs text-surface-500">
+              Booking: <span class="font-semibold text-surface-700">{{ visit.booking_ref }}</span>
+            </p>
+          }
+        </div>
+        <button
+          type="button"
+          (click)="close()"
+          class="p-1.5 rounded-lg text-surface-400 hover:text-surface-700 hover:bg-surface-100 transition-colors"
+          aria-label="Close modal"
+        >
+          &times;
+        </button>
+      </div>
+
+      <!-- Messages -->
+      @if (errorMessage()) {
+        <div
+          class="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700"
+          role="alert"
+        >
+          {{ errorMessage() }}
+        </div>
+      }
+
+      @if (successMessage()) {
+        <div
+          class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-700"
+          role="alert"
+        >
+          {{ successMessage() }}
+        </div>
+      }
+
+      <!-- Tubes List or Generate Action -->
+      @if (tubes().length === 0) {
+        <div class="bg-surface-50 rounded-xl p-6 text-center space-y-3 border border-surface-200">
+          <p class="text-sm text-surface-600">No tubes have been generated for this visit yet.</p>
+          <button
+            type="button"
+            (click)="generateTubes()"
+            [disabled]="isGenerating()"
+            class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 transition-colors shadow-2xs"
+          >
+            @if (isGenerating()) {
+              Generating Tubes...
+            } @else {
+              Generate Sample Tubes
+            }
+          </button>
+        </div>
+      } @else {
+        <!-- Tubes Overview -->
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wide text-surface-500">
+              Assigned Tubes ({{ tubes().length }})
+            </span>
+            <span class="text-xs text-surface-500"> Click tube to view printable barcode </span>
+          </div>
+
+          <div class="space-y-2">
+            @for (tube of tubes(); track tube.tube_code) {
+              <div
+                (click)="selectTubeForBarcode(tube)"
+                [class]="
+                  'p-3 rounded-xl border transition-colors cursor-pointer flex items-center justify-between ' +
+                  (activeTubeForBarcode()?.tube_code === tube.tube_code
+                    ? 'border-primary-500 bg-primary-50/40'
+                    : 'border-surface-200 bg-surface-50 hover:bg-surface-100')
+                "
+              >
+                <div>
+                  <div class="font-mono text-sm font-bold text-surface-900">
+                    {{ tube.tube_code }}
+                  </div>
+                  <div class="text-xs text-surface-500">
+                    Ordinal #{{ tube.test_ordinal + 1 }} · Attempt {{ tube.attempt }}
+                  </div>
+                </div>
+
+                <div>
+                  @if (tube.status === 'scanned_at_collection') {
+                    <span
+                      class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200"
+                    >
+                      &check; Scanned
+                    </span>
+                  } @else {
+                    <span
+                      class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200"
+                    >
+                      Pending Scan
+                    </span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- Active Tube Barcode & Print View -->
+          @if (activeTubeForBarcode()) {
+            <div
+              class="bg-surface-0 border border-surface-200 rounded-xl p-4 text-center space-y-2"
+            >
+              <span class="text-xs font-semibold text-surface-500 block">
+                Physical Barcode Label (Code 128-B)
+              </span>
+
+              @let svgData = getBarcodeSvg(activeTubeForBarcode()!.tube_code);
+              <div
+                class="flex justify-center my-2 p-2 bg-white rounded-lg border border-surface-100"
+              >
+                <svg
+                  [attr.viewBox]="'0 0 ' + svgData.totalWidth + ' ' + svgData.height"
+                  class="w-full max-w-xs h-16"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  @for (bar of svgData.bars; track bar.x) {
+                    <rect
+                      [attr.x]="bar.x"
+                      [attr.y]="bar.y"
+                      [attr.width]="bar.width"
+                      [attr.height]="bar.height"
+                      class="fill-surface-950"
+                    />
+                  }
+                </svg>
+              </div>
+
+              <div class="font-mono text-xs font-bold tracking-widest text-surface-900">
+                {{ activeTubeForBarcode()!.tube_code }}
+              </div>
+
+              <button
+                type="button"
+                (click)="printBarcode()"
+                class="px-3 py-1.5 rounded-lg text-xs font-semibold text-surface-700 bg-surface-100 hover:bg-surface-200 border border-surface-300 transition-colors"
+              >
+                Print Label
+              </button>
+            </div>
+          }
+        </div>
+
+        <!-- Scan Section -->
+        <div class="pt-3 border-t border-surface-100 space-y-3">
+          <h3 class="text-xs font-bold uppercase tracking-wide text-surface-500">
+            Confirm Tube Collection Scan
+          </h3>
+
+          <!-- Camera Stream (if supported) -->
+          @if (hasBarcodeDetector()) {
+            <div class="space-y-2">
+              @if (!cameraActive()) {
+                <button
+                  type="button"
+                  (click)="startCamera()"
+                  class="w-full py-2 rounded-xl text-xs font-bold text-surface-700 bg-surface-100 hover:bg-surface-200 border border-surface-300 transition-colors"
+                >
+                  Scan Barcode with Camera
+                </button>
+              } @else {
+                <div
+                  class="relative bg-black rounded-xl overflow-hidden aspect-video flex items-center justify-center"
+                >
+                  <video
+                    #scannerVideo
+                    autoplay
+                    muted
+                    playsinline
+                    class="w-full h-full object-cover"
+                  ></video>
+                  <button
+                    type="button"
+                    (click)="stopCamera()"
+                    class="absolute top-2 right-2 px-2.5 py-1 rounded-lg text-xs font-bold bg-surface-900/80 text-white"
+                  >
+                    Stop Camera
+                  </button>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Manual typing fallback (always provided) -->
+          <div class="space-y-1.5">
+            <label for="manual-tube-input" class="text-xs font-semibold text-surface-700 block">
+              Manual Tube Code Input (Keyboard Fallback)
+            </label>
+            <div class="flex gap-2">
+              <input
+                id="manual-tube-input"
+                type="text"
+                [ngModel]="manualCodeInput()"
+                (ngModelChange)="manualCodeInput.set($event)"
+                placeholder="e.g. FLT-ABCD-1234 or ABCD1234"
+                (keyup.enter)="onManualSubmit()"
+                class="flex-1 px-3 py-2 rounded-xl border border-surface-300 text-xs font-mono uppercase focus:outline-hidden focus:ring-2 focus:ring-primary-500"
+              />
+              <button
+                type="button"
+                (click)="onManualSubmit()"
+                [disabled]="isScanning() || !manualCodeInput().trim()"
+                class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 transition-colors"
+              >
+                @if (isScanning()) {
+                  Scanning...
+                } @else {
+                  Confirm
+                }
+              </button>
+            </div>
+            <p class="text-2xs text-surface-500">
+              Type the 8-character tube code. Ambiguous letters (I, L, O) and dashes are normalized
+              automatically.
+            </p>
+          </div>
+        </div>
+      }
+
+      <!-- Modal Footer -->
+      <div class="pt-3 border-t border-surface-100 flex justify-end">
+        <button
+          type="button"
+          (click)="close()"
+          class="px-4 py-2 rounded-xl text-xs font-semibold text-surface-700 bg-surface-100 hover:bg-surface-200 border border-surface-200 transition-colors"
+        >
+          Done
+        </button>
+      </div>
+    </div>
+  </div>
+}

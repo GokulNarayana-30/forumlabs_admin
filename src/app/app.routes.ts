@@ -1,6 +1,17 @@
-import { Routes } from '@angular/router';
+import { inject } from '@angular/core';
+import { CanActivateFn, Router, Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
 import { roleGuard } from './core/auth/role.guard';
+import { StaffStateService } from './core/state/staff-state.service';
+
+export const refundFinanceGuard: CanActivateFn = () => {
+  const staffState = inject(StaffStateService);
+  const router = inject(Router);
+  if (staffState.roles().includes('finance')) {
+    return true;
+  }
+  return router.createUrlTree(['/no-access']);
+};
 
 export const routes: Routes = [
   {
@@ -29,6 +40,61 @@ export const routes: Routes = [
         canActivate: [roleGuard],
         data: { roles: ['booking_dispatch', 'super_admin'] },
         loadChildren: () => import('./features/bookings/bookings.routes').then((m) => m.routes),
+      },
+      {
+        path: 'dispatch',
+        canActivate: [roleGuard],
+        data: { roles: ['booking_dispatch'] },
+        loadComponent: () =>
+          import('./features/dispatch/dispatch-today.component').then(
+            (m) => m.DispatchTodayComponent,
+          ),
+      },
+      {
+        path: 'dispatch/calendar',
+        canActivate: [roleGuard],
+        data: { roles: ['booking_dispatch'] },
+        loadComponent: () =>
+          import('./features/dispatch/dispatch-calendar.component').then(
+            (m) => m.DispatchCalendarComponent,
+          ),
+      },
+      {
+        path: 'slots',
+        canActivate: [roleGuard],
+        data: { roles: ['booking_dispatch'] },
+        loadComponent: () =>
+          import('./features/slots/slots-calendar.component').then((m) => m.SlotsCalendarComponent),
+      },
+      {
+        path: 'samples',
+        canActivate: [roleGuard],
+        data: { roles: ['lab_staff', 'booking_dispatch'] },
+        loadComponent: () =>
+          import('./features/samples/lab-receipt.component').then((m) => m.LabReceiptComponent),
+      },
+      {
+        path: 'finance/cash-close',
+        canActivate: [roleGuard],
+        data: { roles: ['finance'] },
+        loadComponent: () =>
+          import('./features/finance/cash-close-daily.component').then(
+            (m) => m.CashCloseDailyComponent,
+          ),
+      },
+      {
+        path: 'finance/refunds',
+        canActivate: [roleGuard, refundFinanceGuard],
+        data: { roles: ['finance'] },
+        loadComponent: () =>
+          import('./features/finance/refunds-list.component').then((m) => m.RefundsListComponent),
+      },
+      {
+        path: 'members',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin'] },
+        loadComponent: () =>
+          import('./features/members/members-list.component').then((m) => m.MembersListComponent),
       },
       {
         path: 'field',

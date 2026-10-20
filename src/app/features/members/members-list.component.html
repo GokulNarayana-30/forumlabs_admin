@@ -1,0 +1,260 @@
+<div class="space-y-6">
+  <!-- Header Bar -->
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h2 class="text-xl font-bold text-surface-900">Staff Management</h2>
+      <p class="text-xs text-surface-500">
+        Manage staff directory, role assignments, security credentials, and access status.
+      </p>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        (click)="openCreateModal()"
+        class="inline-flex items-center gap-1.5 rounded-full bg-primary-600 px-4 py-2 text-xs font-medium text-surface-0 hover:bg-primary-700"
+      >
+        <i class="pi pi-user-plus"></i>
+        <span>Add Staff Member</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <div
+    *ngIf="errorMessage()"
+    class="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-medium text-red-700 flex items-center justify-between"
+  >
+    <span>{{ errorMessage() }}</span>
+    <button type="button" (click)="errorMessage.set('')" class="text-red-700 hover:text-red-900">
+      <i class="pi pi-times"></i>
+    </button>
+  </div>
+
+  <div
+    *ngIf="successMessage()"
+    class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-medium text-emerald-800 flex items-center justify-between"
+  >
+    <div class="flex items-center gap-2">
+      <i class="pi pi-check-circle text-emerald-600"></i>
+      <span>{{ successMessage() }}</span>
+    </div>
+    <button
+      type="button"
+      (click)="successMessage.set('')"
+      class="text-emerald-700 hover:text-emerald-900"
+    >
+      <i class="pi pi-times"></i>
+    </button>
+  </div>
+
+  <!-- Filters & Table Card -->
+  <div class="rounded-2xl border border-surface-200 bg-surface-0 shadow-sm overflow-hidden">
+    <!-- Filter Toolbar -->
+    <div
+      class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-surface-200 p-4 bg-surface-50"
+    >
+      <div class="flex flex-wrap items-center gap-3">
+        <!-- Role Filter -->
+        <div class="flex items-center gap-2">
+          <label for="roleFilter" class="text-xs text-surface-500 font-medium">Role:</label>
+          <select
+            id="roleFilter"
+            [ngModel]="selectedRole()"
+            (ngModelChange)="onRoleFilterChange($event)"
+            class="rounded-lg border border-surface-300 bg-surface-0 px-2.5 py-1.5 text-xs text-surface-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          >
+            <option value="">All Roles</option>
+            <option *ngFor="let r of rolesList" [value]="r.value">{{ r.label }}</option>
+          </select>
+        </div>
+
+        <!-- Status Filter -->
+        <div class="flex items-center gap-2">
+          <label for="statusFilter" class="text-xs text-surface-500 font-medium">Status:</label>
+          <select
+            id="statusFilter"
+            [ngModel]="selectedStatus()"
+            (ngModelChange)="onStatusFilterChange($event)"
+            class="rounded-lg border border-surface-300 bg-surface-0 px-2.5 py-1.5 text-xs text-surface-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          >
+            <option value="">All Statuses</option>
+            <option value="active">Active</option>
+            <option value="disabled">Disabled</option>
+          </select>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        (click)="loadMembers()"
+        [disabled]="isLoading()"
+        class="inline-flex items-center gap-1.5 rounded-full border border-surface-300 bg-surface-0 px-3 py-1.5 text-xs font-medium text-surface-700 hover:bg-surface-50 disabled:opacity-50"
+      >
+        <i class="pi pi-refresh" [class.pi-spin]="isLoading()"></i>
+        <span>Refresh</span>
+      </button>
+    </div>
+
+    <!-- Loading State -->
+    <div *ngIf="isLoading()" class="p-8 text-center text-xs text-surface-500">
+      Loading staff members...
+    </div>
+
+    <!-- Table -->
+    <div *ngIf="!isLoading()" class="overflow-x-auto">
+      <table class="w-full text-left text-xs text-surface-700">
+        <thead
+          class="border-b border-surface-200 bg-surface-50 text-[11px] font-medium uppercase text-surface-500"
+        >
+          <tr>
+            <th class="px-5 py-3">Staff Member</th>
+            <th class="px-5 py-3">Email</th>
+            <th class="px-5 py-3">Phone</th>
+            <th class="px-5 py-3">Roles</th>
+            <th class="px-5 py-3">Status</th>
+            <th class="px-5 py-3 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-surface-200">
+          <tr *ngFor="let member of members()" class="hover:bg-surface-50/50">
+            <!-- Name & Self Tag -->
+            <td class="px-5 py-3 font-medium text-surface-900">
+              <div class="flex items-center gap-2">
+                <span>{{ member.display_name }}</span>
+                <span
+                  *ngIf="member.is_self"
+                  class="rounded-full bg-primary-100 px-2 py-0.5 text-[10px] font-bold text-primary-800"
+                >
+                  You
+                </span>
+              </div>
+            </td>
+
+            <!-- Email -->
+            <td class="px-5 py-3 text-surface-600 font-mono text-[11px]">
+              {{ member.email }}
+            </td>
+
+            <!-- Phone -->
+            <td class="px-5 py-3 text-surface-600 font-mono text-[11px]">
+              {{ member.phone || '—' }}
+            </td>
+
+            <!-- Roles -->
+            <td class="px-5 py-3">
+              <div class="flex flex-wrap gap-1">
+                <span
+                  *ngFor="let role of member.roles"
+                  class="inline-flex items-center rounded-full bg-surface-100 px-2 py-0.5 text-[10px] font-medium text-surface-800 border border-surface-200"
+                >
+                  {{ getRoleLabel(role) }}
+                </span>
+              </div>
+            </td>
+
+            <!-- Status -->
+            <td class="px-5 py-3">
+              <span
+                class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
+                [ngClass]="{
+                  'bg-emerald-100 text-emerald-800': member.status === 'active',
+                  'bg-surface-200 text-surface-700': member.status === 'disabled',
+                }"
+              >
+                {{ member.status }}
+              </span>
+            </td>
+
+            <!-- Actions -->
+            <td class="px-5 py-3 text-right">
+              <div class="inline-flex items-center justify-end gap-1.5">
+                <button
+                  type="button"
+                  (click)="openRolesModal(member)"
+                  class="rounded-lg border border-surface-300 bg-surface-0 px-2.5 py-1 text-[11px] font-medium text-surface-700 hover:bg-surface-50"
+                >
+                  Manage Roles
+                </button>
+                <button
+                  type="button"
+                  (click)="openPasswordModal(member)"
+                  class="rounded-lg border border-surface-300 bg-surface-0 px-2.5 py-1 text-[11px] font-medium text-surface-700 hover:bg-surface-50"
+                >
+                  Reset Password
+                </button>
+                <button
+                  *ngIf="member.status === 'active'"
+                  type="button"
+                  (click)="openDeactivateModal(member)"
+                  [disabled]="member.is_self"
+                  [title]="
+                    member.is_self
+                      ? 'You cannot deactivate your own account'
+                      : 'Deactivate staff account'
+                  "
+                  class="rounded-lg border border-red-300 bg-surface-0 px-2.5 py-1 text-[11px] font-medium text-red-700 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Deactivate
+                </button>
+                <button
+                  *ngIf="member.status === 'disabled'"
+                  type="button"
+                  (click)="reactivateMember(member)"
+                  class="rounded-lg border border-emerald-300 bg-surface-0 px-2.5 py-1 text-[11px] font-medium text-emerald-700 hover:bg-emerald-50"
+                >
+                  Reactivate
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <tr *ngIf="members().length === 0">
+            <td colspan="6" class="px-5 py-8 text-center text-surface-400">
+              No staff members found matching the selected filters.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div *ngIf="nextCursor()" class="flex justify-center">
+    <button
+      type="button"
+      (click)="loadMore()"
+      [disabled]="isLoading() || isLoadingMore()"
+      class="rounded-full border border-surface-300 px-4 py-2 text-xs disabled:opacity-50"
+    >
+      {{ isLoadingMore() ? 'Loading more staff...' : 'Load more staff' }}
+    </button>
+  </div>
+
+  <!-- Member Action Modals -->
+  <app-create-member-modal
+    [visible]="isCreateModalVisible()"
+    (visibleChange)="isCreateModalVisible.set($event)"
+    (memberCreated)="onMemberCreated($event)"
+  ></app-create-member-modal>
+
+  <app-manage-roles-modal
+    [visible]="isRolesModalVisible()"
+    [member]="activeMember()"
+    (visibleChange)="isRolesModalVisible.set($event)"
+    (memberUpdated)="onMemberUpdated($event)"
+  ></app-manage-roles-modal>
+
+  <app-reset-password-modal
+    [visible]="isPasswordModalVisible()"
+    [member]="activeMember()"
+    (visibleChange)="isPasswordModalVisible.set($event)"
+    (passwordReset)="onPasswordReset()"
+  ></app-reset-password-modal>
+
+  <app-deactivate-member-modal
+    [visible]="isDeactivateModalVisible()"
+    [member]="activeMember()"
+    (visibleChange)="isDeactivateModalVisible.set($event)"
+    (memberDeactivated)="onMemberDeactivated($event)"
+  ></app-deactivate-member-modal>
+</div>

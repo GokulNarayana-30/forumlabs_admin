@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
+import { PendingAuthOperations } from './pending-auth-operations.service';
 import { AuthService } from './auth.service';
 import { inMemoryStorage } from './supabase-client';
 import { ApiClient } from '../api/api-client.service';
@@ -80,7 +81,10 @@ describe('AuthService (Memory-Only Session Security)', () => {
   it('signOut forgets every cached Idempotency-Key, even when Supabase sign-out fails (WR-01)', async () => {
     vi.spyOn(service.supabase.auth, 'signOut').mockRejectedValueOnce(new Error('offline'));
 
+    const operations = TestBed.inject(PendingAuthOperations);
+    operations.set('reset:m', 'operation-id', 'm');
     await service.signOut().catch(() => undefined);
+    expect(operations.get('reset:m')).toBeUndefined();
 
     expect(apiClient.resetIdempotencyKeys).toHaveBeenCalledTimes(1);
   });

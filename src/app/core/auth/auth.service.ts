@@ -2,6 +2,7 @@ import { Injectable, Injector, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Session, SupabaseClient } from '@supabase/supabase-js';
 import { createSupabaseAuthClient, inMemoryStorage } from './supabase-client';
+import { PendingAuthOperations } from './pending-auth-operations.service';
 import { ApiClient } from '../api/api-client.service';
 
 @Injectable({
@@ -32,6 +33,7 @@ export class AuthService {
   }
 
   async signOut(): Promise<void> {
+    this.injector.get(PendingAuthOperations).clear();
     try {
       await this.supabase.auth.signOut();
     } finally {

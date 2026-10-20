@@ -1,0 +1,171 @@
+<div
+  *ngIf="visible"
+  class="fixed inset-0 z-50 flex items-center justify-center bg-surface-900/50 p-4"
+  role="dialog"
+  aria-modal="true"
+>
+  <div class="w-full max-w-lg rounded-2xl bg-surface-0 p-6 shadow-xl border border-surface-200">
+    <div class="flex items-center justify-between border-b border-surface-200 pb-3">
+      <div>
+        <h3 class="text-base font-semibold text-surface-900">Record Handover & Custody</h3>
+        <p class="text-xs text-surface-500">
+          Phlebotomist:
+          <strong class="text-surface-800">{{ day?.recorder?.display_name }}</strong> | Date:
+          <strong class="text-surface-800 font-mono">{{ day?.date }}</strong>
+        </p>
+      </div>
+      <button
+        type="button"
+        (click)="closeModal()"
+        class="rounded-lg p-1.5 text-surface-400 hover:bg-surface-100 hover:text-surface-700"
+      >
+        <span class="sr-only">Close</span>
+        <i class="pi pi-times"></i>
+      </button>
+    </div>
+
+    <p *ngIf="pending()" role="status">
+      Handover unresolved. Editing is locked; retry exactly this handover.
+    </p>
+    <!-- Error Banner -->
+    <div
+      *ngIf="errorMessage()"
+      class="mt-3 rounded-lg bg-red-50 p-3 text-xs text-red-700 border border-red-200"
+    >
+      {{ errorMessage() }}
+    </div>
+
+    <!-- Expected Ledger Amounts Box -->
+    <div
+      class="mt-4 rounded-xl border border-surface-200 bg-surface-50 p-3.5 grid grid-cols-2 gap-3 text-xs"
+    >
+      <div>
+        <span class="text-surface-500 block">Expected Cash (Ledger)</span>
+        <span class="text-sm font-bold text-surface-900 mt-0.5 block">
+          ₹{{ formatPaise(day?.cash_expected_paise || 0) }}
+        </span>
+      </div>
+      <div>
+        <span class="text-surface-500 block">Expected UPI (Ledger)</span>
+        <span class="text-sm font-bold text-surface-900 mt-0.5 block">
+          ₹{{ formatPaise(day?.upi_expected_paise || 0) }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Form Inputs -->
+    <div class="mt-4 space-y-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label for="cashInput" class="block text-xs font-medium text-surface-700">
+            Cash Handed Over (₹) <span class="text-red-500">*</span>
+          </label>
+          <input
+            id="cashInput"
+            type="text"
+            placeholder="0.00"
+            [ngModel]="cashRupeesInput()"
+            (ngModelChange)="cashRupeesInput.set($event)"
+            [disabled]="isSubmitting() || pending()"
+            class="mt-1 block w-full rounded-lg border border-surface-300 bg-surface-0 px-3 py-2 text-sm text-surface-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          />
+          <span
+            class="text-[11px] block mt-1 font-medium"
+            [ngClass]="{
+              'text-green-700': cashDifferencePaise === 0,
+              'text-amber-700': cashDifferencePaise > 0,
+              'text-red-700': cashDifferencePaise < 0,
+            }"
+          >
+            Diff: {{ cashDifferencePaise >= 0 ? '+' : '' }}₹{{ formatPaise(cashDifferencePaise) }}
+          </span>
+        </div>
+
+        <div>
+          <label for="upiInput" class="block text-xs font-medium text-surface-700">
+            UPI Confirmed (₹) <span class="text-red-500">*</span>
+          </label>
+          <input
+            id="upiInput"
+            type="text"
+            placeholder="0.00"
+            [ngModel]="upiRupeesInput()"
+            (ngModelChange)="upiRupeesInput.set($event)"
+            [disabled]="isSubmitting() || pending()"
+            class="mt-1 block w-full rounded-lg border border-surface-300 bg-surface-0 px-3 py-2 text-sm text-surface-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          />
+          <span
+            class="text-[11px] block mt-1 font-medium"
+            [ngClass]="{
+              'text-green-700': upiDifferencePaise === 0,
+              'text-amber-700': upiDifferencePaise > 0,
+              'text-red-700': upiDifferencePaise < 0,
+            }"
+          >
+            Diff: {{ upiDifferencePaise >= 0 ? '+' : '' }}₹{{ formatPaise(upiDifferencePaise) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Difference Alert and Mandatory Note -->
+      <div
+        *ngIf="hasDifference"
+        class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 space-y-2"
+      >
+        <div class="flex items-center gap-1.5 font-semibold">
+          <i class="pi pi-exclamation-triangle"></i>
+          <span>Discrepancy Detected — Mandatory Note Required</span>
+        </div>
+        <p>
+          Entered amount does not match expected ledger collections. An audit note explaining the
+          discrepancy (e.g. change shortfall, customer pending transfer) must be entered.
+        </p>
+      </div>
+
+      <div>
+        <label for="handoverNote" class="block text-xs font-medium text-surface-700">
+          Handover Note
+          <span *ngIf="hasDifference" class="text-red-500 font-bold"
+            >* (Required on discrepancy)</span
+          >
+        </label>
+        <textarea
+          id="handoverNote"
+          rows="3"
+          maxlength="300"
+          placeholder="Enter explanation note if amount differs from ledger..."
+          [ngModel]="noteInput()"
+          (ngModelChange)="noteInput.set($event)"
+          [disabled]="isSubmitting() || pending()"
+          class="mt-1 block w-full rounded-lg border border-surface-300 bg-surface-0 p-2.5 text-xs text-surface-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+        ></textarea>
+        <p class="mt-1 text-[11px] text-surface-500">
+          Max 300 characters. Stored in custody audit trail.
+        </p>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="mt-6 flex items-center justify-end gap-2 border-t border-surface-200 pt-3">
+      <button
+        type="button"
+        (click)="closeModal()"
+        [disabled]="isSubmitting() || pending()"
+        class="rounded-full border border-surface-300 bg-surface-0 px-4 py-2 text-xs font-medium text-surface-700 hover:bg-surface-50"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        (click)="submitHandover()"
+        [disabled]="isSubmitting() || (hasDifference && !noteInput().trim())"
+        class="rounded-full bg-primary-600 px-5 py-2 text-xs font-medium text-surface-0 hover:bg-primary-700 disabled:opacity-50"
+      >
+        <span *ngIf="!isSubmitting()">{{
+          pending() ? 'Retry exact handover' : 'Confirm Handover'
+        }}</span>
+        <span *ngIf="isSubmitting()">Recording...</span>
+      </button>
+    </div>
+  </div>
+</div>
