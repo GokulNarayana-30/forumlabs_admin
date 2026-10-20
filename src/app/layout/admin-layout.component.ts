@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { StaffStateService, StaffRole } from '../core/state/staff-state.service';
@@ -19,6 +19,9 @@ export interface NavItem {
 export class AdminLayoutComponent {
   private readonly staffState = inject(StaffStateService);
   private readonly auth = inject(AuthService);
+
+  /** Phones only: whether the slide-in menu is open. */
+  readonly menuOpen = signal(false);
 
   readonly displayName = this.staffState.displayName;
   readonly roles = this.staffState.roles;

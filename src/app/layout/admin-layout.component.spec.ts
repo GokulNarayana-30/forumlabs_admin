@@ -182,4 +182,47 @@ describe('AdminLayoutComponent', () => {
     const labels = component.navItems().map((i: { label: string }) => i.label);
     expect(labels).toEqual(['Cash Close', 'Refunds']);
   });
+
+  describe('phone layout', () => {
+    const el = () => fixture.nativeElement as HTMLElement;
+    const menu = () => el().querySelector('#main-menu') as HTMLElement;
+
+    it('the menu is hidden on a phone until the menu button opens it, and the button reports its state', () => {
+      const button = el().querySelector('[data-testid="menu-btn"]') as HTMLButtonElement;
+      expect(button).toBeTruthy();
+      expect(button.getAttribute('aria-expanded')).toBe('false');
+      expect(menu().className).toContain('hidden'); // closed: hidden below md (md:flex shows it from md up)
+      expect(menu().className).toContain('md:flex');
+      expect(el().querySelector('[data-testid="menu-backdrop"]')).toBeNull();
+
+      button.click();
+      fixture.detectChanges();
+      expect(button.getAttribute('aria-expanded')).toBe('true');
+      expect(button.getAttribute('aria-label')).toBe('Close menu');
+      expect(menu().className).not.toMatch(/(^|\s)hidden(\s|$)/);
+      expect(menu().className).toContain('fixed');
+      expect(el().querySelector('[data-testid="menu-backdrop"]')).toBeTruthy();
+    });
+
+    it('a tap on the dark layer or on a menu link closes the menu again', () => {
+      const button = el().querySelector('[data-testid="menu-btn"]') as HTMLButtonElement;
+      button.click();
+      fixture.detectChanges();
+      (el().querySelector('[data-testid="menu-backdrop"]') as HTMLElement).click();
+      fixture.detectChanges();
+      expect(component.menuOpen()).toBe(false);
+
+      button.click();
+      fixture.detectChanges();
+      (menu().querySelector('a') as HTMLAnchorElement).click();
+      fixture.detectChanges();
+      expect(component.menuOpen()).toBe(false);
+    });
+
+    it('keeps the top bar short on a phone: role badges and the word Operations only from wider screens', () => {
+      expect(el().querySelector('header .hidden.md\\:flex')).toBeTruthy(); // role badges
+      expect(el().querySelector('header span.hidden.sm\\:inline')).toBeTruthy();
+      expect((el().querySelector('main') as HTMLElement).className).toContain('p-3');
+    });
+  });
 });
