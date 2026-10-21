@@ -13,6 +13,7 @@ import { TubeScanModalComponent } from '../../tube-scan-modal.component';
 import { errorText } from '../../../../core/api/error-text';
 import { FieldDateBarComponent } from '../../components/field-date-bar/field-date-bar.component';
 import { formatFieldDate, istToday } from '../../field-date';
+import { refusalText } from '../../refusal-text';
 
 @Component({
   selector: 'app-field-today',
@@ -188,7 +189,7 @@ export class FieldTodayComponent implements OnInit {
         this.successMessage.set('Status updated: On the way (15 mins)');
         await this.loadVisits();
       } else {
-        this.errorMessage.set(`Unable to update status: ${res.kind}`);
+        this.errorMessage.set(refusalText('Unable to update status', res.kind));
       }
     } catch (err: unknown) {
       const message = errorText(err, 'Failed to update status');
@@ -212,7 +213,7 @@ export class FieldTodayComponent implements OnInit {
         this.successMessage.set('Status updated: Arrived at customer location');
         await this.loadVisits();
       } else {
-        this.errorMessage.set(`Unable to update status: ${res.kind}`);
+        this.errorMessage.set(refusalText('Unable to update status', res.kind));
       }
     } catch (err: unknown) {
       const message = errorText(err, 'Failed to update status');
@@ -226,6 +227,20 @@ export class FieldTodayComponent implements OnInit {
     const parts = [addr.house, addr.street, addr.area, addr.pincode].filter(Boolean);
     const query = encodeURIComponent(parts.join(', '));
     return `https://www.google.com/maps/search/?api=1&query=${query}`;
+  }
+
+  /** The booking was cancelled or refunded: the phlebotomist must not visit and nothing can be recorded. */
+  isCancelled(visit: FieldVisit): boolean {
+    return visit.status === 'cancelled' || visit.status === 'refunded';
+  }
+
+  /** The sample was collected and is already with the lab or further on. */
+  isWithLab(visit: FieldVisit): boolean {
+    return (
+      visit.status === 'received_by_lab' ||
+      visit.status === 'processing' ||
+      visit.status === 'report_ready'
+    );
   }
 
   getStatusClass(status: string): string {

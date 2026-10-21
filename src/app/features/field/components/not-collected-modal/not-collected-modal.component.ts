@@ -19,6 +19,7 @@ export const CANONICAL_FAILURE_REASONS: readonly FailureReasonOption[] = [
   { code: 'payment_refused', label: 'Payment Refused (Cash/UPI Declined)' },
   { code: 'other', label: 'Other Reason' },
 ] as const;
+import { refusalText } from '../../refusal-text';
 
 @Component({
   selector: 'app-not-collected-modal',
@@ -69,7 +70,7 @@ export class NotCollectedModalComponent {
         this.notCollected.emit();
         this.close();
       } else {
-        this.errorMessage.set(`Unable to record failure: ${res.kind}`);
+        this.errorMessage.set(refusalText('Unable to record failure', res.kind));
       }
     } catch (err: unknown) {
       const message = errorText(err, 'Failed to record failure');

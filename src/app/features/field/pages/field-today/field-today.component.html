@@ -84,7 +84,7 @@
             </div>
 
             <div class="flex items-center gap-1.5">
-              @if (!visit.accepted_at) {
+              @if (!visit.accepted_at && !isCancelled(visit)) {
                 <span
                   class="inline-flex items-center px-2 py-0.5 rounded-full text-2xs font-bold bg-amber-50 text-amber-700 border border-amber-200"
                 >
@@ -143,7 +143,9 @@
             <!-- Amount Due & Patients & Tests -->
             <div class="space-y-2">
               <div class="text-xs font-semibold text-surface-700" data-testid="amount-due">
-                @if (visit.payment_status === 'paid') {
+                @if (isCancelled(visit)) {
+                  Nothing to collect
+                } @else if (visit.payment_status === 'paid') {
                   Paid
                 } @else {
                   Collect ₹{{ (visit.total_paise / 100).toFixed(2) }} (cash or UPI)
@@ -179,6 +181,20 @@
                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200"
                 >
                   &check; Collected & Paid
+                </span>
+              } @else if (isWithLab(visit)) {
+                <span
+                  data-testid="with-lab-note"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200"
+                >
+                  &check; Collected, with the lab
+                </span>
+              } @else if (isCancelled(visit)) {
+                <span
+                  data-testid="cancelled-note"
+                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200"
+                >
+                  &cross; Booking cancelled: do not visit
                 </span>
               } @else if (visit.status === 'collection_failed') {
                 <span

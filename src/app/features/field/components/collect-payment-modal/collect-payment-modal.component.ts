@@ -20,6 +20,7 @@ export interface CollectPaymentPayload {
         upi_reference?: string;
       };
 }
+import { refusalText } from '../../refusal-text';
 
 @Component({
   selector: 'app-collect-payment-modal',
@@ -137,7 +138,7 @@ export class CollectPaymentModalComponent {
             : 'Amount does not match the order total. Reload the page.',
         );
       } else {
-        this.errorMessage.set(`Unable to record collection: ${res.kind}`);
+        this.errorMessage.set(refusalText('Unable to record collection', res.kind));
       }
     } catch (err: unknown) {
       const message = errorText(err, 'Failed to record collection');

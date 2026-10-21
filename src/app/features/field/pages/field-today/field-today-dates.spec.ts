@@ -123,6 +123,56 @@ describe('field screens: choosing a day', () => {
     expect((q('date-today') as HTMLButtonElement).disabled).toBe(false);
   });
 
+  it('a cancelled booking shows a note and no buttons, so nothing can be recorded on it', async () => {
+    svc.getTodayVisits.mockResolvedValue({
+      kind: 'field_visits',
+      date: 'x',
+      total_count: 1,
+      visits: [visit('cancelled', null)],
+    });
+    component.onDateChange(istToday());
+    await refresh();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(q('cancelled-note')?.textContent).toContain('do not visit');
+    expect(q('accept-visit-btn')).toBeNull();
+    expect(q('collect-pay-btn')).toBeNull();
+    expect(q('scan-samples-btn')).toBeNull();
+    expect(text).not.toContain('Not Collected');
+    expect(text).not.toContain('Unaccepted');
+    expect(text).not.toContain('Collect ₹');
+    expect(text).toContain('Nothing to collect');
+  });
+
+  it.each(['refunded'])('a %s booking is treated like a cancelled one', async (status) => {
+    svc.getTodayVisits.mockResolvedValue({
+      kind: 'field_visits',
+      date: 'x',
+      total_count: 1,
+      visits: [visit(status, null)],
+    });
+    component.onDateChange(istToday());
+    await refresh();
+    expect(q('cancelled-note')).toBeTruthy();
+    expect(q('accept-visit-btn')).toBeNull();
+  });
+
+  it.each(['received_by_lab', 'processing', 'report_ready'])(
+    'a %s booking shows it is already with the lab, with no buttons',
+    async (status) => {
+      svc.getTodayVisits.mockResolvedValue({
+        kind: 'field_visits',
+        date: 'x',
+        total_count: 1,
+        visits: [visit(status, '2026-10-20T06:00:00Z')],
+      });
+      component.onDateChange(istToday());
+      await refresh();
+      expect(q('with-lab-note')).toBeTruthy();
+      expect(q('collect-pay-btn')).toBeNull();
+      expect(q('accept-visit-btn')).toBeNull();
+    },
+  );
+
   it('a collected visit on a past day still shows its result', async () => {
     svc.getTodayVisits.mockResolvedValue({
       kind: 'field_visits',
