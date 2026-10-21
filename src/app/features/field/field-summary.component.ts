@@ -1,17 +1,27 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FieldService, FieldSummaryResult } from './services/field.service';
 import { errorText } from '../../core/api/error-text';
+import { FieldDateBarComponent } from './components/field-date-bar/field-date-bar.component';
+import { formatFieldDate, istToday } from './field-date';
 
 @Component({
   selector: 'app-field-summary',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, FieldDateBarComponent],
   templateUrl: './field-summary.component.html',
 })
 export class FieldSummaryComponent implements OnInit {
   private readonly fieldService = inject(FieldService);
+
+  readonly today = istToday();
+  /** The day being shown; handing tubes over is only possible for today. */
+  readonly viewDate = signal<string>(this.today);
+  readonly isToday = computed(() => this.viewDate() === this.today);
+  readonly viewTitle = computed(() =>
+    this.isToday() ? 'Field Daily Summary' : `Summary for ${formatFieldDate(this.viewDate())}`,
+  );
 
   readonly summary = signal<FieldSummaryResult | null>(null);
   readonly isLoading = signal<boolean>(false);
@@ -28,7 +38,7 @@ export class FieldSummaryComponent implements OnInit {
     this.isLoading.set(true);
     this.errorMessage.set('');
     try {
-      const data = await this.fieldService.getFieldSummary();
+      const data = await this.fieldService.getFieldSummary(this.viewDate());
       this.summary.set(data);
     } catch (err: unknown) {
       this.errorMessage.set(errorText(err, 'Failed to load field summary'));
@@ -37,9 +47,16 @@ export class FieldSummaryComponent implements OnInit {
     }
   }
 
+  onDateChange(date: string): void {
+    this.viewDate.set(date);
+    this.successMessage.set('');
+    this.showConfirmHandover.set(false);
+    void this.loadSummary();
+  }
+
   confirmHandover(): void {
     const s = this.summary();
-    if (!s || s.pending_tube_codes.length === 0) return;
+    if (!this.isToday() || !s || s.pending_tube_codes.length === 0) return;
     this.showConfirmHandover.set(true);
   }
 
@@ -49,7 +66,7 @@ export class FieldSummaryComponent implements OnInit {
 
   async submitHandover(): Promise<void> {
     const s = this.summary();
-    if (!s || s.pending_tube_codes.length === 0) return;
+    if (!this.isToday() || !s || s.pending_tube_codes.length === 0) return;
 
     this.isSubmitting.set(true);
     this.errorMessage.set('');

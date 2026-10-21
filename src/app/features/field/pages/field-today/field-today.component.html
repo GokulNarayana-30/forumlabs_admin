@@ -4,7 +4,7 @@
     class="sticky top-0 z-10 bg-white p-4 rounded-2xl border border-surface-200 shadow-xs flex items-center justify-between"
   >
     <div>
-      <h1 class="text-xl font-bold text-surface-900 tracking-tight">Today's Visits</h1>
+      <h1 class="text-xl font-bold text-surface-900 tracking-tight">{{ viewTitle() }}</h1>
       <p class="text-xs text-surface-500">Phlebotomist Daily Home Collections</p>
     </div>
 
@@ -33,6 +33,8 @@
     </div>
   </div>
 
+  <app-field-date-bar [date]="viewDate()" [today]="today" (dateChange)="onDateChange($event)" />
+
   @if (errorMessage()) {
     <div class="p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700" role="alert">
       {{ errorMessage() }}
@@ -57,7 +59,9 @@
       >
         &check;
       </div>
-      <h3 class="text-base font-semibold text-surface-800">No visits assigned for today</h3>
+      <h3 class="text-base font-semibold text-surface-800">
+        {{ isToday() ? 'No visits assigned for today' : 'No visits assigned for this day' }}
+      </h3>
       <p class="text-xs text-surface-500 mt-1">Check back later or contact the dispatch desk.</p>
     </div>
   } @else {
@@ -181,6 +185,13 @@
                   class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200"
                 >
                   &cross; Collection Failed
+                </span>
+              } @else if (!isToday()) {
+                <span
+                  class="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-semibold bg-surface-100 text-surface-600 border border-surface-200"
+                  data-testid="view-only-note"
+                >
+                  View only: visits can be acted on only on the day
                 </span>
               } @else {
                 <!-- Prominent Accept Visit button if not accepted -->

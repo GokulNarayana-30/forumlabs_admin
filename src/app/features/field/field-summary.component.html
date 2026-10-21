@@ -4,7 +4,7 @@
     class="sticky top-0 z-10 bg-white p-4 rounded-2xl border border-surface-200 shadow-xs flex items-center justify-between"
   >
     <div>
-      <h1 class="text-xl font-bold text-surface-900 tracking-tight">Field Daily Summary</h1>
+      <h1 class="text-xl font-bold text-surface-900 tracking-tight">{{ viewTitle() }}</h1>
       <p class="text-xs text-surface-500">Phlebotomist Daily Collection & Handover</p>
     </div>
 
@@ -27,6 +27,8 @@
       </button>
     </div>
   </div>
+
+  <app-field-date-bar [date]="viewDate()" [today]="today" (dateChange)="onDateChange($event)" />
 
   @if (errorMessage()) {
     <div class="p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700" role="alert">
@@ -131,7 +133,11 @@
           }
         </div>
 
-        @if (!showConfirmHandover()) {
+        @if (!isToday()) {
+          <p class="text-xs text-surface-500" data-testid="handover-view-only">
+            View only: samples can be handed over only on the day.
+          </p>
+        } @else if (!showConfirmHandover()) {
           <button
             type="button"
             (click)="confirmHandover()"

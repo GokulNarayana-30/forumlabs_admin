@@ -10,6 +10,8 @@ import {
 } from './slots.service';
 import { SlotOverrideModalComponent } from './slot-override-modal.component';
 import { SlotSettingsModalComponent } from './slot-settings-modal.component';
+import { SlotWindowsModalComponent } from './slot-windows-modal.component';
+import { windowTimeLabel } from './slot-time';
 import { errorText } from '../../core/api/error-text';
 
 export function getTodayIstYmd(): string {
@@ -32,7 +34,13 @@ export function addDaysYmd(ymd: string, days: number): string {
 @Component({
   selector: 'app-slots-calendar',
   standalone: true,
-  imports: [CommonModule, FormsModule, SlotOverrideModalComponent, SlotSettingsModalComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    SlotOverrideModalComponent,
+    SlotSettingsModalComponent,
+    SlotWindowsModalComponent,
+  ],
   templateUrl: './slots-calendar.component.html',
 })
 export class SlotsCalendarComponent implements OnInit, OnDestroy {
@@ -55,6 +63,7 @@ export class SlotsCalendarComponent implements OnInit, OnDestroy {
   readonly selectedWindow = signal<SlotWindow | null>(null);
   readonly isOverrideModalVisible = signal<boolean>(false);
   readonly isSettingsModalVisible = signal<boolean>(false);
+  readonly isWindowsModalVisible = signal<boolean>(false);
 
   // Whole day closure modal
   readonly isCloseDayModalVisible = signal<boolean>(false);
@@ -106,6 +115,21 @@ export class SlotsCalendarComponent implements OnInit, OnDestroy {
   openOverrideModal(window: SlotWindow): void {
     this.selectedWindow.set(window);
     this.isOverrideModalVisible.set(true);
+  }
+
+  /** Every window, hidden ones included, as the first loaded day lists them. */
+  windowsForEditing(): SlotWindow[] {
+    return this.days()[0]?.windows ?? [];
+  }
+
+  openWindowsModal(): void {
+    this.isWindowsModalVisible.set(true);
+  }
+
+  async onWindowsSaved(message: string): Promise<void> {
+    this.isWindowsModalVisible.set(false);
+    await this.loadOverview();
+    this.successMessage.set(message);
   }
 
   openSettingsModal(): void {
@@ -189,17 +213,8 @@ export class SlotsCalendarComponent implements OnInit, OnDestroy {
     });
   }
 
-  formatWindowLabel(windowId: string): string {
-    // win-0600 -> 06:00
-    const match = windowId.match(/win-(\d{2})(\d{2})/);
-    if (match) {
-      const h1 = parseInt(match[1], 10);
-      const m1 = match[2];
-      const h2 = (h1 + 2) % 24;
-      const h2Str = h2.toString().padStart(2, '0');
-      return `${match[1]}:${m1} - ${h2Str}:${m1}`;
-    }
-    return windowId;
+  formatWindowLabel(window: SlotWindow): string {
+    return windowTimeLabel(window.start_minute, window.end_minute);
   }
 
   getTotalBookings(day: SlotDay): number {

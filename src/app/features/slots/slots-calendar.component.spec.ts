@@ -1,3 +1,4 @@
+import { ChangeDetectorRef } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { SlotsCalendarComponent, getTodayIstYmd, addDaysYmd } from './slots-calendar.component';
@@ -31,6 +32,10 @@ describe('SlotsCalendarComponent', () => {
         windows: [
           {
             window_id: 'win-0800',
+            start_minute: 480,
+            end_minute: 540,
+            period: 'morning',
+            best_for_fasting: false,
             active: true,
             capacity: 10,
             closed: false,
@@ -41,6 +46,10 @@ describe('SlotsCalendarComponent', () => {
           },
           {
             window_id: 'win-1000',
+            start_minute: 600,
+            end_minute: 660,
+            period: 'morning',
+            best_for_fasting: false,
             active: true,
             capacity: 8,
             closed: true,
@@ -58,6 +67,10 @@ describe('SlotsCalendarComponent', () => {
         windows: [
           {
             window_id: 'win-0800',
+            start_minute: 480,
+            end_minute: 540,
+            period: 'morning',
+            best_for_fasting: false,
             active: true,
             capacity: 10,
             closed: false,
@@ -102,9 +115,36 @@ describe('SlotsCalendarComponent', () => {
     expect(compiled.textContent).toContain('Slots & Capacity Management');
     expect(compiled.textContent).toContain('Lead Time: 120 mins');
     expect(compiled.textContent).toContain('win-0800');
-    expect(compiled.textContent).toContain('08:00 - 10:00');
+    expect(compiled.textContent).toContain('08:00 - 09:00');
     expect(compiled.textContent).toContain('4'); // Booked count
     expect(compiled.textContent).toContain('10'); // Capacity
+  });
+
+  it('the Windows button opens the windows dialog with every window of the loaded days', () => {
+    fixture.detectChanges();
+    expect(component.isWindowsModalVisible()).toBe(false);
+    const button = (fixture.nativeElement as HTMLElement).querySelector(
+      '[data-testid="open-windows"]',
+    ) as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+    button.click();
+    fixture.detectChanges();
+    expect(component.isWindowsModalVisible()).toBe(true);
+    expect(component.windowsForEditing().map((w) => w.window_id)).toEqual(['win-0800', 'win-1000']);
+  });
+
+  it('a hidden window is labelled Hidden in the day table, not Open', () => {
+    const day = component.days()[0]!;
+    component.days.set([
+      { ...day, windows: [{ ...day.windows[0]!, active: false }, day.windows[1]!] },
+    ]);
+    component.selectDay(component.days()[0]!);
+    fixture.debugElement.injector.get(ChangeDetectorRef).markForCheck();
+    fixture.detectChanges();
+    const hidden = (fixture.nativeElement as HTMLElement).querySelectorAll(
+      '[data-testid="window-hidden"]',
+    );
+    expect(hidden).toHaveLength(1);
   });
 
   it('updates selected day when clicking date button', () => {

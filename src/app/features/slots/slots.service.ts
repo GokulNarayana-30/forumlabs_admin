@@ -4,6 +4,11 @@ import { ApiClient } from '../../core/api/api-client.service';
 
 export interface SlotWindow {
   window_id: string;
+  /** IST minutes from midnight. */
+  start_minute: number;
+  end_minute: number;
+  period: 'morning' | 'afternoon' | 'evening';
+  best_for_fasting: boolean;
   active: boolean;
   capacity: number;
   closed: boolean;
@@ -33,9 +38,23 @@ export interface SlotsOverviewResult {
   days: SlotDay[];
 }
 
+export interface SlotWindowCreatedResult {
+  kind: 'slot_window_created';
+  window_id: string;
+  start_minute: number;
+  end_minute: number;
+  period: 'morning' | 'afternoon' | 'evening';
+  best_for_fasting: boolean;
+  capacity: number;
+  active: boolean;
+}
+
 export interface SlotWindowUpdatedResult {
   kind: 'slot_window_updated';
   window_id: string;
+  start_minute: number;
+  end_minute: number;
+  best_for_fasting: boolean;
   capacity: number;
   active: boolean;
   existing_bookings_kept: string[];
@@ -93,12 +112,23 @@ export class SlotsService {
 
   async updateWindow(
     windowId: string,
-    body: { capacity?: number; active?: boolean },
+    body: { capacity?: number; active?: boolean; end_minute?: number; best_for_fasting?: boolean },
   ): Promise<SlotWindowUpdatedResult> {
     return firstValueFrom(
       this.api.patch<SlotWindowUpdatedResult>(`/staff/slots/windows/${windowId}`, body, {
         idempotent: true,
       }),
+    );
+  }
+
+  async createWindow(body: {
+    start_minute: number;
+    end_minute: number;
+    capacity: number;
+    best_for_fasting?: boolean;
+  }): Promise<SlotWindowCreatedResult> {
+    return firstValueFrom(
+      this.api.post<SlotWindowCreatedResult>('/staff/slots/windows', body, { idempotent: true }),
     );
   }
 

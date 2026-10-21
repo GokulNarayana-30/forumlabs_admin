@@ -21,6 +21,16 @@
       </div>
       <button
         type="button"
+        data-testid="open-windows"
+        (click)="openWindowsModal()"
+        [disabled]="isLoading() || !days().length"
+        class="inline-flex items-center gap-1.5 rounded-full border border-surface-300 bg-surface-0 px-4 py-2 text-xs font-medium text-surface-700 hover:bg-surface-50"
+      >
+        <i class="pi pi-clock"></i>
+        <span>Windows</span>
+      </button>
+      <button
+        type="button"
         (click)="openSettingsModal()"
         [disabled]="isLoading() || !settings()"
         class="inline-flex items-center gap-1.5 rounded-full border border-surface-300 bg-surface-0 px-4 py-2 text-xs font-medium text-surface-700 hover:bg-surface-50"
@@ -190,26 +200,33 @@
           >
             <td class="px-4 py-3">
               <span class="font-medium text-surface-900 block">
-                {{ formatWindowLabel(window.window_id) }}
+                {{ formatWindowLabel(window) }}
               </span>
               <span class="text-[11px] font-mono text-surface-400">{{ window.window_id }}</span>
             </td>
 
             <td class="px-4 py-3">
               <span
-                *ngIf="window.closed"
+                *ngIf="!window.active"
+                data-testid="window-hidden"
+                class="inline-block rounded-full bg-surface-200 px-2 py-0.5 text-[11px] font-semibold text-surface-700"
+              >
+                Hidden
+              </span>
+              <span
+                *ngIf="window.active && window.closed"
                 class="inline-block rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700"
               >
                 Closed
               </span>
               <span
-                *ngIf="!window.closed && window.booked_count >= window.capacity"
+                *ngIf="window.active && !window.closed && window.booked_count >= window.capacity"
                 class="inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800"
               >
                 Full
               </span>
               <span
-                *ngIf="!window.closed && window.booked_count < window.capacity"
+                *ngIf="window.active && !window.closed && window.booked_count < window.capacity"
                 class="inline-block rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-semibold text-green-800"
               >
                 Open
@@ -348,6 +365,12 @@
     [window]="selectedWindow()"
     (saved)="onOverrideSaved()"
   ></app-slot-override-modal>
+
+  <app-slot-windows-modal
+    [(visible)]="isWindowsModalVisible"
+    [windows]="windowsForEditing()"
+    (saved)="onWindowsSaved($event)"
+  ></app-slot-windows-modal>
 
   <app-slot-settings-modal
     [(visible)]="isSettingsModalVisible"

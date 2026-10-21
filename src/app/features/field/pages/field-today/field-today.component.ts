@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import {
@@ -11,6 +11,8 @@ import { CollectPaymentModalComponent } from '../../components/collect-payment-m
 import { NotCollectedModalComponent } from '../../components/not-collected-modal/not-collected-modal.component';
 import { TubeScanModalComponent } from '../../tube-scan-modal.component';
 import { errorText } from '../../../../core/api/error-text';
+import { FieldDateBarComponent } from '../../components/field-date-bar/field-date-bar.component';
+import { formatFieldDate, istToday } from '../../field-date';
 
 @Component({
   selector: 'app-field-today',
@@ -21,11 +23,21 @@ import { errorText } from '../../../../core/api/error-text';
     CollectPaymentModalComponent,
     NotCollectedModalComponent,
     TubeScanModalComponent,
+    FieldDateBarComponent,
   ],
   templateUrl: './field-today.component.html',
 })
 export class FieldTodayComponent implements OnInit {
   private readonly fieldService = inject(FieldService);
+
+  /** IST today, fixed when the screen opens. */
+  readonly today = istToday();
+  /** The day being shown. Only today's visits can be acted on; other days are view only. */
+  readonly viewDate = signal<string>(this.today);
+  readonly isToday = computed(() => this.viewDate() === this.today);
+  readonly viewTitle = computed(() =>
+    this.isToday() ? "Today's Visits" : `Visits on ${formatFieldDate(this.viewDate())}`,
+  );
 
   readonly visits = signal<FieldVisit[]>([]);
   readonly isLoading = signal<boolean>(false);
@@ -51,7 +63,7 @@ export class FieldTodayComponent implements OnInit {
     this.isLoading.set(true);
     this.errorMessage.set('');
     try {
-      const res = await this.fieldService.getTodayVisits();
+      const res = await this.fieldService.getTodayVisits(this.viewDate());
       // Sort visits stably by slot_starts_at
       const sorted = [...res.visits].sort((a, b) =>
         a.slot_starts_at.localeCompare(b.slot_starts_at),
@@ -63,6 +75,12 @@ export class FieldTodayComponent implements OnInit {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  onDateChange(date: string): void {
+    this.viewDate.set(date);
+    this.successMessage.set('');
+    void this.loadVisits();
   }
 
   async acceptVisit(visit: FieldVisit): Promise<void> {

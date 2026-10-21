@@ -20,6 +20,7 @@ describe('SlotsService', () => {
   beforeEach(() => {
     mockApiClient = {
       get: vi.fn(),
+      post: vi.fn(),
       patch: vi.fn(),
       put: vi.fn(),
       delete: vi.fn(),
@@ -50,6 +51,10 @@ describe('SlotsService', () => {
             windows: [
               {
                 window_id: 'win-0800',
+                start_minute: 480,
+                end_minute: 540,
+                period: 'morning',
+                best_for_fasting: false,
                 active: true,
                 capacity: 10,
                 closed: false,
@@ -80,11 +85,37 @@ describe('SlotsService', () => {
     });
   });
 
+  describe('createWindow', () => {
+    it('calls POST /staff/slots/windows with the times in IST minutes and the idempotent option', async () => {
+      mockApiClient.post.mockReturnValue(
+        of({
+          kind: 'slot_window_created',
+          window_id: 'win-1400',
+          start_minute: 840,
+          end_minute: 900,
+          period: 'afternoon',
+          best_for_fasting: false,
+          capacity: 4,
+          active: true,
+        }),
+      );
+      const body = { start_minute: 840, end_minute: 900, capacity: 4, best_for_fasting: false };
+      const result = await service.createWindow(body);
+      expect(mockApiClient.post).toHaveBeenCalledWith('/staff/slots/windows', body, {
+        idempotent: true,
+      });
+      expect(result.window_id).toBe('win-1400');
+    });
+  });
+
   describe('updateWindow', () => {
     it('calls PATCH /staff/slots/windows/:window_id with body and idempotent option', async () => {
       const mockResult: SlotWindowUpdatedResult = {
         kind: 'slot_window_updated',
         window_id: 'win-0800',
+        start_minute: 480,
+        end_minute: 540,
+        best_for_fasting: false,
         capacity: 12,
         active: true,
         existing_bookings_kept: ['BK-1001'],
