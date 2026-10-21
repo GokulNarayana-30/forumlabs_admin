@@ -1,0 +1,173 @@
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-surface-900">Campaigns</h1>
+      <p class="text-sm text-surface-500 mt-1">
+        Targeted push notification campaigns for patient health programs.
+      </p>
+    </div>
+    <div class="flex items-center gap-3">
+      <a routerLink="new">
+        <ui-button label="Create Campaign" icon="pi pi-plus" severity="primary"></ui-button>
+      </a>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="flex items-center gap-4 bg-white p-4 rounded-xl border border-surface-200 shadow-sm">
+    <div class="flex items-center gap-2">
+      <label for="status-filter" class="text-sm font-medium text-surface-700">Status:</label>
+      <select
+        id="status-filter"
+        [ngModel]="selectedStatus()"
+        (ngModelChange)="onStatusChange($event)"
+        class="rounded-lg border border-surface-300 bg-white px-3 py-1.5 text-sm text-surface-800 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+      >
+        <option value="all">All Statuses</option>
+        <option value="draft">Draft</option>
+        <option value="pending_approval">Pending Approval</option>
+        <option value="scheduled">Scheduled</option>
+        <option value="sending">Sending</option>
+        <option value="sent">Sent</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+    </div>
+  </div>
+
+  @if (actionError()) {
+    <div
+      data-testid="action-error"
+      class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+    >
+      {{ actionError() }}
+    </div>
+  }
+
+  <!-- Table -->
+  <div class="bg-white rounded-xl border border-surface-200 shadow-sm overflow-hidden">
+    @if (loading()) {
+      <div class="p-8 text-center text-surface-500">
+        <i class="pi pi-spin pi-spinner text-2xl mb-2"></i>
+        <p class="text-sm">Loading campaigns...</p>
+      </div>
+    } @else if (loadError()) {
+      <div data-testid="list-error" class="p-8 text-center">
+        <p class="text-sm text-red-700">{{ loadError() }}</p>
+        <button type="button" class="mt-2 text-sm underline" (click)="loadCampaigns()">
+          Try again
+        </button>
+      </div>
+    } @else if (filteredCampaigns().length === 0) {
+      <div class="p-8 text-center text-surface-500">
+        <i class="pi pi-inbox text-3xl mb-2 text-surface-400"></i>
+        <p class="text-base font-medium text-surface-700">No campaigns found</p>
+        <p class="text-sm text-surface-500 mt-1">Create your first push campaign to get started.</p>
+      </div>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-surface-700">
+          <thead
+            class="bg-surface-50 border-b border-surface-200 text-xs uppercase font-semibold text-surface-600"
+          >
+            <tr>
+              <th class="px-6 py-3.5">Campaign</th>
+              <th class="px-6 py-3.5">Target & Status</th>
+              <th class="px-6 py-3.5">Scheduled / Sent</th>
+              <th class="px-6 py-3.5 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-surface-200">
+            @for (campaign of filteredCampaigns(); track campaign.id) {
+              <tr data-testid="campaign-row" class="hover:bg-surface-50 transition-colors">
+                <td class="px-6 py-4">
+                  <div class="font-medium text-surface-900">{{ campaign.name }}</div>
+                  <div class="text-xs text-surface-500 mt-0.5">{{ campaign.title }}</div>
+                </td>
+                <td class="px-6 py-4">
+                  <div class="flex items-center gap-2">
+                    <ui-tag
+                      [value]="campaign.status.toUpperCase()"
+                      [severity]="statusSeverity(campaign.status)"
+                    ></ui-tag>
+                  </div>
+                </td>
+                <td class="px-6 py-4 text-xs text-surface-600">
+                  @if (campaign.sendAt) {
+                    <span>{{ campaign.sendAt | date: 'dd MMM yyyy, hh:mm a' }}</span>
+                  } @else {
+                    <span class="text-surface-400">—</span>
+                  }
+                </td>
+                <td class="px-6 py-4 text-right space-x-2">
+                  @if (campaign.status === 'draft') {
+                    <a [routerLink]="[campaign.id]">
+                      <button
+                        type="button"
+                        class="px-3 py-1.5 text-xs font-medium text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
+                      >
+                        Edit
+                      </button>
+                    </a>
+                  }
+                  @if (isSuperAdmin() && campaign.status === 'pending_approval') {
+                    <button
+                      type="button"
+                      data-testid="approve-btn"
+                      (click)="approveCampaign(campaign)"
+                      [disabled]="actionLoadingId() === campaign.id"
+                      class="px-3 py-1.5 text-xs font-medium bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      Approve
+                    </button>
+                  }
+                  @if (canCancel(campaign.status)) {
+                    <button
+                      type="button"
+                      (click)="cancelCampaign(campaign)"
+                      [disabled]="actionLoadingId() === campaign.id"
+                      class="px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  }
+                  <a [routerLink]="[campaign.id, 'report']">
+                    <button
+                      type="button"
+                      class="px-3 py-1.5 text-xs font-medium text-surface-700 hover:bg-surface-100 rounded-lg transition-colors"
+                    >
+                      Report
+                    </button>
+                  </a>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div
+        class="flex items-center justify-between px-6 py-3 border-t border-surface-200 bg-surface-50 text-xs text-surface-600"
+      >
+        <button
+          type="button"
+          data-testid="prev-page"
+          [disabled]="page() <= 1"
+          (click)="goToPage(page() - 1)"
+          class="px-3 py-1.5 rounded-lg border border-surface-300 bg-white disabled:opacity-50"
+        >
+          Previous
+        </button>
+        <span>Page {{ page() }}</span>
+        <button
+          type="button"
+          data-testid="next-page"
+          [disabled]="!hasNextPage()"
+          (click)="goToPage(page() + 1)"
+          class="px-3 py-1.5 rounded-lg border border-surface-300 bg-white disabled:opacity-50"
+        >
+          Next
+        </button>
+      </div>
+    }
+  </div>
+</div>

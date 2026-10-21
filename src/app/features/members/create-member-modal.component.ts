@@ -3,6 +3,7 @@ import { PendingAuthOperations } from '../../core/auth/pending-auth-operations.s
 import { isUncertainError } from '../finance/refunds.service';
 import {
   Component,
+  computed,
   EventEmitter,
   Input,
   Output,
@@ -70,7 +71,18 @@ export class CreateMemberModalComponent implements OnChanges, OnDestroy {
 
   readonly displayName = signal<string>('');
   readonly email = signal<string>('');
+  /** The full number sent to the server (`+91` and 10 digits), or empty. */
   readonly phone = signal<string>('');
+  /** What the box shows: only the 10 digits, since `+91` is fixed in front of it. */
+  readonly phoneDigits = computed(() => this.phone().replace(/^\+91/, ''));
+
+  /** Keeps digits only (a pasted +91 or spaces are dropped), at most 10, and stores `+91` + digits. */
+  setPhoneDigits(value: string): void {
+    let digits = (value ?? '').replace(/\D/g, '');
+    if (digits.length > 10 && digits.startsWith('91')) digits = digits.slice(2);
+    digits = digits.slice(0, 10);
+    this.phone.set(digits ? `+91${digits}` : '');
+  }
   readonly password = signal<string>('');
   readonly selectedRoles = signal<StaffRole[]>(['support']);
 
@@ -132,8 +144,8 @@ export class CreateMemberModalComponent implements OnChanges, OnDestroy {
     }
 
     const phoneStr = this.phone().trim();
-    if (phoneStr && !/^\+91[0-9]{10}$/.test(phoneStr)) {
-      this.errorMessage.set('Phone number must be in +91XXXXXXXXXX format');
+    if (phoneStr && !/^\+91[6-9][0-9]{9}$/.test(phoneStr)) {
+      this.errorMessage.set('Phone number must be 10 digits, starting with 6, 7, 8 or 9');
       return;
     }
 

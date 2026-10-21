@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { signal } from '@angular/core';
 import { AdminLayoutComponent } from './admin-layout.component';
 import { StaffStateService, StaffRole } from '../core/state/staff-state.service';
@@ -46,6 +46,9 @@ describe('AdminLayoutComponent', () => {
         { provide: AuthService, useValue: mockAuthService },
       ],
     }).compileComponents();
+
+    const router = TestBed.inject(Router);
+    vi.spyOn(router, 'navigateByUrl').mockImplementation(() => Promise.resolve(true));
 
     fixture = TestBed.createComponent(AdminLayoutComponent);
     component = fixture.componentInstance;
@@ -181,6 +184,35 @@ describe('AdminLayoutComponent', () => {
     fixture.detectChanges();
     const labels = component.navItems().map((i: { label: string }) => i.label);
     expect(labels).toEqual(['Cash Close', 'Refunds']);
+  });
+
+  it('filters navigation for marketing role with three marketing links and no settings', () => {
+    rolesSignal.set(['marketing']);
+    fixture.detectChanges();
+    const labels = component.navItems().map((i: { label: string }) => i.label);
+    expect(labels).toEqual(['Banners & Popups', 'Coupons', 'Push Campaigns']);
+  });
+
+  it('displays all four marketing links for super_admin', () => {
+    rolesSignal.set(['super_admin']);
+    fixture.detectChanges();
+    const labels = component.navItems().map((i: { label: string }) => i.label);
+    expect(labels).toContain('Banners & Popups');
+    expect(labels).toContain('Coupons');
+    expect(labels).toContain('Push Campaigns');
+    expect(labels).toContain('Marketing Settings');
+  });
+
+  it('does not display any marketing links for unauthorized roles', () => {
+    for (const role of ['phlebotomist', 'catalog_manager', 'lab_staff', 'support'] as StaffRole[]) {
+      rolesSignal.set([role]);
+      fixture.detectChanges();
+      const labels = component.navItems().map((i: { label: string }) => i.label);
+      expect(labels).not.toContain('Banners & Popups');
+      expect(labels).not.toContain('Coupons');
+      expect(labels).not.toContain('Push Campaigns');
+      expect(labels).not.toContain('Marketing Settings');
+    }
   });
 
   describe('phone layout', () => {

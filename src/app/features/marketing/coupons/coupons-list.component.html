@@ -1,0 +1,233 @@
+<div class="space-y-6 p-6">
+  <!-- Header -->
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-surface-900">Coupons & Discounts</h1>
+      <p class="mt-1 text-sm text-surface-500">
+        Manage customer discount coupons, order value caps, and redemption limits.
+      </p>
+    </div>
+    <div>
+      <a routerLink="new">
+        <ui-button label="+ Create Coupon" severity="primary" icon="pi pi-plus" />
+      </a>
+    </div>
+  </div>
+
+  <!-- Filters Bar -->
+  <div
+    class="flex flex-col gap-4 rounded-xl border border-surface-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+  >
+    <!-- Search -->
+    <div class="relative w-full sm:w-80">
+      <input
+        type="text"
+        placeholder="Search by code or title..."
+        [ngModel]="searchQuery()"
+        (ngModelChange)="searchQuery.set($event)"
+        class="w-full rounded-lg border border-surface-300 py-1.5 pl-8 pr-3 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+      />
+      <i class="pi pi-search absolute left-2.5 top-2.5 text-xs text-surface-400"></i>
+    </div>
+
+    <!-- Status Filter -->
+    <div class="flex items-center gap-2">
+      <span class="text-xs text-surface-500">Status:</span>
+      <select
+        [ngModel]="statusFilter()"
+        (ngModelChange)="statusFilter.set($event)"
+        class="rounded-lg border border-surface-300 py-1.5 pl-3 pr-8 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+      >
+        <option value="all">All</option>
+        <option value="active">Active</option>
+        <option value="paused">Paused</option>
+        <option value="expired">Expired</option>
+      </select>
+    </div>
+  </div>
+
+  @if (loadError()) {
+    <div
+      role="alert"
+      data-testid="load-error"
+      class="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+    >
+      {{ loadError() }}
+      <button
+        type="button"
+        class="ml-3 text-primary-700 underline"
+        (click)="loadCoupons()"
+        [disabled]="loading()"
+      >
+        Retry loading
+      </button>
+    </div>
+  }
+  @if (actionError()) {
+    <div
+      role="alert"
+      data-testid="action-error"
+      class="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+    >
+      {{ actionError() }}
+      <button
+        type="button"
+        class="ml-3 text-primary-700 underline"
+        (click)="retryFailedAction()"
+        [disabled]="actionLoadingId() !== null"
+      >
+        Retry action
+      </button>
+    </div>
+  }
+  <!-- Coupons Table Card -->
+  <div class="overflow-hidden rounded-xl border border-surface-200 bg-white shadow-sm">
+    @if (loading()) {
+      <div class="flex items-center justify-center p-12 text-surface-400">
+        <i class="pi pi-spin pi-spinner mr-2 text-xl"></i>
+        <span>Loading coupons...</span>
+      </div>
+    } @else if (loadError() && coupons().length === 0) {
+      <p class="p-12 text-center text-surface-500">The coupons could not be loaded.</p>
+    } @else if (filteredCoupons().length === 0) {
+      <div class="p-12 text-center text-surface-500">
+        <i class="pi pi-ticket text-3xl text-surface-400"></i>
+        <p class="mt-2 text-sm font-medium">No coupons found</p>
+        <p class="text-xs text-surface-400">Try adjusting your search query or filters.</p>
+      </div>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-surface-600">
+          <thead
+            class="border-b border-surface-200 bg-surface-50 text-xs font-semibold uppercase text-surface-500"
+          >
+            <tr>
+              <th scope="col" class="px-4 py-3">Code</th>
+              <th scope="col" class="px-4 py-3">Title & Details</th>
+              <th scope="col" class="px-4 py-3">Discount</th>
+              <th scope="col" class="px-4 py-3">Min Order</th>
+              <th scope="col" class="px-4 py-3">Redemption Limits</th>
+              <th scope="col" class="px-4 py-3">Validity (IST)</th>
+              <th scope="col" class="px-4 py-3">Status</th>
+              <th scope="col" class="px-4 py-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-surface-200">
+            @for (coupon of filteredCoupons(); track coupon.id) {
+              <tr class="hover:bg-surface-50/50" data-testid="coupon-row">
+                <!-- Code -->
+                <td class="px-4 py-3 font-mono font-bold text-primary-700">
+                  <span class="rounded bg-primary-50 px-2 py-1 border border-primary-200 text-xs">
+                    {{ coupon.code }}
+                  </span>
+                </td>
+
+                <!-- Title & Description -->
+                <td class="px-4 py-3">
+                  <div class="font-semibold text-surface-900">{{ coupon.title }}</div>
+                  <div class="text-xs text-surface-500 line-clamp-1">{{ coupon.description }}</div>
+                </td>
+
+                <!-- Discount -->
+                <td class="px-4 py-3 font-semibold text-surface-900">
+                  {{ formatDiscount(coupon) }}
+                </td>
+
+                <!-- Min Order -->
+                <td class="px-4 py-3 text-xs text-surface-600">
+                  {{ formatMinOrder(coupon.min_amount_paise) }}
+                </td>
+
+                <!-- Redemption Limits -->
+                <td class="px-4 py-3 text-xs">
+                  <div class="text-surface-800 font-medium">
+                    {{ formatRedemptionLimits(coupon).total }}
+                  </div>
+                  <div class="text-surface-400 text-[11px]">
+                    {{ formatRedemptionLimits(coupon).perUser }}
+                  </div>
+                </td>
+
+                <!-- Validity -->
+                <td class="px-4 py-3 text-xs text-surface-600">
+                  {{ formatValidity(coupon.valid_from, coupon.valid_until) }}
+                </td>
+
+                <!-- Status -->
+                <td class="px-4 py-3">
+                  <ui-tag
+                    [value]="couponStatus(coupon) | uppercase"
+                    [severity]="statusSeverity(couponStatus(coupon))"
+                  />
+                </td>
+
+                <!-- Actions -->
+                <td class="px-4 py-3 text-right">
+                  <div class="flex items-center justify-end gap-2">
+                    <a [routerLink]="[coupon.id]">
+                      <ui-button label="Edit" size="small" [outlined]="true" severity="secondary" />
+                    </a>
+
+                    <ui-button
+                      [label]="coupon.active ? 'Pause' : 'Resume'"
+                      size="small"
+                      [outlined]="true"
+                      [severity]="coupon.active ? 'warn' : 'success'"
+                      [loading]="actionLoadingId() === coupon.id"
+                      (onClick)="toggleActive(coupon)"
+                    />
+
+                    @if (couponStatus(coupon) !== 'expired') {
+                      <ui-button
+                        label="End"
+                        size="small"
+                        [text]="true"
+                        severity="danger"
+                        [loading]="actionLoadingId() === coupon.id"
+                        (onClick)="promptEndCoupon(coupon)"
+                      />
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+
+  <!-- End Coupon Confirmation Dialog -->
+  <ui-dialog
+    header="End Coupon Early?"
+    [visible]="couponToEnd() !== null"
+    (visibleChange)="cancelEndCoupon()"
+  >
+    <div class="space-y-3 py-2">
+      <p class="text-sm text-surface-700">
+        Are you sure you want to permanently end coupon
+        <span class="font-mono font-bold text-surface-900">{{ couponToEnd()?.code }}</span
+        >?
+      </p>
+      <p class="text-xs text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
+        Ending this coupon immediately sets its expiry to now. Customers will no longer be able to
+        apply or redeem it.
+      </p>
+    </div>
+
+    <div dialog-footer class="flex justify-end gap-2">
+      <ui-button
+        label="Cancel"
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="cancelEndCoupon()"
+      />
+      <ui-button
+        label="Confirm End"
+        severity="danger"
+        [loading]="actionLoadingId() !== null"
+        (onClick)="confirmEndCoupon()"
+      />
+    </div>
+  </ui-dialog>
+</div>

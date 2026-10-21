@@ -126,6 +126,36 @@ export const routes: Routes = [
         data: { roles: ['support', 'super_admin'] },
         loadChildren: () => import('./features/tickets/tickets.routes').then((m) => m.routes),
       },
+      {
+        path: 'marketing/promos',
+        canActivate: [roleGuard],
+        data: { roles: ['marketing', 'super_admin'] },
+        loadChildren: () =>
+          import('./features/marketing/promos/promos.routes').then((m) => m.routes),
+      },
+      {
+        path: 'marketing/coupons',
+        canActivate: [roleGuard],
+        data: { roles: ['marketing', 'super_admin'] },
+        loadChildren: () =>
+          import('./features/marketing/coupons/coupons.routes').then((m) => m.routes),
+      },
+      {
+        path: 'marketing/campaigns',
+        canActivate: [roleGuard],
+        data: { roles: ['marketing', 'super_admin'] },
+        loadChildren: () =>
+          import('./features/marketing/campaigns/campaigns.routes').then((m) => m.routes),
+      },
+      {
+        path: 'marketing/settings',
+        canActivate: [roleGuard],
+        data: { roles: ['super_admin'] },
+        loadComponent: () =>
+          import('./features/marketing/settings/marketing-settings.component').then(
+            (m) => m.MarketingSettingsComponent,
+          ),
+      },
     ],
   },
   {

@@ -44,6 +44,26 @@ export class AdminLayoutComponent {
     { label: 'Cash Close', path: '/finance/cash-close', roles: ['finance', 'super_admin'] },
     { label: 'Refunds', path: '/finance/refunds', roles: ['finance'] },
     { label: 'Members', path: '/members', roles: ['super_admin'] },
+    {
+      label: 'Banners & Popups',
+      path: '/marketing/promos',
+      roles: ['marketing', 'super_admin'],
+    },
+    {
+      label: 'Coupons',
+      path: '/marketing/coupons',
+      roles: ['marketing', 'super_admin'],
+    },
+    {
+      label: 'Push Campaigns',
+      path: '/marketing/campaigns',
+      roles: ['marketing', 'super_admin'],
+    },
+    {
+      label: 'Marketing Settings',
+      path: '/marketing/settings',
+      roles: ['super_admin'],
+    },
   ];
 
   readonly navItems = computed(() => {

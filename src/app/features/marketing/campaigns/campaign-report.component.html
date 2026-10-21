@@ -1,0 +1,213 @@
+<div class="space-y-6 max-w-6xl pb-12">
+  <!-- Header -->
+  <div class="flex items-center justify-between border-b border-surface-200 pb-4">
+    <div>
+      <div class="flex items-center gap-2">
+        <a
+          routerLink="/marketing/campaigns"
+          class="text-sm text-surface-500 hover:text-surface-700"
+        >
+          Campaigns
+        </a>
+        <span class="text-surface-400">/</span>
+        <span class="text-sm font-medium text-surface-900">Campaign Report</span>
+      </div>
+      <h1 class="text-2xl font-bold text-surface-900 mt-1">
+        {{ report()?.campaign?.name || 'Campaign Report' }}
+      </h1>
+      <p class="text-sm text-surface-500 mt-1">
+        Delivery counts, test sends and per-recipient outcomes.
+      </p>
+    </div>
+    <div class="flex items-center gap-3">
+      @if (isPolling()) {
+        <span
+          class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-sky-50 text-sky-700 border border-sky-200 animate-pulse"
+        >
+          <i class="pi pi-spin pi-spinner text-xs"></i>
+          <span>Live Dispatching...</span>
+        </span>
+      }
+      <a routerLink="/marketing/campaigns">
+        <ui-button label="Back to Campaigns" severity="secondary" [outlined]="true"></ui-button>
+      </a>
+    </div>
+  </div>
+
+  @if (loading() && !report()) {
+    <div class="p-12 text-center text-surface-500">
+      <i class="pi pi-spin pi-spinner text-3xl mb-2 text-primary-600"></i>
+      <p class="text-sm">Loading campaign report...</p>
+    </div>
+  } @else if (errorMessage() && !report()) {
+    <div
+      data-testid="report-error"
+      class="p-8 text-center rounded-xl border border-red-200 bg-red-50"
+    >
+      <p class="text-sm text-red-700">{{ errorMessage() }}</p>
+      <ui-button
+        label="Try again"
+        severity="secondary"
+        [outlined]="true"
+        (click)="retry()"
+      ></ui-button>
+    </div>
+  } @else if (report()) {
+    <!-- 1. Overview Stat Cards -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div class="bg-white p-5 rounded-xl border border-surface-200 shadow-sm">
+        <div class="text-xs font-semibold uppercase tracking-wider text-surface-500">Queued</div>
+        <div data-testid="stat-queued" class="text-2xl font-bold text-surface-900 mt-1">
+          {{ report()!.counts.queued | number }}
+        </div>
+      </div>
+      <div class="bg-white p-5 rounded-xl border border-surface-200 shadow-sm">
+        <div class="text-xs font-semibold uppercase tracking-wider text-green-600">Sent</div>
+        <div data-testid="stat-sent" class="text-2xl font-bold text-green-700 mt-1">
+          {{ report()!.counts.sent | number }}
+        </div>
+      </div>
+      <div class="bg-white p-5 rounded-xl border border-surface-200 shadow-sm">
+        <div class="text-xs font-semibold uppercase tracking-wider text-amber-600">Skipped</div>
+        <div data-testid="stat-skipped" class="text-2xl font-bold text-amber-700 mt-1">
+          {{ report()!.counts.skipped | number }}
+        </div>
+      </div>
+      <div class="bg-white p-5 rounded-xl border border-surface-200 shadow-sm">
+        <div class="text-xs font-semibold uppercase tracking-wider text-red-600">Failed</div>
+        <div data-testid="stat-failed" class="text-2xl font-bold text-red-700 mt-1">
+          {{ report()!.counts.failed | number }}
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Test Sends Audit Log -->
+    @if (report()?.test_sends && report()!.test_sends.length > 0) {
+      <div class="bg-white p-6 rounded-xl border border-surface-200 shadow-sm space-y-4">
+        <h2 class="text-base font-semibold text-surface-900 border-b border-surface-100 pb-3">
+          Pre-Dispatch Test Send Log
+        </h2>
+        <div class="divide-y divide-surface-200">
+          @for (tst of report()!.test_sends; track tst.requestId + ':' + tst.revision) {
+            <div
+              data-testid="test-send-row"
+              class="py-2.5 flex items-center justify-between text-xs"
+            >
+              <div class="flex items-center gap-3">
+                <span class="text-surface-800">Revision {{ tst.revision }}</span>
+                <span class="text-surface-400">•</span>
+                <span class="text-surface-500"
+                  >{{ tst.sentAt | date: 'dd MMM, hh:mm a' : '+0530' }} IST</span
+                >
+              </div>
+              <span class="font-medium text-surface-700">
+                {{ tst.count }} {{ tst.count === 1 ? 'device' : 'devices' }}
+              </span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- 4. Per-Recipient Outcomes Table -->
+    <div class="bg-white rounded-xl border border-surface-200 shadow-sm overflow-hidden space-y-0">
+      <div class="p-6 border-b border-surface-100 flex items-center justify-between">
+        <div>
+          <h2 class="text-base font-semibold text-surface-900">Per-Recipient Outcomes</h2>
+          <p class="text-xs text-surface-500 mt-0.5">
+            Privacy-safe recipient dispatch records (ID-only values, no personal profile fields).
+          </p>
+        </div>
+      </div>
+
+      @if (recipientsError()) {
+        <div
+          data-testid="recipients-error"
+          class="px-6 py-3 text-sm text-red-700 bg-red-50 border-b border-red-200"
+        >
+          {{ recipientsError() }}
+          <button type="button" class="underline ml-2" (click)="loadRecipients(page())">
+            Try again
+          </button>
+        </div>
+      }
+      @if (!recipientsPage() || recipientsPage()!.items.length === 0) {
+        <div class="p-8 text-center text-surface-500 text-sm">No recipient records available.</div>
+      } @else {
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-surface-700">
+            <thead
+              class="bg-surface-50 border-b border-surface-200 text-xs uppercase font-semibold text-surface-600"
+            >
+              <tr>
+                <th class="px-6 py-3.5">User ID</th>
+                <th class="px-6 py-3.5">Status</th>
+                <th class="px-6 py-3.5">Skip Reason</th>
+                <th class="px-6 py-3.5">Result</th>
+                <th class="px-6 py-3.5">Sent At</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-surface-200">
+              @for (rec of recipientsPage()!.items; track rec.user_id) {
+                <tr data-testid="recipient-row" class="hover:bg-surface-50 transition-colors">
+                  <td class="px-6 py-4 font-mono text-xs text-surface-900">
+                    {{ rec.user_id }}
+                  </td>
+                  <td class="px-6 py-4">
+                    <ui-tag
+                      [value]="rec.status"
+                      [severity]="rec.status === 'sent' ? 'success' : 'secondary'"
+                    ></ui-tag>
+                  </td>
+                  <td class="px-6 py-4 text-xs text-surface-600">
+                    {{ rec.skip_reason || '—' }}
+                  </td>
+                  <td class="px-6 py-4 text-xs font-mono text-surface-600">
+                    {{ rec.result || '—' }}
+                  </td>
+                  <td class="px-6 py-4 text-xs text-surface-500">
+                    @if (rec.sent_at) {
+                      <span>{{ rec.sent_at | date: 'dd MMM, hh:mm:ss a' }}</span>
+                    } @else {
+                      <span>—</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div
+          class="px-6 py-4 border-t border-surface-200 bg-surface-50 flex items-center justify-between text-xs text-surface-600"
+        >
+          <div>
+            Showing {{ (page() - 1) * limit + 1 }} to
+            {{ (page() - 1) * limit + recipientsPage()!.items.length }} of
+            {{ recipientsPage()!.total | number }} recipients
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              [disabled]="page() <= 1"
+              (click)="onPageChange(page() - 1)"
+              class="px-3 py-1.5 rounded-lg border border-surface-300 bg-white font-medium text-surface-700 hover:bg-surface-100 disabled:opacity-50 transition-colors"
+            >
+              Previous
+            </button>
+            <span class="font-medium text-surface-800">Page {{ page() }}</span>
+            <button
+              type="button"
+              [disabled]="page() * limit >= recipientsPage()!.total"
+              (click)="onPageChange(page() + 1)"
+              class="px-3 py-1.5 rounded-lg border border-surface-300 bg-white font-medium text-surface-700 hover:bg-surface-100 disabled:opacity-50 transition-colors"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
