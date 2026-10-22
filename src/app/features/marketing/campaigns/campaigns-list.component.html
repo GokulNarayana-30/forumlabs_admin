@@ -35,6 +35,15 @@
     </div>
   </div>
 
+  @if (notice()) {
+    <div
+      data-testid="list-notice"
+      class="rounded-xl border border-primary-200 bg-primary-50 px-4 py-3 text-sm text-primary-800"
+    >
+      {{ notice() }}
+    </div>
+  }
+
   @if (actionError()) {
     <div
       data-testid="action-error"

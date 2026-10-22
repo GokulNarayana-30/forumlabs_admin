@@ -80,6 +80,39 @@ describe('CampaignsListComponent', () => {
     fixture.detectChanges();
   });
 
+  it('shows the notice passed from the editor and refreshes quietly while a campaign is still moving', () => {
+    vi.useFakeTimers();
+    try {
+      history.replaceState({ notice: 'Queued. Sending starts within about a minute.' }, '');
+      mockCampaignsService.listCampaigns.mockReturnValue(
+        of({ campaigns: [{ ...mockCampaigns[0], status: 'scheduled' }] }),
+      );
+      const f = TestBed.createComponent(CampaignsListComponent);
+      f.detectChanges();
+      expect(f.nativeElement.querySelector('[data-testid="list-notice"]').textContent).toContain(
+        'Queued',
+      );
+
+      const before = mockCampaignsService.listCampaigns.mock.calls.length;
+      vi.advanceTimersByTime(10_000);
+      expect(mockCampaignsService.listCampaigns.mock.calls.length).toBe(before + 1);
+      expect(f.componentInstance.loading()).toBe(false); // quiet: no spinner
+
+      // Nothing is moving any more: the timer stops calling the API.
+      mockCampaignsService.listCampaigns.mockReturnValue(
+        of({ campaigns: [{ ...mockCampaigns[0], status: 'sent' }] }),
+      );
+      vi.advanceTimersByTime(10_000);
+      const settled = mockCampaignsService.listCampaigns.mock.calls.length;
+      vi.advanceTimersByTime(30_000);
+      expect(mockCampaignsService.listCampaigns.mock.calls.length).toBe(settled);
+      f.destroy();
+    } finally {
+      history.replaceState(null, '');
+      vi.useRealTimers();
+    }
+  });
+
   it('renders campaign rows with exact API status strings', () => {
     expect(mockCampaignsService.listCampaigns).toHaveBeenCalled();
     const rows = fixture.nativeElement.querySelectorAll('[data-testid="campaign-row"]');

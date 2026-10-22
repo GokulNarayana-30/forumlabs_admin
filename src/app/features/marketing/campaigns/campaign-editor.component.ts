@@ -580,9 +580,17 @@ export class CampaignEditorComponent implements OnInit {
         : null;
 
     this.campaignsService.scheduleCampaign(this.campaignId, sendAt ? { sendAt } : {}).subscribe({
-      next: () => {
+      next: (campaign) => {
         this.scheduling.set(false);
-        this.router.navigate(['/marketing/campaigns']);
+        // Send Now only queues the campaign; the server picks it up on its next minute tick. Say so on
+        // the list instead of dropping the user there with no sign that anything happened.
+        const notice =
+          campaign.status === 'pending_approval'
+            ? 'Saved. This audience is above the self-send limit, so a Super Admin must approve it before it is sent.'
+            : sendAt
+              ? 'Scheduled. It will be sent at the chosen time.'
+              : 'Queued. Sending starts within about a minute. This list refreshes by itself; the status changes to Sending, then Sent.';
+        this.router.navigate(['/marketing/campaigns'], { state: { notice } });
       },
       error: (err) => {
         this.scheduling.set(false);

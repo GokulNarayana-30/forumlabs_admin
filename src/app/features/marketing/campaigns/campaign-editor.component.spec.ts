@@ -481,6 +481,21 @@ describe('CampaignEditorComponent', () => {
       expect(svc.scheduleCampaign).toHaveBeenCalledWith('cmp-1', {});
     });
 
+    it('"Send Now" lands on the list with a queued notice; an approval-needed result says so', async () => {
+      await confirmed();
+      component.form.sendOption = 'now';
+      component.scheduleOrSend();
+      expect(router.navigate).toHaveBeenCalledWith(['/marketing/campaigns'], {
+        state: { notice: expect.stringContaining('Sending starts within about a minute') },
+      });
+
+      svc.scheduleCampaign.mockReturnValue(of({ status: 'pending_approval' }));
+      component.scheduleOrSend();
+      expect(router.navigate).toHaveBeenLastCalledWith(['/marketing/campaigns'], {
+        state: { notice: expect.stringContaining('Super Admin must approve') },
+      });
+    });
+
     it('scheduling is refused until the current revision was tested', async () => {
       await create();
       fill();

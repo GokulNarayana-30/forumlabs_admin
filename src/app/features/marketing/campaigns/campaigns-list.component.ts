@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -17,6 +17,7 @@ import { StaffStateService } from '../../../core/state/staff-state.service';
 export class CampaignsListComponent implements OnInit {
   private readonly campaignsService = inject(CampaignsService);
   private readonly staffState = inject(StaffStateService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly campaigns = signal<CampaignItem[]>([]);
   readonly loading = signal<boolean>(true);
@@ -26,6 +27,9 @@ export class CampaignsListComponent implements OnInit {
   readonly loadError = signal<string | null>(null);
   /** An approve or cancel failed (409, 422, 503); the rows stay as they were. */
   readonly actionError = signal<string | null>(null);
+
+  /** Shown once after the editor queues a campaign (Send Now / Schedule), passed in navigation state. */
+  readonly notice = signal<string | null>(null);
 
   readonly pageSize = 20;
   readonly page = signal<number>(1);
@@ -43,12 +47,21 @@ export class CampaignsListComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    const fromEditor = (history.state as { notice?: unknown } | null)?.notice;
+    if (typeof fromEditor === 'string') this.notice.set(fromEditor);
     this.loadCampaigns();
+    // A queued campaign moves scheduled -> sending -> sent on the server within a minute or two.
+    // Refresh quietly (no spinner) while any row is still moving, so the user sees it happen.
+    const timer = setInterval(() => {
+      if (this.campaigns().some((c) => c.status === 'scheduled' || c.status === 'sending'))
+        this.loadCampaigns(true);
+    }, 10_000);
+    this.destroyRef.onDestroy(() => clearInterval(timer));
   }
 
-  loadCampaigns(): void {
-    this.loading.set(true);
-    this.loadError.set(null);
+  loadCampaigns(silent = false): void {
+    if (!silent) this.loading.set(true);
+    if (!silent) this.loadError.set(null);
     const filter = this.selectedStatus() !== 'all' ? this.selectedStatus() : undefined;
     this.campaignsService
       .listCampaigns({ status: filter, page: this.page(), limit: this.pageSize })
@@ -59,6 +72,7 @@ export class CampaignsListComponent implements OnInit {
           this.loading.set(false);
         },
         error: (err) => {
+          if (silent) return;
           this.loading.set(false);
           this.loadError.set(marketingErrorMessage(err, 'Campaigns could not be loaded.'));
         },
