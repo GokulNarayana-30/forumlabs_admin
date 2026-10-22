@@ -658,6 +658,40 @@ describe('CampaignEditorComponent', () => {
     });
   });
 
+  describe('Send Now on a form that was never saved', () => {
+    it('saves the draft first, then queues it (it used to do nothing, silently)', async () => {
+      await create();
+      fill();
+      vi.spyOn(TestBed.inject(StaffStateService), 'hasRole').mockReturnValue(true);
+      expect(component.campaignId).toBeNull();
+      component.form.sendOption = 'now';
+
+      component.scheduleOrSend();
+
+      expect(svc.createCampaign).toHaveBeenCalledTimes(1);
+      expect(svc.scheduleCampaign).toHaveBeenCalledTimes(1);
+      expect(svc.scheduleCampaign.mock.calls[0][0]).toBe(component.campaignId);
+      expect(router.navigate).toHaveBeenCalledWith(['/marketing/campaigns'], expect.anything());
+    });
+
+    it('a failed save is shown next to the button and the button is usable again', async () => {
+      await create();
+      fill();
+      vi.spyOn(TestBed.inject(StaffStateService), 'hasRole').mockReturnValue(true);
+      svc.createCampaign.mockReturnValue(
+        throwError(() => new ApiClientError(422, 'unprocessable', 'Title is too long')),
+      );
+      component.scheduleOrSend();
+      fixture.detectChanges();
+
+      expect(svc.scheduleCampaign).not.toHaveBeenCalled();
+      expect(component.scheduling()).toBe(false);
+      expect(el().querySelector('[data-testid="schedule-error"]')?.textContent).toContain(
+        'Title is too long',
+      );
+    });
+  });
+
   describe('marketingErrorMessage', () => {
     it('503 with push down returns synchronized push not connected error', () => {
       const err = new ApiClientError(503, 'service_unavailable', 'down', { push: 'down' });

@@ -634,6 +634,15 @@
           }
         </div>
 
+        @if (errorMessage()) {
+          <div
+            data-testid="schedule-error"
+            class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+          >
+            {{ errorMessage() }}
+          </div>
+        }
+
         <div class="pt-4 border-t border-surface-100 flex items-center justify-between">
           <div class="text-xs text-surface-500">
             @if (policy()?.push_connected === false) {

@@ -558,11 +558,7 @@ export class CampaignEditorComponent implements OnInit {
   }
 
   scheduleOrSend(): void {
-    if (
-      !this.campaignId ||
-      !(this.testSendSuccess() || this.canSkipTest()) ||
-      this.policy()?.push_connected === false
-    )
+    if (!(this.testSendSuccess() || this.canSkipTest()) || this.policy()?.push_connected === false)
       return;
 
     const problem = this.scheduleProblem();
@@ -571,6 +567,16 @@ export class CampaignEditorComponent implements OnInit {
       return;
     }
 
+    // A brand-new or edited form has nothing (or something stale) on the server: save the draft first,
+    // then queue it. Before, a click on an unsaved campaign did nothing at all and said nothing.
+    this.scheduling.set(true);
+    this.saveDraft(
+      (saved) => this.queueCampaign(saved.id),
+      () => this.scheduling.set(false),
+    );
+  }
+
+  private queueCampaign(campaignId: string): void {
     this.scheduling.set(true);
     this.errorMessage.set(null);
 
@@ -579,7 +585,7 @@ export class CampaignEditorComponent implements OnInit {
         ? istInputToInstant(`${this.form.sendAtDate}T${this.form.sendAtTime}`)
         : null;
 
-    this.campaignsService.scheduleCampaign(this.campaignId, sendAt ? { sendAt } : {}).subscribe({
+    this.campaignsService.scheduleCampaign(campaignId, sendAt ? { sendAt } : {}).subscribe({
       next: (campaign) => {
         this.scheduling.set(false);
         // Send Now only queues the campaign; the server picks it up on its next minute tick. Say so on
