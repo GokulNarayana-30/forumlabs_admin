@@ -2,6 +2,7 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { StaffStateService } from '../../../core/state/staff-state.service';
 import { UiButtonComponent } from '../../../shared/ui/ui-button.component';
 import { imageUrlProblem } from '../image-url';
 import { istInputToInstant } from '../ist-datetime';
@@ -49,6 +50,12 @@ export class CampaignEditorComponent implements OnInit {
   private readonly campaignsService = inject(CampaignsService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly staffState = inject(StaffStateService);
+
+  /** Super admins may send without a test send; the API enforces the same rule. */
+  canSkipTest(): boolean {
+    return this.staffState.hasRole('super_admin');
+  }
 
   campaignId: string | null = null;
   readonly loading = signal<boolean>(false);
@@ -92,6 +99,18 @@ export class CampaignEditorComponent implements OnInit {
     const est = this.estimate();
     const policy = this.policy();
     return est !== null && policy !== null && est.estimated_count > policy.approval_threshold;
+  });
+
+  /** The push configuration state from policy.push_connected. */
+  readonly pushStateMessage = computed(() => {
+    const connected = this.policy()?.push_connected;
+    if (connected === true) {
+      return 'Push is configured: test sends go to your registered devices.';
+    }
+    if (connected === false) {
+      return 'Push is not connected yet: test send and scheduling are unavailable.';
+    }
+    return null;
   });
 
   /** One id per test attempt of a revision: a retry of the same saved revision replays, never re-sends. */
@@ -493,6 +512,7 @@ export class CampaignEditorComponent implements OnInit {
   }
 
   runTestSend(): void {
+    if (this.policy()?.push_connected === false) return;
     const devices = this.selectedDeviceIds();
     if (devices.length === 0) return;
 
@@ -538,7 +558,12 @@ export class CampaignEditorComponent implements OnInit {
   }
 
   scheduleOrSend(): void {
-    if (!this.campaignId || !this.testSendSuccess()) return;
+    if (
+      !this.campaignId ||
+      !(this.testSendSuccess() || this.canSkipTest()) ||
+      this.policy()?.push_connected === false
+    )
+      return;
 
     const problem = this.scheduleProblem();
     if (problem) {

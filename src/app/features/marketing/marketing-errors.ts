@@ -8,7 +8,7 @@ import { ApiClientError } from '../../core/api/api-client.service';
 export function marketingErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof ApiClientError) {
     if (error.status === 503 && error.details?.['push'] === 'down') {
-      return 'Push notifications are not connected yet, so campaigns cannot be test-sent or scheduled.';
+      return 'Push is not connected yet: test send and scheduling are unavailable.';
     }
     if (error.status === 503) return 'Marketing is temporarily unavailable. Try again shortly.';
     if (error.message) return error.message;

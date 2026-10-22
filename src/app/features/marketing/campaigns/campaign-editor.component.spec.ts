@@ -4,12 +4,15 @@ import { provideRouter, ActivatedRoute, Router } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 import { ApiClientError } from '../../../core/api/api-client.service';
 import { CampaignEditorComponent } from './campaign-editor.component';
+import { StaffStateService } from '../../../core/state/staff-state.service';
+import { marketingErrorMessage } from '../marketing-errors';
 import {
   CampaignsService,
   CampaignItem,
   CampaignPolicyDto,
   CreateCampaignDto,
   TestSendLogItem,
+  TestDeviceItem,
 } from './campaigns.service';
 
 /**
@@ -68,7 +71,14 @@ describe('CampaignEditorComponent', () => {
     fixture.detectChanges();
   };
 
-  async function create(opts: { id?: string; policyFails?: boolean } = {}): Promise<void> {
+  async function create(
+    opts: {
+      id?: string;
+      policyFails?: boolean;
+      policy?: CampaignPolicyDto;
+      testDevices?: TestDeviceItem[];
+    } = {},
+  ): Promise<void> {
     tests = [];
     server = baseCampaign();
 
@@ -113,11 +123,11 @@ describe('CampaignEditorComponent', () => {
       getPolicy: vi.fn(() =>
         opts.policyFails
           ? throwError(() => new ApiClientError(503, 'service_unavailable', 'down'))
-          : of(policy),
+          : of(opts.policy ?? policy),
       ),
       getTestDevices: vi.fn(() =>
         of({
-          devices: [
+          devices: opts.testDevices ?? [
             {
               id: 'dev-001',
               platform: 'android',
@@ -564,6 +574,81 @@ describe('CampaignEditorComponent', () => {
       await create();
       fixture.detectChanges();
       expect(el().textContent).toContain('android 2.1.0');
+    });
+  });
+
+  describe('push state and device hint (Plan 16.1-07 Task 1)', () => {
+    it('push_connected true shows configured line', async () => {
+      await create({ policy: { ...policy, push_connected: true } });
+      fixture.detectChanges();
+      expect(el().textContent).toContain(
+        'Push is configured: test sends go to your registered devices.',
+      );
+    });
+
+    it('push_connected false shows not connected line and disables test-send and schedule', async () => {
+      await create({ policy: { ...policy, push_connected: false } });
+      fill();
+      fixture.detectChanges();
+      expect(el().textContent).toContain(
+        'Push is not connected yet: test send and scheduling are unavailable.',
+      );
+
+      // Test send button is disabled
+      const testSendBtn = q('test-send-button')?.querySelector('button');
+      expect(testSendBtn?.disabled).toBe(true);
+
+      // Schedule button is disabled
+      const scheduleBtn = q('schedule-button')?.querySelector('button');
+      expect(scheduleBtn?.disabled).toBe(true);
+
+      // Component method pushStateMessage returns the reason
+      expect(component.pushStateMessage()).toBe(
+        'Push is not connected yet: test send and scheduling are unavailable.',
+      );
+    });
+
+    it('push_connected undefined (old API) shows no extra push state line', async () => {
+      await create({ policy: { ...policy, push_connected: undefined } });
+      fixture.detectChanges();
+      expect(el().textContent).not.toContain('Push is configured');
+      expect(el().textContent).not.toContain('Push is not connected yet');
+      expect(q('push-state-message')).toBeNull();
+    });
+
+    it('empty test devices shows registration hint', async () => {
+      await create({ testDevices: [] });
+      fixture.detectChanges();
+      expect(el().textContent).toContain(
+        'Open the app signed in as yourself and allow notifications to register a device.',
+      );
+    });
+  });
+
+  describe('sending without a test send', () => {
+    it('unlocks Send Now for a super admin; other roles stay locked until a test send succeeds', async () => {
+      await create({ policy: { ...policy, push_connected: true } });
+      fill();
+      fixture.detectChanges();
+      const scheduleBtn = () => q('schedule-button')?.querySelector('button');
+      expect(scheduleBtn()?.disabled).toBe(true);
+      expect(el().textContent).toContain('Complete test send above to unlock scheduling.');
+
+      vi.spyOn(TestBed.inject(StaffStateService), 'hasRole').mockReturnValue(true);
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(scheduleBtn()?.disabled).toBe(false);
+      expect(el().textContent).not.toContain('Complete test send above to unlock scheduling.');
+    });
+  });
+
+  describe('marketingErrorMessage', () => {
+    it('503 with push down returns synchronized push not connected error', () => {
+      const err = new ApiClientError(503, 'service_unavailable', 'down', { push: 'down' });
+      expect(marketingErrorMessage(err, 'fallback')).toBe(
+        'Push is not connected yet: test send and scheduling are unavailable.',
+      );
     });
   });
 });

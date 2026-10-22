@@ -146,6 +146,7 @@ export interface CampaignRecipientsPageDto {
 export interface CampaignPolicyDto {
   approval_threshold: number;
   allowed_image_hosts: string[];
+  push_connected?: boolean;
 }
 
 export interface TestDeviceItem {
