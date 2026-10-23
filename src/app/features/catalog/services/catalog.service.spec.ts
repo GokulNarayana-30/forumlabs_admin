@@ -71,4 +71,46 @@ describe('CatalogService', () => {
     });
     expect(res.mrp_paise).toBe(55000);
   });
+
+  it('createItem calls POST /staff/catalog/items with idempotent: true', async () => {
+    const payload = {
+      kind: 'test' as const,
+      code: 'CBC',
+      name: 'Complete Blood Count',
+      category_ids: ['cat-hematology'],
+      price: '500',
+    };
+    const response = {
+      kind: 'catalog_item_created' as const,
+      item: mockItems[0] as any,
+      catalog_version: 1,
+    };
+    mockApiClient.post.mockReturnValue(of(response));
+
+    const res = await service.createItem(payload);
+    expect(mockApiClient.post).toHaveBeenCalledWith('/staff/catalog/items', payload, {
+      idempotent: true,
+    });
+    expect(res).toEqual(response);
+  });
+
+  it('setVisibility calls PATCH /staff/catalog/items/:id/visibility with idempotent: true', async () => {
+    const response = {
+      kind: 'catalog_visibility_set' as const,
+      item: { ...mockItems[0], active: false } as any,
+      changed: true,
+      catalog_version: 2,
+    };
+    mockApiClient.patch.mockReturnValue(of(response));
+
+    const res = await service.setVisibility('item-1', false);
+    expect(mockApiClient.patch).toHaveBeenCalledWith(
+      '/staff/catalog/items/item-1/visibility',
+      { active: false },
+      {
+        idempotent: true,
+      },
+    );
+    expect(res).toEqual(response);
+  });
 });

@@ -1,0 +1,412 @@
+<div class="space-y-6 max-w-4xl">
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-surface-900 tracking-tight">Add Catalog Item</h1>
+      <p class="text-xs text-surface-500 mt-1">
+        Create a new diagnostic test or health package in the active catalog.
+      </p>
+    </div>
+    <a
+      routerLink="/catalog"
+      class="px-3.5 py-2 rounded-xl text-xs font-semibold text-surface-700 bg-white border border-surface-200 hover:bg-surface-50 transition-colors shadow-2xs"
+    >
+      Cancel & Return
+    </a>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700" role="alert">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  <form (ngSubmit)="onSubmit()" class="space-y-6">
+    <!-- Basic Information Card -->
+    <div class="p-6 bg-white rounded-2xl border border-surface-200 shadow-xs space-y-4">
+      <h2 class="text-base font-bold text-surface-900">Basic Information</h2>
+
+      <!-- Kind Selector -->
+      <div>
+        <label class="block text-xs font-semibold text-surface-700 mb-1">Item Type</label>
+        <div class="flex gap-4">
+          <label class="flex items-center gap-2 text-sm text-surface-800 cursor-pointer">
+            <input
+              type="radio"
+              name="kind"
+              value="test"
+              [ngModel]="kind()"
+              (ngModelChange)="kind.set($event)"
+              class="text-primary-600 focus:ring-primary-500"
+            />
+            <span>Diagnostic Test</span>
+          </label>
+          <label class="flex items-center gap-2 text-sm text-surface-800 cursor-pointer">
+            <input
+              type="radio"
+              name="kind"
+              value="package"
+              [ngModel]="kind()"
+              (ngModelChange)="kind.set($event)"
+              class="text-primary-600 focus:ring-primary-500"
+            />
+            <span>Health Package</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- Code -->
+        <div>
+          <label for="code" class="block text-xs font-semibold text-surface-700 mb-1">
+            Item Code <span class="text-red-500">*</span>
+          </label>
+          <input
+            id="code"
+            type="text"
+            [ngModel]="code()"
+            (ngModelChange)="code.set($event)"
+            name="code"
+            placeholder="e.g. CBC or HBA1C"
+            class="w-full px-3 py-2 rounded-xl border border-surface-300 text-sm text-surface-900 uppercase focus:outline-hidden focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+          />
+          @if (fieldErrors().get('code')) {
+            <p class="text-xs text-red-600 mt-1">{{ fieldErrors().get('code') }}</p>
+          }
+        </div>
+
+        <!-- Name -->
+        <div>
+          <label for="name" class="block text-xs font-semibold text-surface-700 mb-1">
+            Display Name <span class="text-red-500">*</span>
+          </label>
+          <input
+            id="name"
+            type="text"
+            [ngModel]="name()"
+            (ngModelChange)="name.set($event)"
+            name="name"
+            placeholder="e.g. Complete Blood Count"
+            class="w-full px-3 py-2 rounded-xl border border-surface-300 text-sm text-surface-900 focus:outline-hidden focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+          />
+          @if (fieldErrors().get('name')) {
+            <p class="text-xs text-red-600 mt-1">{{ fieldErrors().get('name') }}</p>
+          }
+        </div>
+      </div>
+
+      <!-- Categories Selector -->
+      <div>
+        <label class="block text-xs font-semibold text-surface-700 mb-1">
+          Categories <span class="text-red-500">*</span>
+        </label>
+        <div class="flex flex-wrap gap-2">
+          @for (cat of categories(); track cat.id) {
+            <button
+              type="button"
+              (click)="toggleCategory(cat.id)"
+              [class.bg-primary-50]="selectedCategoryIds().includes(cat.id)"
+              [class.border-primary-400]="selectedCategoryIds().includes(cat.id)"
+              [class.text-primary-800]="selectedCategoryIds().includes(cat.id)"
+              class="px-3 py-1.5 rounded-lg border border-surface-200 text-xs font-medium text-surface-700 hover:bg-surface-50 transition-colors"
+            >
+              {{ cat.name }}
+            </button>
+          }
+        </div>
+        @if (fieldErrors().get('category_ids')) {
+          <p class="text-xs text-red-600 mt-1">{{ fieldErrors().get('category_ids') }}</p>
+        }
+      </div>
+
+      <!-- Pricing -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label for="price" class="block text-xs font-semibold text-surface-700 mb-1">
+            MRP (Whole Rupees) <span class="text-red-500">*</span>
+          </label>
+          <div class="relative">
+            <span class="absolute left-3 top-2 text-sm text-surface-400">₹</span>
+            <input
+              id="price"
+              type="text"
+              inputmode="numeric"
+              [ngModel]="price()"
+              (ngModelChange)="price.set($event)"
+              name="price"
+              placeholder="e.g. 500"
+              class="w-full pl-7 pr-3 py-2 rounded-xl border border-surface-300 text-sm text-surface-900 focus:outline-hidden focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+            />
+          </div>
+          @if (fieldErrors().get('price')) {
+            <p class="text-xs text-red-600 mt-1">{{ fieldErrors().get('price') }}</p>
+          }
+        </div>
+
+        <div>
+          <label for="offerPrice" class="block text-xs font-semibold text-surface-700 mb-1">
+            Offer Price (Whole Rupees, Optional)
+          </label>
+          <div class="relative">
+            <span class="absolute left-3 top-2 text-sm text-surface-400">₹</span>
+            <input
+              id="offerPrice"
+              type="text"
+              inputmode="numeric"
+              [ngModel]="offerPrice()"
+              (ngModelChange)="offerPrice.set($event)"
+              name="offerPrice"
+              placeholder="Leave blank if no discount"
+              class="w-full pl-7 pr-3 py-2 rounded-xl border border-surface-300 text-sm text-surface-900 focus:outline-hidden focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+            />
+          </div>
+          @if (fieldErrors().get('offer_price')) {
+            <p class="text-xs text-red-600 mt-1">{{ fieldErrors().get('offer_price') }}</p>
+          }
+        </div>
+      </div>
+
+      <!-- Who can book -->
+      <div>
+        <label class="block text-xs font-semibold text-surface-700 mb-1">Who Can Book</label>
+        <select
+          [ngModel]="whoCanBook()"
+          (ngModelChange)="whoCanBook.set($event)"
+          name="whoCanBook"
+          class="w-full sm:w-64 px-3 py-2 rounded-xl border border-surface-300 text-sm text-surface-900 focus:outline-hidden focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+        >
+          <option value="Everyone">Everyone</option>
+          <option value="Women">Women Only</option>
+          <option value="Men">Men Only</option>
+        </select>
+      </div>
+
+      <!-- Description -->
+      <div>
+        <label for="description" class="block text-xs font-semibold text-surface-700 mb-1"
+          >Description (Optional)</label
+        >
+        <textarea
+          id="description"
+          [ngModel]="description()"
+          (ngModelChange)="description.set($event)"
+          name="description"
+          rows="2"
+          placeholder="Brief clinical description of the test or package"
+          class="w-full px-3 py-2 rounded-xl border border-surface-300 text-sm text-surface-900 focus:outline-hidden focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+        ></textarea>
+      </div>
+    </div>
+
+    <!-- Package Inclusions Card (Only for Package) -->
+    @if (kind() === 'package') {
+      <div class="p-6 bg-white rounded-2xl border border-surface-200 shadow-xs space-y-4">
+        <h2 class="text-base font-bold text-surface-900">Included Tests</h2>
+        <p class="text-xs text-surface-500">
+          Select active diagnostic tests to include in this health package.
+        </p>
+
+        <!-- Selected Test Chips -->
+        <div class="flex flex-wrap gap-2 min-h-8">
+          @for (code of selectedTestCodes(); track code) {
+            <span
+              class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-primary-50 text-primary-800 border border-primary-200"
+            >
+              {{ getTestName(code) }} ({{ code }})
+              <button
+                type="button"
+                (click)="removeTestInclusion(code)"
+                class="text-primary-600 hover:text-primary-800 font-bold ml-1"
+                aria-label="Remove test"
+              >
+                ×
+              </button>
+            </span>
+          }
+          @if (selectedTestCodes().length === 0) {
+            <span class="text-xs text-surface-400 italic">No tests selected yet.</span>
+          }
+        </div>
+        @if (fieldErrors().get('tests_included')) {
+          <p class="text-xs text-red-600 mt-1">{{ fieldErrors().get('tests_included') }}</p>
+        }
+
+        <!-- Test Picker Dropdown -->
+        <div>
+          <label class="block text-xs font-semibold text-surface-700 mb-1">Add Active Test</label>
+          <select
+            (change)="addTestInclusion($any($event.target).value); $any($event.target).value = ''"
+            class="w-full sm:w-96 px-3 py-2 rounded-xl border border-surface-300 text-sm text-surface-900 focus:outline-hidden focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+          >
+            <option value="">-- Choose a test to add --</option>
+            @for (test of activeTests(); track test.id) {
+              @if (!selectedTestCodes().includes(test.code!)) {
+                <option [value]="test.code">{{ test.name }} ({{ test.code }})</option>
+              }
+            }
+          </select>
+        </div>
+      </div>
+    }
+
+    <!-- Optional Medical Information Card -->
+    <div class="p-6 bg-white rounded-2xl border border-surface-200 shadow-xs space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-base font-bold text-surface-900">Medical Requirements</h2>
+        <span
+          class="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md"
+        >
+          Only enter values confirmed by the lab. Leave blank if unconfirmed.
+        </span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <!-- Sample Type -->
+        <div>
+          <label for="sampleType" class="block text-xs font-semibold text-surface-700 mb-1"
+            >Sample Type</label
+          >
+          <input
+            id="sampleType"
+            type="text"
+            [ngModel]="sampleType()"
+            (ngModelChange)="sampleType.set($event)"
+            name="sampleType"
+            placeholder="e.g. Blood (EDTA)"
+            class="w-full px-3 py-2 rounded-xl border border-surface-300 text-sm text-surface-900 focus:outline-hidden focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+          />
+        </div>
+
+        <!-- Fasting Requirements -->
+        <div>
+          <label for="fasting" class="block text-xs font-semibold text-surface-700 mb-1"
+            >Fasting Instructions</label
+          >
+          <input
+            id="fasting"
+            type="text"
+            [ngModel]="fasting()"
+            (ngModelChange)="fasting.set($event)"
+            name="fasting"
+            placeholder="e.g. 10-12 or No"
+            class="w-full px-3 py-2 rounded-xl border border-surface-300 text-sm text-surface-900 focus:outline-hidden focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+          />
+          <p class="text-xs text-surface-500 mt-1">
+            Hours as a number or a range (10-12), or the word No. Leave empty if not confirmed.
+          </p>
+          @if (fieldErrors().get('fasting')) {
+            <p data-testid="fasting-error" class="text-xs text-red-600 mt-1">
+              {{ fieldErrors().get('fasting') }}
+            </p>
+          }
+        </div>
+
+        <!-- Report Turnaround Time -->
+        <div>
+          <label for="reportTime" class="block text-xs font-semibold text-surface-700 mb-1"
+            >Report Time</label
+          >
+          <input
+            id="reportTime"
+            type="text"
+            [ngModel]="reportTime()"
+            (ngModelChange)="reportTime.set($event)"
+            name="reportTime"
+            placeholder="e.g. 24"
+            class="w-full px-3 py-2 rounded-xl border border-surface-300 text-sm text-surface-900 focus:outline-hidden focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+          />
+          <p class="text-xs text-surface-500 mt-1">
+            Whole hours (for example 24). Leave empty if not confirmed.
+          </p>
+          @if (fieldErrors().get('report_time')) {
+            <p data-testid="report-time-error" class="text-xs text-red-600 mt-1">
+              {{ fieldErrors().get('report_time') }}
+            </p>
+          }
+        </div>
+      </div>
+
+      <!-- Preparation Instructions -->
+      <div>
+        <label for="preparation" class="block text-xs font-semibold text-surface-700 mb-1">
+          Patient Preparation Instructions (One per line)
+        </label>
+        <textarea
+          id="preparation"
+          [ngModel]="preparation()"
+          (ngModelChange)="preparation.set($event)"
+          name="preparation"
+          rows="3"
+          placeholder="e.g. Drink plenty of water before test&#10;Avoid caffeine for 8 hours"
+          class="w-full px-3 py-2 rounded-xl border border-surface-300 text-sm text-surface-900 focus:outline-hidden focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+        ></textarea>
+      </div>
+
+      <!-- Aliases -->
+      <div>
+        <label for="aliases" class="block text-xs font-semibold text-surface-700 mb-1">
+          Search Aliases & Keywords (Comma-separated)
+        </label>
+        <input
+          id="aliases"
+          type="text"
+          [ngModel]="aliases()"
+          (ngModelChange)="aliases.set($event)"
+          name="aliases"
+          placeholder="e.g. Hemogram, Blood Picture"
+          class="w-full px-3 py-2 rounded-xl border border-surface-300 text-sm text-surface-900 focus:outline-hidden focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+        />
+      </div>
+    </div>
+
+    <!-- Visibility & Status Card -->
+    <div class="p-6 bg-white rounded-2xl border border-surface-200 shadow-xs space-y-4">
+      <h2 class="text-base font-bold text-surface-900">Visibility & Status</h2>
+
+      <div class="flex flex-col sm:flex-row gap-6">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            [ngModel]="active()"
+            (ngModelChange)="active.set($event)"
+            name="active"
+            class="rounded-sm text-primary-600 focus:ring-primary-500"
+          />
+          <span class="text-sm font-medium text-surface-800">Active (Visible in Catalog)</span>
+        </label>
+
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            [ngModel]="popular()"
+            (ngModelChange)="popular.set($event)"
+            name="popular"
+            class="rounded-sm text-primary-600 focus:ring-primary-500"
+          />
+          <span class="text-sm font-medium text-surface-800">Mark as Popular / Featured</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center justify-end gap-3 pt-2">
+      <a
+        routerLink="/catalog"
+        class="px-4 py-2.5 rounded-xl text-sm font-semibold text-surface-700 bg-white border border-surface-200 hover:bg-surface-50 transition-colors shadow-2xs"
+      >
+        Cancel
+      </a>
+      <button
+        type="submit"
+        [disabled]="submitting() || loading()"
+        class="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 transition-colors shadow-xs"
+      >
+        @if (submitting()) {
+          Saving...
+        } @else {
+          Create Item
+        }
+      </button>
+    </div>
+  </form>
+</div>

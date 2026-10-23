@@ -1,6 +1,9 @@
+import '@angular/compiler';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CatalogEditDialogComponent } from './catalog-edit-dialog.component';
 import { CatalogService } from '../../services/catalog.service';
+import { ApiClientError } from '../../../../core/api/api-client.service';
 
 describe('CatalogEditDialogComponent', () => {
   let fixture: ComponentFixture<CatalogEditDialogComponent>;
@@ -31,6 +34,7 @@ describe('CatalogEditDialogComponent', () => {
   beforeEach(async () => {
     mockCatalogService = {
       updateItem: vi.fn().mockResolvedValue({ ...mockItem, mrp_paise: 60000 }),
+      getItem: vi.fn().mockResolvedValue(mockItem),
     };
 
     await TestBed.configureTestingModule({
@@ -92,5 +96,32 @@ describe('CatalogEditDialogComponent', () => {
       active: true,
     });
     expect(component.visible).toBe(false);
+  });
+
+  it('re-reads getItem and resets controls to server values upon update refusal', async () => {
+    // Change form state
+    component.mrpRupees.set(800);
+    component.eligibleGender.set('female');
+    component.active.set(false);
+
+    // Mock updateItem rejection
+    mockCatalogService.updateItem.mockRejectedValueOnce(
+      new ApiClientError(400, 'refusal', 'Update refused by server'),
+    );
+    mockCatalogService.getItem.mockResolvedValueOnce({
+      ...mockItem,
+      mrp_paise: 50000,
+      eligible_gender: 'any',
+      active: true,
+    });
+
+    await component.onSubmit();
+
+    expect(mockCatalogService.getItem).toHaveBeenCalledWith('item-1');
+    expect(component.errorMessage()).toContain('Update refused by server');
+    // Controls restored to server state
+    expect(component.mrpRupees()).toBe(500);
+    expect(component.eligibleGender()).toBe('any');
+    expect(component.active()).toBe(true);
   });
 });

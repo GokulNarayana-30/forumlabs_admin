@@ -121,6 +121,21 @@ export class CatalogEditDialogComponent implements OnChanges {
     } catch (err: unknown) {
       const message = errorText(err, 'Failed to update item');
       this.errorMessage.set(message);
+
+      try {
+        const fresh = await this.catalogService.getItem(this.item.id);
+        this.mrpRupees.set(fresh.mrp_paise / 100);
+        this.offerPriceRupees.set(
+          fresh.offer_price_paise !== null ? fresh.offer_price_paise / 100 : null,
+        );
+        this.eligibleGender.set((fresh.eligible_gender as 'any' | 'male' | 'female') || 'any');
+        this.minAgeYears.set(fresh.min_age_years);
+        this.maxAgeYears.set(fresh.max_age_years);
+        this.selectedCategoryIds.set([...fresh.category_ids]);
+        this.active.set(fresh.active);
+      } catch {
+        this.initForm();
+      }
     } finally {
       this.isSubmitting.set(false);
     }

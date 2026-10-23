@@ -23,8 +23,47 @@ export interface StaffCatalogItemDetailDto extends StaffCatalogItemListItemDto {
   preparation: string[];
   aliases: string[];
   sample_type: string | null;
-  fasting_required: boolean;
+  fasting_required: boolean | null;
   report_tat_hours: number | null;
+}
+
+export interface CreateCatalogItemPayload {
+  kind: 'test' | 'package';
+  code: string;
+  name: string;
+  category_ids: string[];
+  price: string;
+  offer_price?: string | null;
+  who_can_book?: 'Everyone' | 'Women' | 'Men';
+  description?: string | null;
+  aliases?: string[];
+  preparation?: string[];
+  sample_type?: string | null;
+  fasting?: string | null;
+  report_time?: string | null;
+  active?: boolean;
+  popular?: boolean;
+  tests_included?: string[];
+}
+
+export type StaffCatalogItemCreateResultDto =
+  | {
+      kind: 'catalog_item_created';
+      item: StaffCatalogItemDetailDto;
+      catalog_version: number;
+      warnings?: { level: 'error' | 'warning'; field: string | null; code: string }[];
+    }
+  | {
+      kind: 'code_exists';
+      code: string;
+      existing_id: string;
+    };
+
+export interface StaffCatalogVisibilityResultDto {
+  kind: 'catalog_visibility_set';
+  item: StaffCatalogItemDetailDto;
+  changed: boolean;
+  catalog_version: number;
 }
 
 export interface StaffCatalogCategoryListItemDto {
@@ -209,6 +248,24 @@ export class CatalogService {
       this.api.post<CatalogImportApplyResultDto>(
         `/staff/catalog/imports/${importId}/apply`,
         options,
+        { idempotent: true },
+      ),
+    );
+  }
+
+  async createItem(payload: CreateCatalogItemPayload): Promise<StaffCatalogItemCreateResultDto> {
+    return firstValueFrom(
+      this.api.post<StaffCatalogItemCreateResultDto>('/staff/catalog/items', payload, {
+        idempotent: true,
+      }),
+    );
+  }
+
+  async setVisibility(id: string, active: boolean): Promise<StaffCatalogVisibilityResultDto> {
+    return firstValueFrom(
+      this.api.patch<StaffCatalogVisibilityResultDto>(
+        `/staff/catalog/items/${encodeURIComponent(id)}/visibility`,
+        { active },
         { idempotent: true },
       ),
     );

@@ -11,6 +11,12 @@
     <!-- Quick action links -->
     <div class="flex items-center gap-2">
       <a
+        routerLink="new"
+        class="px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 transition-colors shadow-xs"
+      >
+        Add Item
+      </a>
+      <a
         routerLink="categories"
         class="px-3.5 py-2 rounded-xl text-xs font-semibold text-surface-700 bg-white border border-surface-200 hover:bg-surface-50 transition-colors shadow-2xs"
       >
@@ -18,7 +24,7 @@
       </a>
       <a
         routerLink="import"
-        class="px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-primary-600 hover:bg-primary-700 transition-colors shadow-xs"
+        class="px-3.5 py-2 rounded-xl text-xs font-semibold text-surface-700 bg-white border border-surface-200 hover:bg-surface-50 transition-colors shadow-2xs"
       >
         Excel Import
       </a>
@@ -42,7 +48,7 @@
 
   <!-- Filters & Search -->
   <div
-    class="p-4 bg-white rounded-2xl border border-surface-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+    class="p-4 bg-white rounded-2xl border border-surface-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4"
   >
     <div class="flex-1 max-w-md">
       <input
@@ -54,7 +60,45 @@
       />
     </div>
 
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-3">
+      <!-- Type Filter Buttons -->
+      <div class="inline-flex rounded-xl border border-surface-200 bg-surface-50 p-1">
+        <button
+          type="button"
+          (click)="typeFilter.set('all')"
+          [class]="
+            typeFilter() === 'all'
+              ? 'px-3 py-1 rounded-lg text-xs font-bold bg-white text-surface-900 shadow-2xs'
+              : 'px-3 py-1 rounded-lg text-xs font-medium text-surface-600 hover:text-surface-900'
+          "
+        >
+          All
+        </button>
+        <button
+          type="button"
+          (click)="typeFilter.set('test')"
+          [class]="
+            typeFilter() === 'test'
+              ? 'px-3 py-1 rounded-lg text-xs font-bold bg-white text-surface-900 shadow-2xs'
+              : 'px-3 py-1 rounded-lg text-xs font-medium text-surface-600 hover:text-surface-900'
+          "
+        >
+          Tests
+        </button>
+        <button
+          type="button"
+          (click)="typeFilter.set('package')"
+          [class]="
+            typeFilter() === 'package'
+              ? 'px-3 py-1 rounded-lg text-xs font-bold bg-white text-surface-900 shadow-2xs'
+              : 'px-3 py-1 rounded-lg text-xs font-medium text-surface-600 hover:text-surface-900'
+          "
+        >
+          Packages
+        </button>
+      </div>
+
+      <!-- Category Filter -->
       <select
         [ngModel]="selectedCategoryFilter()"
         (ngModelChange)="selectedCategoryFilter.set($event)"
@@ -66,8 +110,22 @@
         }
       </select>
 
-      <span class="text-xs font-semibold text-surface-500 whitespace-nowrap">
-        {{ filteredItems().length }} of {{ items().length }} items
+      <!-- Group by category checkbox -->
+      <label
+        class="inline-flex items-center gap-2 cursor-pointer text-xs font-medium text-surface-700 select-none"
+      >
+        <input
+          type="checkbox"
+          [checked]="groupByCategory()"
+          (change)="groupByCategory.set(!groupByCategory())"
+          class="h-4 w-4 rounded-sm border-surface-300 text-primary-600 focus:ring-primary-500"
+        />
+        <span>Group by category</span>
+      </label>
+
+      <!-- Distinct Count -->
+      <span class="text-xs font-semibold text-surface-500 whitespace-nowrap ml-1">
+        {{ distinctFilteredCount() }} of {{ items().length }} items
       </span>
     </div>
   </div>
@@ -87,6 +145,7 @@
             <tr
               class="border-b border-surface-200 bg-surface-50 text-surface-600 font-bold uppercase tracking-wider"
             >
+              <th class="py-3 px-4">Type</th>
               <th class="py-3 px-4">Code</th>
               <th class="py-3 px-4">Item Name</th>
               <th class="py-3 px-4">MRP</th>
@@ -98,62 +157,205 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-surface-100 text-surface-800">
-            @for (item of filteredItems(); track item.id) {
-              <tr class="hover:bg-surface-50 transition-colors">
-                <td class="py-3 px-4 font-mono font-bold text-surface-700">
-                  {{ item.code || '-' }}
-                </td>
-                <td class="py-3 px-4 font-medium text-surface-900">
-                  {{ item.name }}
-                  @if (item.is_popular) {
-                    <span
-                      class="ml-1.5 px-1.5 py-0.5 rounded-sm text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 uppercase"
+            @if (groupByCategory()) {
+              @for (group of groupedCategories(); track group.category.id) {
+                <tr class="bg-surface-100/70 border-y border-surface-200">
+                  <td colspan="9" class="py-2.5 px-4 font-bold text-surface-800 text-xs">
+                    {{ group.category.name }}
+                    <span class="text-[11px] font-normal text-surface-500 ml-1.5"
+                      >({{ group.items.length }}
+                      {{ group.items.length === 1 ? 'item' : 'items' }})</span
                     >
-                      Popular
+                  </td>
+                </tr>
+                @for (item of group.items; track item.id + '-' + $index) {
+                  <tr class="hover:bg-surface-50 transition-colors">
+                    <td class="py-3 px-4">
+                      <span
+                        [class]="
+                          item.kind === 'test'
+                            ? 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary-50 text-primary-800 border border-primary-200 uppercase'
+                            : 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-100 text-surface-800 border border-surface-300 uppercase'
+                        "
+                      >
+                        {{ item.kind === 'test' ? 'Test' : 'Package' }}
+                      </span>
+                    </td>
+                    <td class="py-3 px-4 font-mono font-bold text-surface-700">
+                      {{ item.code || '-' }}
+                    </td>
+                    <td class="py-3 px-4 font-medium text-surface-900">
+                      {{ item.name }}
+                      <span
+                        [class]="
+                          item.kind === 'test'
+                            ? 'ml-1.5 px-1.5 py-0.5 rounded-sm text-[10px] font-bold bg-primary-50 text-primary-800 border border-primary-200 uppercase'
+                            : 'ml-1.5 px-1.5 py-0.5 rounded-sm text-[10px] font-bold bg-surface-100 text-surface-800 border border-surface-300 uppercase'
+                        "
+                      >
+                        {{ item.kind === 'test' ? 'Test' : 'Package' }}
+                      </span>
+                      @if (item.is_popular) {
+                        <span
+                          class="ml-1.5 px-1.5 py-0.5 rounded-sm text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 uppercase"
+                        >
+                          Popular
+                        </span>
+                      }
+                    </td>
+                    <td class="py-3 px-4 font-medium text-surface-800">
+                      ₹{{ (item.mrp_paise / 100).toFixed(2) }}
+                    </td>
+                    <td class="py-3 px-4">
+                      @if (item.offer_price_paise !== null) {
+                        <span class="font-bold text-emerald-700">
+                          ₹{{ (item.offer_price_paise / 100).toFixed(2) }}
+                        </span>
+                      } @else {
+                        <span class="text-surface-400">-</span>
+                      }
+                    </td>
+                    <td class="py-3 px-4 text-surface-600 max-w-xs truncate">
+                      {{ getCategoryNames(item.category_ids) }}
+                    </td>
+                    <td class="py-3 px-4 text-surface-600">
+                      {{
+                        formatEligibility(
+                          item.eligible_gender,
+                          item.min_age_years,
+                          item.max_age_years
+                        )
+                      }}
+                    </td>
+                    <td class="py-3 px-4">
+                      <span
+                        [class]="
+                          item.active
+                            ? 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-100 text-surface-600 border border-surface-200'
+                        "
+                      >
+                        {{ item.active ? 'Active' : 'Inactive' }}
+                      </span>
+                    </td>
+                    <td class="py-3 px-4 text-right space-x-2 whitespace-nowrap">
+                      <button
+                        type="button"
+                        (click)="toggleItemVisibility(item)"
+                        [disabled]="pendingItemIds().has(item.id)"
+                        [class]="
+                          item.active
+                            ? 'px-2.5 py-1 rounded-lg text-xs font-semibold text-amber-700 hover:text-amber-800 hover:bg-amber-50 transition-colors disabled:opacity-50'
+                            : 'px-2.5 py-1 rounded-lg text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 transition-colors disabled:opacity-50'
+                        "
+                      >
+                        {{ item.active ? 'Hide' : 'Show' }}
+                      </button>
+                      <button
+                        type="button"
+                        (click)="openEditDialog(item)"
+                        class="px-2.5 py-1 rounded-lg text-xs font-semibold text-primary-700 hover:text-primary-800 hover:bg-primary-50 transition-colors"
+                      >
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                }
+              }
+            } @else {
+              @for (item of filteredItems(); track item.id) {
+                <tr class="hover:bg-surface-50 transition-colors">
+                  <td class="py-3 px-4">
+                    <span
+                      [class]="
+                        item.kind === 'test'
+                          ? 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary-50 text-primary-800 border border-primary-200 uppercase'
+                          : 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-100 text-surface-800 border border-surface-300 uppercase'
+                      "
+                    >
+                      {{ item.kind === 'test' ? 'Test' : 'Package' }}
                     </span>
-                  }
-                </td>
-                <td class="py-3 px-4 font-medium text-surface-800">
-                  ₹{{ (item.mrp_paise / 100).toFixed(2) }}
-                </td>
-                <td class="py-3 px-4">
-                  @if (item.offer_price_paise !== null) {
-                    <span class="font-bold text-emerald-700">
-                      ₹{{ (item.offer_price_paise / 100).toFixed(2) }}
+                  </td>
+                  <td class="py-3 px-4 font-mono font-bold text-surface-700">
+                    {{ item.code || '-' }}
+                  </td>
+                  <td class="py-3 px-4 font-medium text-surface-900">
+                    {{ item.name }}
+                    <span
+                      [class]="
+                        item.kind === 'test'
+                          ? 'ml-1.5 px-1.5 py-0.5 rounded-sm text-[10px] font-bold bg-primary-50 text-primary-800 border border-primary-200 uppercase'
+                          : 'ml-1.5 px-1.5 py-0.5 rounded-sm text-[10px] font-bold bg-surface-100 text-surface-800 border border-surface-300 uppercase'
+                      "
+                    >
+                      {{ item.kind === 'test' ? 'Test' : 'Package' }}
                     </span>
-                  } @else {
-                    <span class="text-surface-400">-</span>
-                  }
-                </td>
-                <td class="py-3 px-4 text-surface-600 max-w-xs truncate">
-                  {{ getCategoryNames(item.category_ids) }}
-                </td>
-                <td class="py-3 px-4 text-surface-600">
-                  {{
-                    formatEligibility(item.eligible_gender, item.min_age_years, item.max_age_years)
-                  }}
-                </td>
-                <td class="py-3 px-4">
-                  <span
-                    [class]="
-                      item.active
-                        ? 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        : 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-100 text-surface-600 border border-surface-200'
-                    "
-                  >
-                    {{ item.active ? 'Active' : 'Inactive' }}
-                  </span>
-                </td>
-                <td class="py-3 px-4 text-right">
-                  <button
-                    type="button"
-                    (click)="openEditDialog(item)"
-                    class="px-2.5 py-1 rounded-lg text-xs font-semibold text-primary-700 hover:text-primary-800 hover:bg-primary-50 transition-colors"
-                  >
-                    Edit
-                  </button>
-                </td>
-              </tr>
+                    @if (item.is_popular) {
+                      <span
+                        class="ml-1.5 px-1.5 py-0.5 rounded-sm text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 uppercase"
+                      >
+                        Popular
+                      </span>
+                    }
+                  </td>
+                  <td class="py-3 px-4 font-medium text-surface-800">
+                    ₹{{ (item.mrp_paise / 100).toFixed(2) }}
+                  </td>
+                  <td class="py-3 px-4">
+                    @if (item.offer_price_paise !== null) {
+                      <span class="font-bold text-emerald-700">
+                        ₹{{ (item.offer_price_paise / 100).toFixed(2) }}
+                      </span>
+                    } @else {
+                      <span class="text-surface-400">-</span>
+                    }
+                  </td>
+                  <td class="py-3 px-4 text-surface-600 max-w-xs truncate">
+                    {{ getCategoryNames(item.category_ids) }}
+                  </td>
+                  <td class="py-3 px-4 text-surface-600">
+                    {{
+                      formatEligibility(
+                        item.eligible_gender,
+                        item.min_age_years,
+                        item.max_age_years
+                      )
+                    }}
+                  </td>
+                  <td class="py-3 px-4">
+                    <span
+                      [class]="
+                        item.active
+                          ? 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-100 text-surface-600 border border-surface-200'
+                      "
+                    >
+                      {{ item.active ? 'Active' : 'Inactive' }}
+                    </span>
+                  </td>
+                  <td class="py-3 px-4 text-right space-x-2 whitespace-nowrap">
+                    <button
+                      type="button"
+                      (click)="toggleItemVisibility(item)"
+                      [disabled]="pendingItemIds().has(item.id)"
+                      [class]="
+                        item.active
+                          ? 'px-2.5 py-1 rounded-lg text-xs font-semibold text-amber-700 hover:text-amber-800 hover:bg-amber-50 transition-colors disabled:opacity-50'
+                          : 'px-2.5 py-1 rounded-lg text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 transition-colors disabled:opacity-50'
+                      "
+                    >
+                      {{ item.active ? 'Hide' : 'Show' }}
+                    </button>
+                    <button
+                      type="button"
+                      (click)="openEditDialog(item)"
+                      class="px-2.5 py-1 rounded-lg text-xs font-semibold text-primary-700 hover:text-primary-800 hover:bg-primary-50 transition-colors"
+                    >
+                      Edit
+                    </button>
+                  </td>
+                </tr>
+              }
             }
           </tbody>
         </table>
