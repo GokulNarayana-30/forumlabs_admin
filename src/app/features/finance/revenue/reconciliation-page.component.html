@@ -1,0 +1,182 @@
+<div class="space-y-6">
+  <!-- Header Area -->
+  <div class="flex flex-col gap-1">
+    <h1 class="text-2xl font-bold tracking-tight text-surface-900">Reconciliation</h1>
+    <p class="text-xs text-surface-600">
+      Daily collection and refund reconciliation against phlebotomist cash close.
+    </p>
+  </div>
+
+  <!-- Controls Card -->
+  <div
+    class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-surface-200 bg-surface-0 p-4 shadow-sm"
+  >
+    <!-- Range Selection -->
+    <div class="flex items-center gap-2 text-xs">
+      <span class="font-semibold text-surface-600">Date range:</span>
+      <input
+        type="date"
+        [value]="fromDate()"
+        (change)="setCustomRange($any($event.target).value, toDate())"
+        class="rounded-lg border border-surface-300 bg-surface-0 px-2 py-1 text-xs text-surface-800"
+      />
+      <span class="text-surface-400">to</span>
+      <input
+        type="date"
+        [value]="toDate()"
+        (change)="setCustomRange(fromDate(), $any($event.target).value)"
+        class="rounded-lg border border-surface-300 bg-surface-0 px-2 py-1 text-xs text-surface-800"
+      />
+    </div>
+
+    <!-- Filter Toggle and Export -->
+    <div class="flex items-center gap-3">
+      <button
+        type="button"
+        (click)="toggleShowOnlyMismatches()"
+        [class]="
+          showOnlyMismatches()
+            ? 'bg-primary-600 text-white font-semibold'
+            : 'bg-surface-100 text-surface-700 hover:bg-surface-200'
+        "
+        class="rounded-full px-3 py-1 text-xs font-medium transition"
+      >
+        Show only mismatches
+      </button>
+      <button
+        type="button"
+        data-testid="export-btn"
+        (click)="openExportDialog()"
+        class="inline-flex items-center gap-1.5 rounded-xl border border-surface-200 bg-surface-0 px-3 py-1.5 text-xs font-semibold text-surface-700 shadow-sm hover:bg-surface-50 hover:text-surface-900 transition"
+      >
+        <i class="pi pi-download text-xs text-surface-500"></i>
+        <span>Export</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Range Error -->
+  @if (rangeError()) {
+    <div class="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+      {{ rangeError() }}
+    </div>
+  }
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div
+      class="rounded-2xl border border-surface-200 bg-surface-0 p-8 text-center text-sm text-surface-500 shadow-sm"
+    >
+      Loading reconciliation figures...
+    </div>
+  } @else if (error()) {
+    <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+      {{ error() }}
+    </div>
+  } @else if (data(); as d) {
+    <!-- Summary Header -->
+    <div class="flex items-center justify-between px-1">
+      <div class="text-xs font-medium text-surface-600">
+        {{ d.mismatch_count }} mismatches in {{ d.rows.length }} rows
+      </div>
+    </div>
+
+    <!-- Table -->
+    @if (filteredRows().length === 0) {
+      <div
+        class="rounded-2xl border border-surface-200 bg-surface-0 p-8 text-center text-sm text-surface-500 shadow-sm"
+      >
+        No rows matching the filter
+      </div>
+    } @else {
+      <div class="overflow-x-auto rounded-2xl border border-surface-200 bg-surface-0 shadow-sm">
+        <table class="w-full text-left text-xs text-surface-700">
+          <thead
+            class="border-b border-surface-200 bg-surface-50 text-[11px] font-semibold uppercase tracking-wider text-surface-500"
+          >
+            <tr>
+              <th class="px-4 py-3">Date</th>
+              <th class="px-3 py-3">Recorder</th>
+              <th class="px-3 py-3 text-right">Cash Coll.</th>
+              <th class="px-3 py-3 text-right">UPI Coll.</th>
+              <th class="px-3 py-3 text-right">Handed Cash</th>
+              <th class="px-3 py-3 text-right">Cash Diff</th>
+              <th class="px-3 py-3 text-center">Status</th>
+              <th class="px-4 py-3">Mismatches / Notes</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-surface-100">
+            @for (row of filteredRows(); track row.date + (row.recorder?.staff_id ?? 'no_rec')) {
+              <tr class="hover:bg-surface-50">
+                <td class="whitespace-nowrap px-4 py-2.5 font-medium text-surface-900">
+                  {{ row.date }}
+                </td>
+                <td class="px-3 py-2.5 font-medium text-surface-900">
+                  {{ row.recorder ? row.recorder.name : 'No recorder' }}
+                </td>
+                <td class="px-3 py-2.5 text-right font-mono">
+                  {{ formatInr(row.cash_collected_paise) }}
+                </td>
+                <td class="px-3 py-2.5 text-right font-mono">
+                  {{ formatInr(row.upi_collected_paise) }}
+                </td>
+                <td class="px-3 py-2.5 text-right font-mono">
+                  {{ formatInr(row.cash_handed_over_paise) }}
+                </td>
+                <td
+                  class="px-3 py-2.5 text-right font-mono font-semibold"
+                  [class.text-red-600]="
+                    row.cash_difference_paise !== null && row.cash_difference_paise !== 0
+                  "
+                >
+                  {{ formatInr(row.cash_difference_paise) }}
+                </td>
+                <td class="px-3 py-2.5 text-center">
+                  <ui-tag [value]="row.status" [severity]="statusSeverity(row.status)" />
+                </td>
+                <td class="px-4 py-2.5">
+                  <div class="flex flex-wrap gap-1">
+                    @for (m of row.mismatches; track m) {
+                      <span
+                        class="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-700"
+                      >
+                        {{ mismatchLabel(m) }}
+                      </span>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+          <tfoot class="border-t-2 border-surface-200 bg-surface-50 font-semibold text-surface-900">
+            <tr>
+              <td class="px-4 py-3" colspan="2">Total</td>
+              <td class="px-3 py-3 text-right font-mono">
+                {{ formatInr(d.totals.cash_collected_paise) }}
+              </td>
+              <td class="px-3 py-3 text-right font-mono">
+                {{ formatInr(d.totals.upi_collected_paise) }}
+              </td>
+              <td class="px-3 py-3 text-right font-mono">
+                {{ formatInr(d.totals.cash_handed_over_paise) }}
+              </td>
+              <td class="px-3 py-3 text-right font-mono">
+                {{ formatInr(d.totals.cash_difference_paise) }}
+              </td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    }
+  }
+
+  <!-- Export Dialog -->
+  <app-export-dialog
+    [visible]="showExportDialog()"
+    (visibleChange)="showExportDialog.set($event)"
+    [from]="fromDate()"
+    [to]="toDate()"
+    defaultDataset="reconciliation"
+  />
+</div>

@@ -48,6 +48,97 @@
       </div>
     </div>
 
+    <!-- Account status (15-13): the owning account, changed only by support / super_admin -->
+    <div class="border border-surface-200 rounded-xl p-4 space-y-3">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="text-xs">
+          <span class="text-surface-500 block">Account status</span>
+          <span data-account-status class="text-sm font-semibold text-surface-900">
+            {{ statusLabel(accountStatus()) }}
+            <span *ngIf="statusNote()" class="block text-xs font-normal text-surface-600">{{
+              statusNote()
+            }}</span>
+          </span>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button
+            type="button"
+            (click)="refreshStatus()"
+            class="px-3 py-1.5 text-xs font-medium rounded-lg border border-surface-300 text-surface-700 hover:bg-surface-50"
+          >
+            Refresh status
+          </button>
+          <ng-container *ngIf="canChangeStatus()">
+            <button
+              *ngIf="accountStatus() === 'active'"
+              data-status-action
+              type="button"
+              (click)="openStatusDialog('block')"
+              class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-red-200 text-red-700 hover:bg-red-50"
+            >
+              Block account
+            </button>
+            <button
+              *ngIf="accountStatus() === 'blocked'"
+              data-status-action
+              type="button"
+              (click)="openStatusDialog('unblock')"
+              class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-surface-300 text-surface-700 hover:bg-surface-50"
+            >
+              Unblock account
+            </button>
+          </ng-container>
+        </div>
+      </div>
+
+      <div
+        *ngIf="statusDialog() as action"
+        role="group"
+        aria-labelledby="status-dialog-title"
+        class="bg-surface-50 border border-surface-200 rounded-lg p-3 space-y-2 text-xs"
+      >
+        <p id="status-dialog-title" class="font-semibold text-surface-900">
+          {{ action === 'block' ? 'Block this account?' : 'Unblock this account?' }}
+        </p>
+        <p class="text-surface-600">
+          {{
+            action === 'block'
+              ? 'The customer is refused at once and signed out of every device.'
+              : 'Sign-in is re-enabled only after the sign-in service confirms it.'
+          }}
+        </p>
+        <label class="block space-y-1">
+          <span class="text-surface-600">Reason (required)</span>
+          <select
+            [value]="statusReason()"
+            (change)="statusReason.set($any($event.target).value)"
+            class="w-full border border-surface-300 rounded-lg px-2 py-1.5 bg-surface-0"
+          >
+            <option value="">Choose a reason</option>
+            <option *ngFor="let r of blockReasons" [value]="r.value">{{ r.label }}</option>
+          </select>
+        </label>
+        <div class="flex gap-2">
+          <button
+            type="button"
+            (click)="confirmStatusChange()"
+            [disabled]="statusBusy()"
+            class="px-3 py-1.5 font-semibold rounded-lg bg-primary-600 text-surface-0 disabled:opacity-50"
+          >
+            Confirm
+          </button>
+          <button
+            type="button"
+            (click)="cancelStatusDialog()"
+            class="px-3 py-1.5 font-semibold rounded-lg border border-surface-300"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+      <p *ngIf="statusError()" role="alert" class="text-xs text-red-700">{{ statusError() }}</p>
+    </div>
+
     <!-- Error Alert -->
     <div
       *ngIf="errorMessage()"

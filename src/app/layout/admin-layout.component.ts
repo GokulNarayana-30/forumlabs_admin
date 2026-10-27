@@ -31,17 +31,22 @@ export class AdminLayoutComponent {
     { label: 'Bookings', path: '/bookings', roles: ['booking_dispatch', 'super_admin'] },
     { label: 'Field / Collection', path: '/field', roles: ['phlebotomist', 'super_admin'] },
     { label: 'Catalog', path: '/catalog', roles: ['catalog_manager', 'super_admin'] },
+    { label: 'Doctors', path: '/doctors', roles: ['catalog_manager', 'super_admin'] },
     { label: 'Reports', path: '/reports', roles: ['lab_staff', 'report_approver', 'super_admin'] },
     {
       label: 'Patient Search',
       path: '/patients',
       roles: ['support', 'booking_dispatch', 'super_admin'],
     },
-    { label: 'Tickets', path: '/tickets', roles: ['support', 'super_admin'] },
+    { label: 'Account Deletions', path: '/patients/deletions', roles: ['support', 'super_admin'] },
+    // report_approver: the API scopes them to the urgent report queue (15-12).
+    { label: 'Tickets', path: '/tickets', roles: ['support', 'report_approver', 'super_admin'] },
     { label: 'Dispatch', path: '/dispatch', roles: ['booking_dispatch', 'super_admin'] },
     { label: 'Slots', path: '/slots', roles: ['booking_dispatch', 'super_admin'] },
     { label: 'Samples', path: '/samples', roles: ['lab_staff', 'booking_dispatch', 'super_admin'] },
     { label: 'Cash Close', path: '/finance/cash-close', roles: ['finance', 'super_admin'] },
+    { label: 'Revenue', path: '/finance/revenue', roles: ['finance', 'super_admin'] },
+    { label: 'Reconciliation', path: '/finance/reconciliation', roles: ['finance', 'super_admin'] },
     { label: 'Refunds', path: '/finance/refunds', roles: ['finance'] },
     { label: 'Members', path: '/members', roles: ['super_admin'] },
     {

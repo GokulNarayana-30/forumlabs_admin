@@ -81,6 +81,9 @@
               [value]="data.ticket.status"
               [severity]="getStatusSeverity(data.ticket.status)"
             ></ui-tag>
+            @if (data.ticket.priority === 'urgent') {
+              <span data-priority><ui-tag value="Urgent" severity="danger"></ui-tag></span>
+            }
           </div>
           <p class="text-xs text-surface-500 mt-1">
             Topic: <span class="font-medium text-surface-700">{{ data.ticket.category }}</span>
@@ -134,6 +137,44 @@
               }
             </select>
           </div>
+
+          @if (canChangePriority()) {
+            <div class="flex items-center gap-2" data-priority-control>
+              <label class="text-xs font-medium text-surface-600" for="priority-select"
+                >Priority:</label
+              >
+              <select
+                #prioritySelect
+                id="priority-select"
+                [value]="data.ticket.priority || 'normal'"
+                [disabled]="isUpdatingPriority()"
+                class="text-xs rounded-lg border border-surface-300 bg-surface-0 px-2.5 py-1.5 text-surface-800"
+              >
+                <option value="normal">Normal</option>
+                <option value="urgent">Urgent</option>
+              </select>
+              <label class="sr-only" for="priority-reason">Reason</label>
+              <select
+                #priorityReason
+                id="priority-reason"
+                [disabled]="isUpdatingPriority()"
+                class="text-xs rounded-lg border border-surface-300 bg-surface-0 px-2.5 py-1.5 text-surface-800"
+              >
+                <option value="">Reason…</option>
+                @for (r of priorityReasons; track r.value) {
+                  <option [value]="r.value">{{ r.label }}</option>
+                }
+              </select>
+              <button
+                type="button"
+                (click)="onPriorityChange(prioritySelect.value, priorityReason.value)"
+                [disabled]="isUpdatingPriority()"
+                class="px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-surface-300 text-surface-700 hover:bg-surface-50 disabled:opacity-50"
+              >
+                Apply
+              </button>
+            </div>
+          }
         </div>
       </div>
 
@@ -201,6 +242,22 @@
                   <span>{{ msg.sent_at | date: 'dd MMM, hh:mm a' : '+0530' }}</span>
                 </div>
                 <p class="text-surface-800 whitespace-pre-wrap">{{ msg.body }}</p>
+                @if (msg.attachments?.length) {
+                  <div class="flex flex-wrap gap-2 mt-2">
+                    @for (a of msg.attachments; track a.id) {
+                      <button
+                        type="button"
+                        (click)="openAttachment(a.id)"
+                        [disabled]="openingAttachment() === a.id"
+                        class="inline-flex items-center gap-1 px-2.5 py-1 text-xs rounded-full border border-surface-300 bg-surface-0 text-surface-700 hover:bg-surface-50 disabled:opacity-50"
+                        [attr.aria-label]="'Open attachment, ' + attachmentLabel(a.mime, a.size)"
+                      >
+                        <i class="pi pi-paperclip text-xs"></i>
+                        <span>{{ attachmentLabel(a.mime, a.size) }}</span>
+                      </button>
+                    }
+                  </div>
+                }
               </div>
             }
           </div>
@@ -213,17 +270,89 @@
                 {{ replyError() }}
               </div>
             }
+            @if (cannedReplies().length) {
+              <div class="flex items-center gap-2">
+                <label class="text-xs text-surface-600" for="canned-reply">Canned reply:</label>
+                <select
+                  #cannedSelect
+                  id="canned-reply"
+                  (change)="insertCannedReply(cannedSelect.value); cannedSelect.value = ''"
+                  class="text-xs rounded-lg border border-surface-300 bg-surface-0 px-2.5 py-1.5 text-surface-800"
+                >
+                  <option value="">Insert…</option>
+                  @for (r of cannedReplies(); track r.id) {
+                    <option [value]="r.id">{{ r.title }}</option>
+                  }
+                </select>
+              </div>
+            }
             <textarea
               [(ngModel)]="replyText"
               rows="3"
+              aria-label="Reply to customer"
               placeholder="Type your response to the customer..."
               class="w-full text-xs rounded-lg border border-surface-300 bg-surface-0 p-3 text-surface-800 focus:outline-none focus:ring-1 focus:ring-primary-500 resize-none"
             ></textarea>
+            <div class="space-y-1">
+              <label class="text-xs font-medium text-surface-600" for="reply-files"
+                >Attach files</label
+              >
+              <input
+                #fileInput
+                id="reply-files"
+                type="file"
+                multiple
+                [attr.accept]="acceptedTypes"
+                (change)="onFilesSelected($any(fileInput.files) ?? []); fileInput.value = ''"
+                class="block text-xs text-surface-700"
+              />
+              <p class="text-xs text-surface-500">
+                JPEG, PNG or PDF, up to 3 files of 10 MB each. HEIC photos are not converted.
+              </p>
+              @if (attachmentError()) {
+                <p role="alert" class="text-xs text-surface-800">{{ attachmentError() }}</p>
+              }
+              @for (p of pending(); track p.localId) {
+                <div class="flex items-center gap-2 text-xs text-surface-700">
+                  <span class="truncate max-w-48">{{ p.name }}</span>
+                  <span class="text-surface-500">
+                    @switch (p.state) {
+                      @case ('uploading') {
+                        Uploading…
+                      }
+                      @case ('ready') {
+                        Ready
+                      }
+                      @case ('failed') {
+                        Upload failed
+                      }
+                    }
+                  </span>
+                  @if (p.state === 'failed') {
+                    <button
+                      type="button"
+                      (click)="retryUpload(p.localId)"
+                      class="font-semibold text-primary-600 hover:underline"
+                    >
+                      Retry
+                    </button>
+                  }
+                  <button
+                    type="button"
+                    (click)="removePending(p.localId)"
+                    class="font-semibold text-surface-600 hover:underline"
+                    [attr.aria-label]="'Remove ' + p.name"
+                  >
+                    Remove
+                  </button>
+                </div>
+              }
+            </div>
             <div class="flex justify-end">
               <button
                 type="button"
                 (click)="onSendReply()"
-                [disabled]="isSendingReply() || !replyText().trim()"
+                [disabled]="!canSend()"
                 class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-primary-600 text-surface-0 hover:bg-primary-700 disabled:opacity-50"
               >
                 @if (isSendingReply()) {

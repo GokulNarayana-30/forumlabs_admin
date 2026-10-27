@@ -1,0 +1,398 @@
+<div class="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900">Doctors & Departments</h1>
+      <p class="text-sm text-slate-500 mt-1">
+        Manage Forum's doctors, departments and referral codes.
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        data-testid="show-add-doctor-btn"
+        (click)="toggleAddDoctor()"
+        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-slate-900 hover:bg-slate-800 focus:outline-none"
+      >
+        {{ showAddDoctor() ? 'Cancel' : 'Add Doctor' }}
+      </button>
+    </div>
+  </div>
+
+  @if (errorText()) {
+    <div class="p-4 rounded-md bg-rose-50 border border-rose-200 text-rose-800 text-sm">
+      {{ errorText() }}
+    </div>
+  }
+
+  <!-- Add / Edit Doctor Form -->
+  @if (showAddDoctor()) {
+    <div class="bg-white p-6 rounded-lg border border-slate-200 shadow-sm space-y-4">
+      <h2 class="text-lg font-semibold text-slate-900">
+        {{ editingDoctorId() ? 'Edit Doctor' : 'Add Doctor' }}
+      </h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-700">Display Name *</label>
+          <input
+            type="text"
+            data-testid="doctor-name-input"
+            [(ngModel)]="doctorName"
+            placeholder="e.g. Dr A Kumar"
+            class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-500 focus:outline-none"
+          />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-700">Department *</label>
+          <select
+            data-testid="doctor-dept-select"
+            [(ngModel)]="doctorDeptId"
+            class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-500 focus:outline-none"
+          >
+            <option value="" disabled>Select Department</option>
+            @for (dept of departments(); track dept.id) {
+              <option [value]="dept.id">{{ dept.name }}</option>
+            }
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-700">Registration Number</label>
+          <input
+            type="text"
+            data-testid="doctor-reg-num-input"
+            [(ngModel)]="doctorRegNum"
+            placeholder="e.g. KMC 12345"
+            class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-500 focus:outline-none"
+          />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-700">Registration Council</label>
+          <input
+            type="text"
+            data-testid="doctor-reg-council-input"
+            [(ngModel)]="doctorRegCouncil"
+            placeholder="e.g. Karnataka Medical Council"
+            class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-500 focus:outline-none"
+          />
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <input
+          type="checkbox"
+          id="doctorShowInApp"
+          data-testid="doctor-show-in-app-checkbox"
+          [(ngModel)]="doctorShowInApp"
+          class="rounded border-slate-300 text-slate-900 focus:ring-slate-500"
+        />
+        <label for="doctorShowInApp" class="text-sm text-slate-700"
+          >Show in customer mobile app</label
+        >
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button
+          type="button"
+          (click)="toggleAddDoctor()"
+          class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          data-testid="save-doctor-btn"
+          [disabled]="saving()"
+          (click)="saveDoctor()"
+          class="px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-md hover:bg-slate-800 disabled:opacity-50"
+        >
+          {{ saving() ? 'Saving...' : editingDoctorId() ? 'Update Doctor' : 'Save Doctor' }}
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Filters Row -->
+  <div
+    class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-4 items-center justify-between"
+  >
+    <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+      <div>
+        <label class="block text-xs font-medium text-slate-500 mb-1">Department</label>
+        <select
+          #deptSelect
+          data-testid="filter-dept-select"
+          [value]="filterDeptId()"
+          (change)="onFilterDeptChange(deptSelect.value)"
+          class="rounded-md border border-slate-300 px-3 py-1.5 text-xs shadow-sm focus:border-slate-500 focus:outline-none"
+        >
+          <option value="">All Departments</option>
+          @for (dept of departments(); track dept.id) {
+            <option [value]="dept.id">{{ dept.name }}</option>
+          }
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-500 mb-1">Status</label>
+        <select
+          #activeSelect
+          data-testid="filter-active-select"
+          [value]="filterActive()"
+          (change)="onFilterActiveChange(activeSelect.value)"
+          class="rounded-md border border-slate-300 px-3 py-1.5 text-xs shadow-sm focus:border-slate-500 focus:outline-none"
+        >
+          <option value="">All Statuses</option>
+          <option value="true">Active Only</option>
+          <option value="false">Inactive Only</option>
+        </select>
+      </div>
+    </div>
+    <div class="w-full sm:w-64">
+      <label class="block text-xs font-medium text-slate-500 mb-1">Search Doctor</label>
+      <input
+        #queryInput
+        type="text"
+        data-testid="filter-query-input"
+        [value]="filterQuery()"
+        (input)="onFilterQueryChange(queryInput.value)"
+        placeholder="Filter by name..."
+        class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs shadow-sm focus:border-slate-500 focus:outline-none"
+      />
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Doctors List (2 cols) -->
+    <div class="lg:col-span-2 space-y-4">
+      <div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+          <h2 class="text-lg font-semibold text-slate-900">Doctors</h2>
+          <span class="text-xs text-slate-500">{{ doctors().length }} doctors</span>
+        </div>
+
+        @if (doctors().length === 0) {
+          <div class="p-8 text-center text-sm text-slate-500">No doctors found.</div>
+        } @else {
+          <ul class="divide-y divide-slate-100">
+            @for (doc of doctors(); track doc.id) {
+              <li class="p-4 sm:p-6 hover:bg-slate-50 transition-colors">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div class="space-y-1">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span class="font-medium text-slate-900 text-base">{{
+                        doc.display_name
+                      }}</span>
+                      <span class="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded">{{
+                        doc.department.name
+                      }}</span>
+                      @if (doc.active) {
+                        <span
+                          class="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-medium"
+                          >Active</span
+                        >
+                      } @else {
+                        <span
+                          class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-medium"
+                          >Inactive</span
+                        >
+                      }
+                      @if (doc.show_in_app) {
+                        <span class="text-xs bg-sky-50 text-sky-700 px-2 py-0.5 rounded font-medium"
+                          >Shown in app</span
+                        >
+                      }
+                    </div>
+                    @if (doc.registration_number) {
+                      <div class="text-xs text-slate-500">
+                        <span>{{ doc.registration_number }}</span>
+                        @if (doc.registration_council) {
+                          <span> &bull; {{ doc.registration_council }}</span>
+                        }
+                      </div>
+                    }
+                    <div class="text-xs text-slate-500">
+                      {{ doc.code_count }} {{ doc.code_count === 1 ? 'code' : 'codes' }}
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      [attr.data-testid]="'edit-doctor-btn-' + doc.id"
+                      (click)="startEditDoctor(doc)"
+                      class="px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      [attr.data-testid]="'toggle-doctor-active-btn-' + doc.id"
+                      [disabled]="saving()"
+                      (click)="toggleDoctorActive(doc)"
+                      class="px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      {{ doc.active ? 'Switch off' : 'Switch on' }}
+                    </button>
+                    <button
+                      type="button"
+                      [attr.data-testid]="'manage-codes-btn-' + doc.id"
+                      (click)="selectDoctor(doc.id)"
+                      class="px-3 py-1.5 text-xs font-medium text-white bg-slate-900 rounded hover:bg-slate-800"
+                    >
+                      Manage Codes
+                    </button>
+                  </div>
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </div>
+
+    <!-- Departments Card (1 col) -->
+    <div class="space-y-4">
+      <div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+          <h2 class="text-lg font-semibold text-slate-900">Departments</h2>
+          <button
+            type="button"
+            data-testid="show-add-dept-btn"
+            (click)="showAddDept.update((v) => !v)"
+            class="text-xs text-slate-600 hover:text-slate-900 font-medium"
+          >
+            {{ showAddDept() ? 'Cancel' : '+ Add' }}
+          </button>
+        </div>
+
+        @if (showAddDept()) {
+          <div class="p-4 bg-slate-50 border-b border-slate-200 space-y-2">
+            <input
+              type="text"
+              data-testid="new-dept-name-input"
+              [(ngModel)]="newDeptName"
+              placeholder="Department name"
+              class="w-full rounded-md border border-slate-300 px-3 py-1.5 text-xs shadow-sm focus:border-slate-500 focus:outline-none"
+            />
+            <div class="flex justify-end gap-2">
+              <button
+                type="button"
+                data-testid="save-new-dept-btn"
+                [disabled]="saving()"
+                (click)="createDepartment()"
+                class="px-3 py-1 text-xs font-medium text-white bg-slate-900 rounded hover:bg-slate-800 disabled:opacity-50"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        }
+
+        <ul class="divide-y divide-slate-100">
+          @for (dept of departments(); track dept.id) {
+            <li class="p-4 space-y-2">
+              <div class="flex items-center justify-between">
+                <div>
+                  <span class="text-sm font-medium text-slate-900">{{ dept.name }}</span>
+                  <p class="text-xs text-slate-500">
+                    {{ dept.active_doctor_count }} active / {{ dept.doctor_count }} doctors
+                  </p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span
+                    class="text-xs px-2 py-0.5 rounded font-medium"
+                    [ngClass]="
+                      dept.active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                    "
+                  >
+                    {{ dept.active ? 'Active' : 'Inactive' }}
+                  </span>
+                  <button
+                    type="button"
+                    [attr.data-testid]="'rename-dept-btn-' + dept.id"
+                    (click)="startRenameDept(dept)"
+                    class="text-xs text-slate-500 hover:text-slate-700"
+                  >
+                    Rename
+                  </button>
+                  <button
+                    type="button"
+                    [attr.data-testid]="'toggle-dept-active-btn-' + dept.id"
+                    [disabled]="saving()"
+                    (click)="toggleDeptActive(dept)"
+                    class="text-xs text-slate-500 hover:text-slate-700 disabled:opacity-50"
+                  >
+                    {{ dept.active ? 'Switch off' : 'Switch on' }}
+                  </button>
+                </div>
+              </div>
+
+              @if (editingDeptId() === dept.id) {
+                <div class="pt-2 flex items-center gap-2">
+                  <input
+                    type="text"
+                    [attr.data-testid]="'rename-dept-input-' + dept.id"
+                    [(ngModel)]="deptRenameValue"
+                    class="flex-1 rounded-md border border-slate-300 px-2 py-1 text-xs shadow-sm focus:border-slate-500 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    [attr.data-testid]="'save-dept-rename-btn-' + dept.id"
+                    [disabled]="saving()"
+                    (click)="saveDeptRename(dept)"
+                    class="px-2.5 py-1 text-xs font-medium text-white bg-slate-900 rounded hover:bg-slate-800 disabled:opacity-50"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    (click)="cancelRenameDept()"
+                    class="px-2.5 py-1 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              }
+            </li>
+          }
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manage Codes Modal / Slide-over with DoctorCodesPanelComponent -->
+  @if (selectedDoctorDetail(); as selDoc) {
+    <div class="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50">
+      <div
+        class="bg-white rounded-lg shadow-xl max-w-xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto"
+      >
+        <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">{{ selDoc.display_name }}</h3>
+            <p class="text-xs text-slate-500">
+              {{ selDoc.department.name }} &bull; {{ selDoc.code_count }} codes
+            </p>
+          </div>
+          <button
+            type="button"
+            (click)="closeDoctorDetail()"
+            class="text-slate-400 hover:text-slate-600 text-sm font-semibold"
+          >
+            ✕
+          </button>
+        </div>
+
+        <!-- Embedded DoctorCodesPanelComponent -->
+        <app-doctor-codes-panel
+          [doctor]="selectedDoctorDetail()"
+          (changed)="onDoctorCodesChanged()"
+        />
+
+        <div class="flex justify-end pt-4 border-t border-slate-200">
+          <button
+            type="button"
+            (click)="closeDoctorDetail()"
+            class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

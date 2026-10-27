@@ -38,6 +38,9 @@ export interface StaffPatientReport {
 }
 
 export interface StaffPatientDetail {
+  /** The owning account (users.id): the subject of block, unblock and deletion, never patient_id. */
+  account_user_id: string;
+  account_status: 'active' | 'blocked' | 'closed' | 'deleted';
   patient_id: string;
   patient_code: string;
   name: string;

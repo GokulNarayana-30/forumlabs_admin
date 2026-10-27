@@ -24,6 +24,8 @@ describe('PatientSearchComponent', () => {
   ];
 
   const mockPatientDetail: StaffPatientDetail = {
+    account_user_id: '11111111-2222-4333-8444-555555555555',
+    account_status: 'active',
     patient_id: '00000000-0000-0000-0000-000000000001',
     patient_code: 'FL-P-104928',
     name: 'Aarav Sharma',

@@ -1,0 +1,495 @@
+<div class="space-y-6">
+  <!-- Header & Title Area -->
+  <div class="flex flex-col gap-2">
+    <div class="flex flex-wrap items-baseline justify-between gap-4">
+      <h1 class="text-2xl font-bold tracking-tight text-surface-900">Revenue</h1>
+      <div class="flex items-center gap-3">
+        @if (summary()?.as_of) {
+          <span class="text-xs text-surface-500">
+            Figures as of {{ formatAsOf(summary()!.as_of) }}
+          </span>
+        }
+        <button
+          type="button"
+          data-testid="export-btn"
+          (click)="openExportDialog()"
+          class="inline-flex items-center gap-1.5 rounded-xl border border-surface-200 bg-surface-0 px-3 py-1.5 text-xs font-semibold text-surface-700 shadow-sm hover:bg-surface-50 hover:text-surface-900 transition"
+        >
+          <i class="pi pi-download text-xs text-surface-500"></i>
+          <span>Export</span>
+        </button>
+      </div>
+    </div>
+    <div class="text-xs text-surface-600 space-y-0.5">
+      <p>Earned: value of tests whose sample was collected, after offers and coupons.</p>
+      <p>
+        Collected: cash and UPI received by phlebotomists, less refunds paid out. This is a
+        different number.
+      </p>
+    </div>
+  </div>
+
+  <!-- Missing Days Alert -->
+  @if (summary()?.missing_days?.length) {
+    <div class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+      {{ formatMissingDays(summary()!.missing_days) }}
+    </div>
+  }
+
+  <!-- Range Controls -->
+  <div
+    class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-surface-200 bg-surface-0 p-4 shadow-sm"
+  >
+    <!-- Presets -->
+    <div class="flex flex-wrap items-center gap-1.5">
+      <span class="mr-1 text-xs font-semibold text-surface-500">Presets:</span>
+      <button
+        type="button"
+        (click)="selectPreset('last7')"
+        [class]="
+          preset() === 'last7'
+            ? 'bg-primary-600 text-white'
+            : 'bg-surface-100 text-surface-700 hover:bg-surface-200'
+        "
+        class="rounded-full px-3 py-1 text-xs font-medium transition"
+      >
+        Last 7 days
+      </button>
+      <button
+        type="button"
+        (click)="selectPreset('last30')"
+        [class]="
+          preset() === 'last30'
+            ? 'bg-primary-600 text-white'
+            : 'bg-surface-100 text-surface-700 hover:bg-surface-200'
+        "
+        class="rounded-full px-3 py-1 text-xs font-medium transition"
+      >
+        Last 30 days
+      </button>
+      <button
+        type="button"
+        (click)="selectPreset('last12weeks')"
+        [class]="
+          preset() === 'last12weeks'
+            ? 'bg-primary-600 text-white'
+            : 'bg-surface-100 text-surface-700 hover:bg-surface-200'
+        "
+        class="rounded-full px-3 py-1 text-xs font-medium transition"
+      >
+        Last 12 weeks
+      </button>
+      <button
+        type="button"
+        (click)="selectPreset('last12months')"
+        [class]="
+          preset() === 'last12months'
+            ? 'bg-primary-600 text-white'
+            : 'bg-surface-100 text-surface-700 hover:bg-surface-200'
+        "
+        class="rounded-full px-3 py-1 text-xs font-medium transition"
+      >
+        Last 12 months
+      </button>
+    </div>
+
+    <!-- Granularity & Custom Dates -->
+    <div class="flex flex-wrap items-center gap-3">
+      <!-- Granularity -->
+      <div class="flex items-center gap-1">
+        <span class="mr-1 text-xs font-semibold text-surface-500">View by:</span>
+        <button
+          type="button"
+          (click)="selectGranularity('day')"
+          [class]="
+            granularity() === 'day'
+              ? 'bg-primary-600 text-white'
+              : 'bg-surface-100 text-surface-700 hover:bg-surface-200'
+          "
+          class="rounded-full px-2.5 py-1 text-xs font-medium transition"
+        >
+          Day
+        </button>
+        <button
+          type="button"
+          (click)="selectGranularity('week')"
+          [class]="
+            granularity() === 'week'
+              ? 'bg-primary-600 text-white'
+              : 'bg-surface-100 text-surface-700 hover:bg-surface-200'
+          "
+          class="rounded-full px-2.5 py-1 text-xs font-medium transition"
+        >
+          Week
+        </button>
+        <button
+          type="button"
+          (click)="selectGranularity('month')"
+          [class]="
+            granularity() === 'month'
+              ? 'bg-primary-600 text-white'
+              : 'bg-surface-100 text-surface-700 hover:bg-surface-200'
+          "
+          class="rounded-full px-2.5 py-1 text-xs font-medium transition"
+        >
+          Month
+        </button>
+      </div>
+
+      <!-- Custom Range -->
+      <div class="flex items-center gap-1 text-xs">
+        <input
+          type="date"
+          [value]="fromDate()"
+          (change)="setCustomRange($any($event.target).value, toDate())"
+          class="rounded-lg border border-surface-300 bg-surface-0 px-2 py-1 text-xs text-surface-800"
+        />
+        <span class="text-surface-400">to</span>
+        <input
+          type="date"
+          [value]="toDate()"
+          (change)="setCustomRange(fromDate(), $any($event.target).value)"
+          class="rounded-lg border border-surface-300 bg-surface-0 px-2 py-1 text-xs text-surface-800"
+        />
+      </div>
+    </div>
+  </div>
+
+  <!-- Range Error -->
+  @if (rangeError()) {
+    <div class="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+      {{ rangeError() }}
+    </div>
+  }
+
+  <!-- Loading / Error States -->
+  @if (loading()) {
+    <div
+      class="rounded-2xl border border-surface-200 bg-surface-0 p-8 text-center text-sm text-surface-500 shadow-sm"
+    >
+      Loading revenue figures...
+    </div>
+  } @else if (error()) {
+    <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+      {{ error() }}
+    </div>
+  } @else if (summary(); as sum) {
+    <!-- Block 1: Earned Revenue -->
+    <div class="space-y-4">
+      <div class="border-b border-surface-200 pb-2">
+        <h2 class="text-lg font-bold text-surface-900">Earned</h2>
+        <p class="text-xs text-surface-500">
+          Value of tests with collected samples, after discounts and coupon deductions.
+        </p>
+      </div>
+
+      <!-- Earned Headline Tiles -->
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
+        <div class="rounded-xl border border-surface-200 bg-surface-0 p-3 shadow-sm">
+          <div class="text-[11px] font-medium text-surface-500">Earned revenue</div>
+          <div class="mt-1 text-base font-bold text-surface-900">
+            {{ formatInr(sum.earned.totals.earned_paise) }}
+          </div>
+        </div>
+        <div class="rounded-xl border border-surface-200 bg-surface-0 p-3 shadow-sm">
+          <div class="text-[11px] font-medium text-surface-500">Orders</div>
+          <div class="mt-1 text-base font-bold text-surface-900">
+            {{ sum.earned.totals.orders_count }}
+          </div>
+        </div>
+        <div class="rounded-xl border border-surface-200 bg-surface-0 p-3 shadow-sm">
+          <div class="text-[11px] font-medium text-surface-500">Average order value</div>
+          <div class="mt-1 text-base font-bold text-surface-900">
+            {{ formatInr(sum.earned.totals.aov_paise) }}
+          </div>
+        </div>
+        <div class="rounded-xl border border-surface-200 bg-surface-0 p-3 shadow-sm">
+          <div class="text-[11px] font-medium text-surface-500">Repeat customers</div>
+          <div class="mt-1 text-base font-bold text-surface-900">
+            {{ formatBasisPoints(sum.earned.totals.repeat_rate_bp) }}
+          </div>
+        </div>
+        <div class="rounded-xl border border-surface-200 bg-surface-0 p-3 shadow-sm">
+          <div class="text-[11px] font-medium text-surface-500">Gross booked</div>
+          <div class="mt-1 text-base font-bold text-surface-900">
+            {{ formatInr(sum.earned.totals.gross_booked_paise) }}
+          </div>
+        </div>
+        <div class="rounded-xl border border-surface-200 bg-surface-0 p-3 shadow-sm">
+          <div class="text-[11px] font-medium text-surface-500">Offer discount</div>
+          <div class="mt-1 text-base font-bold text-surface-900">
+            {{ formatInr(sum.earned.totals.offer_discount_paise) }}
+          </div>
+        </div>
+        <div class="rounded-xl border border-surface-200 bg-surface-0 p-3 shadow-sm">
+          <div class="text-[11px] font-medium text-surface-500">Coupon cost</div>
+          <div class="mt-1 text-base font-bold text-surface-900">
+            {{ formatInr(sum.earned.totals.coupon_cost_paise) }}
+          </div>
+        </div>
+        <div class="rounded-xl border border-surface-200 bg-surface-0 p-3 shadow-sm">
+          <div class="text-[11px] font-medium text-surface-500">Collection fee</div>
+          <div class="mt-1 text-base font-bold text-surface-900">
+            {{ formatInr(sum.earned.totals.collection_fee_paise) }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Refunds Memo -->
+      <div
+        class="rounded-xl border border-surface-200 bg-surface-50 p-3 text-xs text-surface-600 shadow-sm"
+      >
+        <span class="font-medium">Refunds against orders collected in this period:</span>
+        <span class="ml-1 font-semibold text-surface-900">{{
+          formatInr(sum.earned.totals.refunds_against_paise)
+        }}</span>
+      </div>
+
+      <!-- Earned Chart & Period Table -->
+      @if (sum.earned.periods.length > 0) {
+        <div
+          class="grid grid-cols-1 gap-4 rounded-2xl border border-surface-200 bg-surface-0 p-4 shadow-sm lg:grid-cols-2"
+        >
+          <div>
+            <div class="mb-2 text-xs font-semibold text-surface-600">Earned revenue trend</div>
+            <app-svg-bar-chart
+              [items]="earnedChartItems()"
+              [plotHeight]="120"
+              ariaLabel="Earned revenue trend chart"
+            />
+          </div>
+          <div class="overflow-x-auto">
+            <div class="mb-2 text-xs font-semibold text-surface-600">Period figures</div>
+            <table class="w-full text-left text-xs text-surface-700">
+              <thead class="border-b border-surface-200 bg-surface-50 text-[11px]">
+                <tr>
+                  <th class="px-2 py-1.5">Period</th>
+                  <th class="px-2 py-1.5 text-right">Orders</th>
+                  <th class="px-2 py-1.5 text-right">Gross</th>
+                  <th class="px-2 py-1.5 text-right">Earned</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-surface-100">
+                @for (p of sum.earned.periods; track p.period_start) {
+                  <tr>
+                    <td class="px-2 py-1.5 font-medium text-surface-900">
+                      {{ periodLabel(p.period_start, granularity()) }}
+                    </td>
+                    <td class="px-2 py-1.5 text-right font-mono">
+                      {{ p.orders_count }}
+                    </td>
+                    <td class="px-2 py-1.5 text-right font-mono">
+                      {{ formatInr(p.gross_booked_paise) }}
+                    </td>
+                    <td class="px-2 py-1.5 text-right font-mono font-semibold text-surface-900">
+                      {{ formatInr(p.earned_paise) }}
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Block 2: Collected Revenue & Bookings -->
+    <div class="space-y-4">
+      <div class="border-b border-surface-200 pb-2">
+        <h2 class="text-lg font-bold text-surface-900">Collected</h2>
+        <p class="text-xs text-surface-500">
+          Cash and UPI payments collected by phlebotomists at sample collection, less refunds.
+        </p>
+      </div>
+
+      <!-- Collected & Bookings Tiles -->
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div class="rounded-xl border border-surface-200 bg-surface-0 p-3 shadow-sm">
+          <div class="text-[11px] font-medium text-surface-500">Net collected</div>
+          <div class="mt-1 text-base font-bold text-surface-900">
+            {{ formatInr(sum.collected.totals.net_collected_paise) }}
+          </div>
+        </div>
+        <div class="rounded-xl border border-surface-200 bg-surface-0 p-3 shadow-sm">
+          <div class="text-[11px] font-medium text-surface-500">Cash collected</div>
+          <div class="mt-1 text-base font-bold text-surface-900">
+            {{ formatInr(sum.collected.totals.cash_collected_paise) }}
+          </div>
+        </div>
+        <div class="rounded-xl border border-surface-200 bg-surface-0 p-3 shadow-sm">
+          <div class="text-[11px] font-medium text-surface-500">UPI collected</div>
+          <div class="mt-1 text-base font-bold text-surface-900">
+            {{ formatInr(sum.collected.totals.upi_collected_paise) }}
+          </div>
+        </div>
+        <div class="rounded-xl border border-surface-200 bg-surface-0 p-3 shadow-sm">
+          <div class="text-[11px] font-medium text-surface-500">Refunded</div>
+          <div class="mt-1 text-base font-bold text-surface-900">
+            {{
+              formatInr(
+                sum.collected.totals.cash_refunded_paise + sum.collected.totals.upi_refunded_paise
+              )
+            }}
+          </div>
+        </div>
+        <!-- Bookings Tile (D-10) -->
+        <div class="col-span-2 rounded-xl border border-surface-200 bg-surface-0 p-3 shadow-sm">
+          <div class="text-[11px] font-medium text-surface-500">Bookings in period</div>
+          <div class="mt-1 flex items-baseline gap-4 text-xs text-surface-700">
+            <div>
+              <span class="text-surface-500">Placed: </span>
+              <span class="font-bold text-surface-900">{{ sum.bookings.totals.placed_count }}</span>
+            </div>
+            <div>
+              <span class="text-surface-500">Cancelled: </span>
+              <span class="font-bold text-surface-900">{{
+                sum.bookings.totals.cancelled_count
+              }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Collected Chart & Period Table -->
+      @if (sum.collected.periods.length > 0) {
+        <div
+          class="grid grid-cols-1 gap-4 rounded-2xl border border-surface-200 bg-surface-0 p-4 shadow-sm lg:grid-cols-2"
+        >
+          <div>
+            <div class="mb-2 text-xs font-semibold text-surface-600">Net collected trend</div>
+            <app-svg-bar-chart
+              [items]="collectedChartItems()"
+              [plotHeight]="120"
+              ariaLabel="Net collected trend chart"
+            />
+          </div>
+          <div class="overflow-x-auto">
+            <div class="mb-2 text-xs font-semibold text-surface-600">Period figures</div>
+            <table class="w-full text-left text-xs text-surface-700">
+              <thead class="border-b border-surface-200 bg-surface-50 text-[11px]">
+                <tr>
+                  <th class="px-2 py-1.5">Period</th>
+                  <th class="px-2 py-1.5 text-right">Cash</th>
+                  <th class="px-2 py-1.5 text-right">UPI</th>
+                  <th class="px-2 py-1.5 text-right">Refunded</th>
+                  <th class="px-2 py-1.5 text-right">Net Collected</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-surface-100">
+                @for (p of sum.collected.periods; track p.period_start) {
+                  <tr>
+                    <td class="px-2 py-1.5 font-medium text-surface-900">
+                      {{ periodLabel(p.period_start, granularity()) }}
+                    </td>
+                    <td class="px-2 py-1.5 text-right font-mono">
+                      {{ formatInr(p.cash_collected_paise) }}
+                    </td>
+                    <td class="px-2 py-1.5 text-right font-mono">
+                      {{ formatInr(p.upi_collected_paise) }}
+                    </td>
+                    <td class="px-2 py-1.5 text-right font-mono text-surface-500">
+                      {{ formatInr(p.cash_refunded_paise + p.upi_refunded_paise) }}
+                    </td>
+                    <td class="px-2 py-1.5 text-right font-mono font-semibold text-surface-900">
+                      {{ formatInr(p.net_collected_paise) }}
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Block 3: Breakdowns (8 Tabs) -->
+    <div class="space-y-4">
+      <div class="border-b border-surface-200 pb-2">
+        <h2 class="text-lg font-bold text-surface-900">Breakdowns</h2>
+        <p class="text-xs text-surface-500">Earned revenue broken down by dimension.</p>
+      </div>
+
+      <!-- Dimension Tabs -->
+      <div class="flex flex-wrap items-center gap-1.5 border-b border-surface-200 pb-2">
+        @for (tab of dimensionTabs; track tab.id) {
+          <button
+            type="button"
+            (click)="selectDimension(tab.id)"
+            [class]="
+              activeDimension() === tab.id
+                ? 'bg-primary-600 text-white font-semibold'
+                : 'bg-surface-100 text-surface-700 hover:bg-surface-200'
+            "
+            class="rounded-full px-3 py-1 text-xs font-medium transition"
+          >
+            {{ tab.label }}
+          </button>
+        }
+      </div>
+
+      <!-- Breakdown Content -->
+      @if (breakdownLoading()) {
+        <div
+          class="rounded-2xl border border-surface-200 bg-surface-0 p-8 text-center text-sm text-surface-500 shadow-sm"
+        >
+          Loading breakdown...
+        </div>
+      } @else if (breakdownError()) {
+        <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {{ breakdownError() }}
+        </div>
+      } @else {
+        <app-breakdown-table [result]="breakdownResult()" />
+      }
+    </div>
+  }
+
+  <!-- Recompute a Day Section -->
+  <div class="rounded-2xl border border-surface-200 bg-surface-0 p-4 shadow-sm space-y-3">
+    <div class="flex flex-col gap-0.5">
+      <h2 class="text-sm font-semibold text-surface-900">Recompute a day</h2>
+      <p class="text-xs text-surface-500">
+        Recompute earned and collected revenue for one IST calendar day using current catalog
+        definitions.
+      </p>
+    </div>
+    <div class="flex flex-wrap items-center gap-3">
+      <input
+        type="date"
+        data-testid="recompute-date"
+        [value]="recomputeDate()"
+        [max]="todayIstYmd()"
+        (change)="setRecomputeDate($any($event.target).value)"
+        class="rounded-lg border border-surface-300 bg-surface-0 px-2.5 py-1.5 text-xs text-surface-800 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+      />
+      <button
+        type="button"
+        data-testid="recompute-btn"
+        (click)="recomputeDay()"
+        [disabled]="recomputeLoading()"
+        class="rounded-xl bg-surface-900 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-surface-800 disabled:opacity-50 transition"
+      >
+        {{ recomputeLoading() ? 'Queueing...' : 'Recompute' }}
+      </button>
+    </div>
+    @if (recomputeError()) {
+      <div class="rounded-xl border border-red-200 bg-red-50 p-2.5 text-xs text-red-700">
+        {{ recomputeError() }}
+      </div>
+    }
+    @if (recomputeMessage()) {
+      <div class="rounded-xl border border-blue-200 bg-blue-50 p-2.5 text-xs text-blue-800">
+        {{ recomputeMessage() }}
+      </div>
+    }
+  </div>
+
+  <!-- Export Dialog -->
+  <app-export-dialog
+    [visible]="showExportDialog()"
+    (visibleChange)="showExportDialog.set($event)"
+    [from]="fromDate()"
+    [to]="toDate()"
+    defaultDataset="earned_daily"
+  />
+</div>

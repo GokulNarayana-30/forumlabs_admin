@@ -148,7 +148,9 @@ describe('AdminLayoutComponent', () => {
     expect(labels).toContain('Reports');
     expect(labels).not.toContain('Samples');
     expect(labels).not.toContain('Field / Collection');
-    expect(labels).not.toContain('Tickets');
+    // 15-12: report approvers open the desk; the API gives them only the urgent report queue.
+    expect(labels).toContain('Tickets');
+    expect(labels).not.toContain('Patient Search');
     expect(labels).not.toContain('Dispatch');
     expect(labels).not.toContain('Slots');
     expect(labels).not.toContain('Cash Close');
@@ -183,7 +185,7 @@ describe('AdminLayoutComponent', () => {
     rolesSignal.set(['finance']);
     fixture.detectChanges();
     const labels = component.navItems().map((i: { label: string }) => i.label);
-    expect(labels).toEqual(['Cash Close', 'Refunds']);
+    expect(labels).toEqual(['Cash Close', 'Revenue', 'Reconciliation', 'Refunds']);
   });
 
   it('filters navigation for marketing role with three marketing links and no settings', () => {

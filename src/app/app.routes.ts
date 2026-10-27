@@ -83,6 +83,24 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'finance/revenue',
+        canActivate: [roleGuard],
+        data: { roles: ['finance'] },
+        loadComponent: () =>
+          import('./features/finance/revenue/revenue-page.component').then(
+            (m) => m.RevenuePageComponent,
+          ),
+      },
+      {
+        path: 'finance/reconciliation',
+        canActivate: [roleGuard],
+        data: { roles: ['finance'] },
+        loadComponent: () =>
+          import('./features/finance/revenue/reconciliation-page.component').then(
+            (m) => m.ReconciliationPageComponent,
+          ),
+      },
+      {
         path: 'finance/refunds',
         canActivate: [roleGuard, refundFinanceGuard],
         data: { roles: ['finance'] },
@@ -109,6 +127,20 @@ export const routes: Routes = [
         loadChildren: () => import('./features/catalog/catalog.routes').then((m) => m.routes),
       },
       {
+        path: 'doctors',
+        canActivate: [roleGuard],
+        data: { roles: ['catalog_manager'] },
+        loadComponent: () =>
+          import('./features/doctors/doctors-page.component').then((m) => m.DoctorsPageComponent),
+      },
+      {
+        path: 'doctors/card/:doctor_id/:code_id',
+        canActivate: [roleGuard],
+        data: { roles: ['catalog_manager'] },
+        loadComponent: () =>
+          import('./features/doctors/opd-card.component').then((m) => m.OpdCardComponent),
+      },
+      {
         path: 'reports',
         canActivate: [roleGuard],
         data: { roles: ['lab_staff', 'report_approver', 'super_admin'] },
@@ -123,7 +155,7 @@ export const routes: Routes = [
       {
         path: 'tickets',
         canActivate: [roleGuard],
-        data: { roles: ['support', 'super_admin'] },
+        data: { roles: ['support', 'report_approver', 'super_admin'] },
         loadChildren: () => import('./features/tickets/tickets.routes').then((m) => m.routes),
       },
       {

@@ -12,11 +12,12 @@ import {
 import { CommonModule } from '@angular/common';
 import { BookingsService, StaffOrderView } from '../../services/bookings.service';
 import { errorText } from '../../../../core/api/error-text';
+import { OrderDoctorTagComponent } from '../../../doctors/order-doctor-tag.component';
 
 @Component({
   selector: 'app-booking-detail-drawer',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, OrderDoctorTagComponent],
   templateUrl: './booking-detail-drawer.component.html',
 })
 export class BookingDetailDrawerComponent implements OnInit, OnChanges {

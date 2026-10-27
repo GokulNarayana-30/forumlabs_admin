@@ -1,0 +1,109 @@
+<div class="min-h-screen bg-slate-100 p-4 sm:p-8 flex flex-col items-center">
+  <!-- Print Controls & Navigation (Hidden on print) -->
+  <div class="print:hidden w-full max-w-xl mb-6 flex items-center justify-between">
+    <a routerLink="/doctors" class="text-sm font-medium text-slate-600 hover:text-slate-900">
+      &larr; Back to Doctors
+    </a>
+    <button
+      type="button"
+      data-testid="print-btn"
+      (click)="printCard()"
+      class="px-4 py-2 text-sm font-semibold text-white bg-slate-900 rounded-md hover:bg-slate-800 shadow-sm"
+    >
+      Print Card
+    </button>
+  </div>
+
+  @if (errorText()) {
+    <div
+      class="w-full max-w-xl p-4 mb-4 rounded-md bg-rose-50 border border-rose-200 text-rose-800 text-sm"
+    >
+      {{ errorText() }}
+    </div>
+  }
+
+  @if (codeNotFound()) {
+    <div
+      class="w-full max-w-xl p-4 mb-4 rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-sm"
+    >
+      This code was not found.
+    </div>
+  }
+
+  @if (matchedCode(); as code) {
+    @if (!code.active) {
+      <div
+        data-testid="inactive-code-warning"
+        class="print:hidden w-full max-w-xl p-4 mb-4 rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-sm"
+      >
+        This code is switched off. Patients who type it are not linked to the doctor.
+      </div>
+    }
+
+    @if (!cardLink()) {
+      <div
+        data-testid="opd-card-staff-hint"
+        class="print:hidden w-full max-w-xl p-3 mb-4 rounded-md bg-sky-50 border border-sky-200 text-sky-800 text-xs"
+      >
+        Set the card link on the Doctors page to print a web address.
+      </div>
+    }
+
+    <!-- Printable Card Container (Exact card layout) -->
+    <div
+      class="w-full max-w-xl bg-white border border-slate-300 rounded-xl p-8 sm:p-12 shadow-sm text-center space-y-8 print:border-none print:shadow-none print:p-0 print:m-0"
+    >
+      <!-- Hospital Brand -->
+      <div class="space-y-1">
+        <h1 class="text-2xl font-bold tracking-tight text-slate-900 uppercase">Forum Labs</h1>
+        <p class="text-xs uppercase tracking-widest text-slate-500 font-semibold">
+          Diagnostic Laboratory & Home Collection
+        </p>
+      </div>
+
+      <!-- Doctor Information -->
+      <div class="space-y-1 border-t border-b border-slate-100 py-6">
+        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900">
+          {{ doctor()?.display_name }}
+        </h2>
+        <p class="text-base font-medium text-slate-600">
+          {{ doctor()?.department?.name }}
+        </p>
+        @if (code.location_label) {
+          <p class="text-xs text-slate-500 font-medium">
+            {{ code.location_label }}
+          </p>
+        }
+      </div>
+
+      <!-- Code in very large monospace text (D-15) -->
+      <div class="py-4 space-y-2">
+        <p class="text-xs font-semibold tracking-wider text-slate-500 uppercase">Referral Code</p>
+        <div
+          data-testid="opd-card-code"
+          class="text-6xl font-mono tracking-widest font-black text-slate-900 select-all"
+        >
+          {{ code.code }}
+        </div>
+      </div>
+
+      <!-- Patient Instructions -->
+      <div class="space-y-3 pt-2">
+        <p class="text-sm font-medium text-slate-700 max-w-md mx-auto leading-relaxed">
+          Book your tests in the Forum Labs app. On the last step, type this code in Doctor code.
+        </p>
+
+        @if (cardLink(); as link) {
+          <div class="pt-2">
+            <span
+              data-testid="opd-card-link-line"
+              class="text-xs font-mono text-slate-600 select-all"
+            >
+              {{ link }}
+            </span>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>

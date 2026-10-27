@@ -1,11 +1,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BookingDetailDrawerComponent } from './booking-detail-drawer.component';
 import { BookingsService, StaffOrderView } from '../../services/bookings.service';
+import { DoctorsService } from '../../../doctors/doctors.service';
 
 describe('BookingDetailDrawerComponent', () => {
   let fixture: ComponentFixture<BookingDetailDrawerComponent>;
   let component: BookingDetailDrawerComponent;
   let mockBookingsService: any;
+  let mockDoctorsService: any;
 
   const mockDetail: StaffOrderView = {
     order_id: 'order-1',
@@ -74,9 +76,23 @@ describe('BookingDetailDrawerComponent', () => {
       getOrderDetail: vi.fn().mockResolvedValue(mockDetail),
     };
 
+    mockDoctorsService = {
+      getOrderDoctor: vi.fn().mockResolvedValue({
+        kind: 'order_doctor',
+        order_id: 'order-1',
+        doctor: null,
+        source: null,
+      }),
+      listOptions: vi.fn().mockResolvedValue({ kind: 'doctor_options', doctors: [] }),
+      setOrderDoctor: vi.fn(),
+    };
+
     await TestBed.configureTestingModule({
       imports: [BookingDetailDrawerComponent],
-      providers: [{ provide: BookingsService, useValue: mockBookingsService }],
+      providers: [
+        { provide: BookingsService, useValue: mockBookingsService },
+        { provide: DoctorsService, useValue: mockDoctorsService },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(BookingDetailDrawerComponent);
@@ -165,5 +181,24 @@ describe('BookingDetailDrawerComponent', () => {
     expect(text).toContain('18 Oct, 11:59 PM');
     expect(text).toContain('19 Oct, 12:00 AM');
     expect(text).not.toContain('T18:29:59Z');
+  });
+
+  it('renders app-order-doctor-tag with orderId order-1 between patients and timeline, not while loading or on error', async () => {
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const tag = fixture.nativeElement.querySelector('app-order-doctor-tag');
+    expect(tag).toBeTruthy();
+
+    // Not while loading
+    component.isLoading.set(true);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-order-doctor-tag')).toBeNull();
+
+    // Not on error
+    component.isLoading.set(false);
+    component.errorMessage.set('Some error');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('app-order-doctor-tag')).toBeNull();
   });
 });
