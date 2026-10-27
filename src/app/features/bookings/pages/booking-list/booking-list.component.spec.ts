@@ -248,4 +248,83 @@ describe('BookingListComponent', () => {
       });
     });
   });
+
+  describe('cancel booking (dispatch, support and super admin)', () => {
+    const buttonByText = (text: string) =>
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(
+        (b) => (b.textContent ?? '').trim() === text,
+      ) as HTMLButtonElement | undefined;
+    const show = async (status: string) => {
+      mockBookingsService.getOrders.mockResolvedValue([{ ...mockOrders[0], status }]);
+      mockBookingsService.recordEvent = vi.fn().mockResolvedValue({ kind: 'event_recorded' });
+      await component.loadOrders();
+      fixture.detectChanges();
+    };
+
+    for (const status of [
+      'confirmed',
+      'phlebotomist_assigned',
+      'on_the_way',
+      'arrived',
+      'collection_failed',
+    ]) {
+      it(`offers Cancel booking while the booking is ${status}`, async () => {
+        await show(status);
+        expect(buttonByText('Cancel booking')).toBeDefined();
+      });
+    }
+
+    for (const status of [
+      'collected',
+      'received_by_lab',
+      'processing',
+      'report_ready',
+      'cancelled',
+    ]) {
+      it(`does not offer Cancel booking once the booking is ${status}`, async () => {
+        await show(status);
+        expect(buttonByText('Cancel booking')).toBeUndefined();
+      });
+    }
+
+    it('is hidden for a role that may not cancel (for example a phlebotomist)', async () => {
+      mockStaffState.hasRole.mockReturnValue(false);
+      await show('phlebotomist_assigned');
+      expect(buttonByText('Cancel booking')).toBeUndefined();
+    });
+
+    it('the first click only asks; Keep records nothing', async () => {
+      await show('phlebotomist_assigned');
+      buttonByText('Cancel booking')!.click();
+      fixture.detectChanges();
+      expect(mockBookingsService.recordEvent).not.toHaveBeenCalled();
+      buttonByText('Keep')!.click();
+      fixture.detectChanges();
+      expect(mockBookingsService.recordEvent).not.toHaveBeenCalled();
+      expect(buttonByText('Cancel booking')).toBeDefined();
+    });
+
+    it('Yes, cancel records one cancelled event and shows the success text', async () => {
+      await show('phlebotomist_assigned');
+      buttonByText('Cancel booking')!.click();
+      fixture.detectChanges();
+      buttonByText('Yes, cancel')!.click();
+      await fixture.whenStable();
+      expect(mockBookingsService.recordEvent).toHaveBeenCalledTimes(1);
+      expect(mockBookingsService.recordEvent).toHaveBeenCalledWith('order-1', {
+        kind: 'cancelled',
+      });
+      expect(component.successMessage()).toContain('cancelled');
+    });
+
+    it('shows the refusal and no success text when the API answers event_not_allowed', async () => {
+      await show('phlebotomist_assigned');
+      mockBookingsService.recordEvent = vi
+        .fn()
+        .mockResolvedValue({ kind: 'event_not_allowed', reason: 'wrong_status' });
+      await component.cancelBooking({ ...mockOrders[0], status: 'phlebotomist_assigned' } as any);
+      expect(component.successMessage()).toBe('');
+      expect(component.errorMessage()).not.toBe('');
+    });
+  });
 });

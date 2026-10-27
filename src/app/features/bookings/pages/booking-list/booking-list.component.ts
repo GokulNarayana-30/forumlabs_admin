@@ -45,6 +45,7 @@ export class BookingListComponent implements OnInit {
 
   /** The order whose receive-at-lab is waiting for a confirmation click (WR-22). */
   readonly confirmingReceiveOrderId = signal<string | null>(null);
+  readonly confirmingCancelOrderId = signal<string | null>(null);
 
   readonly detailDrawerVisible = signal<boolean>(false);
   readonly selectedOrderId = signal<string | null>(null);
@@ -141,6 +142,49 @@ export class BookingListComponent implements OnInit {
   /** A dispatcher can (re)assign only until the sample is collected: the server refuses it after that. */
   canAssign(order: StaffOrderListItemDto): boolean {
     return isAssignableStatus(order.status);
+  }
+
+  /**
+   * Dispatch and support (and the super admin) can cancel a booking from confirmed up to the arrival, and after a
+   * failed collection: the server's rule (staff cancel). A booking whose sample is collected cannot be cancelled.
+   */
+  canCancel(order: StaffOrderListItemDto): boolean {
+    const cancellable = [
+      'confirmed',
+      'phlebotomist_assigned',
+      'on_the_way',
+      'arrived',
+      'collection_failed',
+    ];
+    const allowedRole =
+      this.staffState.hasRole('booking_dispatch') ||
+      this.staffState.hasRole('support') ||
+      this.staffState.hasRole('super_admin');
+    return cancellable.includes(order.status) && allowedRole;
+  }
+
+  async cancelBooking(order: StaffOrderListItemDto): Promise<void> {
+    this.confirmingCancelOrderId.set(null);
+    if (!this.canCancel(order)) {
+      return;
+    }
+
+    try {
+      this.isLoading.set(true);
+      const res = await this.bookingsService.recordEvent(order.order_id, { kind: 'cancelled' });
+      await this.loadOrders();
+      // After the reload: loadOrders clears the error line.
+      if (isRecorded(res)) {
+        this.successMessage.set(`Booking ${order.booking_ref} cancelled.`);
+      } else {
+        this.successMessage.set('');
+        this.errorMessage.set(eventRefusalText(res));
+      }
+    } catch (err: unknown) {
+      this.errorMessage.set(errorText(err, 'Failed to cancel the booking'));
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 
   canMarkReceivedAtLab(order: StaffOrderListItemDto): boolean {

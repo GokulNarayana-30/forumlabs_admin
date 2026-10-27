@@ -27,7 +27,10 @@
         class="inline-flex items-center gap-1.5 rounded-full border border-surface-300 bg-surface-0 px-4 py-2 text-xs font-medium text-surface-700 hover:bg-surface-50"
       >
         <i class="pi pi-clock"></i>
-        <span>Windows</span>
+        <span
+          title="Change the default number of places, the hours, or add a time window for every day"
+          >Windows &amp; default places</span
+        >
       </button>
       <button
         type="button"
@@ -241,7 +244,16 @@
             </td>
 
             <td class="px-4 py-3 font-semibold text-surface-900">
-              {{ window.capacity }}
+              <button
+                type="button"
+                (click)="openOverrideModal(window)"
+                class="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 -mx-2 hover:bg-surface-100"
+                title="Change the number of places for this day"
+                data-testid="edit-capacity"
+              >
+                {{ window.capacity }}
+                <i class="pi pi-pencil text-[11px] text-primary-600"></i>
+              </button>
             </td>
 
             <td class="px-4 py-3 text-surface-800">
@@ -267,7 +279,7 @@
                 (click)="openOverrideModal(window)"
                 class="rounded-full border border-surface-300 bg-surface-0 px-3 py-1.5 text-xs font-medium text-surface-700 hover:bg-surface-50"
               >
-                Override
+                Edit places / close
               </button>
             </td>
           </tr>
