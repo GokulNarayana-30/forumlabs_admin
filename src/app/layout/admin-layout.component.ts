@@ -23,6 +23,9 @@ export class AdminLayoutComponent {
   /** Phones only: whether the slide-in menu is open. */
   readonly menuOpen = signal(false);
 
+  /** Desktop navigation can be tucked away without changing the phone menu state. */
+  readonly sidebarCollapsed = signal(false);
+
   readonly displayName = this.staffState.displayName;
   readonly roles = this.staffState.roles;
   readonly currentUser = this.staffState.currentUser;

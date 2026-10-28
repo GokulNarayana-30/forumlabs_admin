@@ -1,6 +1,6 @@
-<div class="space-y-6">
+<div class="admin-page admin-refunds space-y-6">
   <!-- Header -->
-  <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+  <div class="admin-page-header flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <h2 class="text-xl font-bold text-surface-900">Customer Refunds & Adjustments</h2>
       <p class="text-xs text-surface-500">
@@ -15,7 +15,7 @@
     *ngIf="successMessage()"
     class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-medium text-emerald-800 flex items-center justify-between"
   >
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2">
       <i class="pi pi-check-circle text-emerald-600"></i>
       <span>{{ successMessage() }}</span>
     </div>
@@ -76,7 +76,7 @@
           <span class="text-xs text-surface-500">Booking Reference</span>
           <p class="text-sm font-bold font-mono text-surface-900">{{ order.booking_ref }}</p>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
           <span
             class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
             [ngClass]="{
@@ -166,27 +166,35 @@
 
     <!-- Table -->
     <div *ngIf="!isLoadingRefunds()" class="overflow-x-auto">
-      <table class="w-full text-left text-xs text-surface-700">
+      <table role="table" class="admin-responsive-table w-full text-left text-xs text-surface-700">
         <thead
           class="border-b border-surface-200 bg-surface-50 text-[11px] font-medium uppercase text-surface-500"
         >
-          <tr>
-            <th class="px-5 py-3">Date (IST)</th>
-            <th class="px-5 py-3">Amount</th>
-            <th class="px-5 py-3">Method</th>
-            <th class="px-5 py-3">Reference</th>
-            <th class="px-5 py-3">Reason</th>
+          <tr role="row">
+            <th scope="col" class="px-5 py-3">Date (IST)</th>
+            <th scope="col" class="px-5 py-3">Amount</th>
+            <th scope="col" class="px-5 py-3">Method</th>
+            <th scope="col" class="px-5 py-3">Reference</th>
+            <th scope="col" class="px-5 py-3">Reason</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-surface-200">
-          <tr *ngFor="let refund of recentRefunds()" class="hover:bg-surface-50/50">
-            <td class="px-5 py-3 font-mono text-surface-600 whitespace-nowrap">
+        <tbody role="rowgroup" class="divide-y divide-surface-200">
+          <tr role="row" *ngFor="let refund of recentRefunds()" class="hover:bg-surface-50/50">
+            <td
+              role="cell"
+              data-label="Date (IST)"
+              class="px-5 py-3 font-mono text-surface-600 whitespace-nowrap"
+            >
               {{ formatDate(refund.recorded_at) }}
             </td>
-            <td class="px-5 py-3 font-bold text-surface-900 whitespace-nowrap">
+            <td
+              role="cell"
+              data-label="Amount"
+              class="px-5 py-3 font-bold text-surface-900 whitespace-nowrap"
+            >
               {{ formatPaise(refund.amount_paise) }}
             </td>
-            <td class="px-5 py-3 uppercase font-medium">
+            <td role="cell" data-label="Method" class="px-5 py-3 uppercase font-medium">
               <span
                 class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold"
                 [ngClass]="{
@@ -197,16 +205,21 @@
                 {{ refund.method }}
               </span>
             </td>
-            <td class="px-5 py-3 font-mono text-surface-600">
+            <td role="cell" data-label="Reference" class="px-5 py-3 font-mono text-surface-600">
               {{ refund.reference || '—' }}
             </td>
-            <td class="px-5 py-3 text-surface-700 max-w-xs truncate" [title]="refund.reason">
+            <td
+              role="cell"
+              data-label="Reason"
+              class="px-5 py-3 text-surface-700 max-w-xs truncate"
+              [title]="refund.reason"
+            >
               {{ refund.reason }}
             </td>
           </tr>
 
-          <tr *ngIf="recentRefunds().length === 0">
-            <td colspan="5" class="px-5 py-8 text-center text-surface-400">
+          <tr role="row" *ngIf="recentRefunds().length === 0">
+            <td role="cell" colspan="5" class="px-5 py-8 text-center text-surface-400">
               No refunds recorded yet.
             </td>
           </tr>

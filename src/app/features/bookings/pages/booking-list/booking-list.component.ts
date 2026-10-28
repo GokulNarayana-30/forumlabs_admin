@@ -28,6 +28,7 @@ export interface StatusFilterOption {
   standalone: true,
   imports: [CommonModule, FormsModule, AssignPhleboDialogComponent, BookingDetailDrawerComponent],
   templateUrl: './booking-list.component.html',
+  styleUrl: './booking-list.component.scss',
 })
 export class BookingListComponent implements OnInit {
   private readonly bookingsService = inject(BookingsService);

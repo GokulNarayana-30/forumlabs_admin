@@ -2,7 +2,7 @@
 <div class="h-screen h-dvh flex flex-col bg-surface-50">
   <!-- Topbar -->
   <header
-    class="h-16 bg-white border-b border-surface-200 px-3 md:px-6 flex items-center justify-between gap-2 sticky top-0 z-30"
+    class="h-16 shrink-0 bg-white border-b border-surface-200 px-3 md:px-6 flex items-center justify-between gap-2 sticky top-0 z-30"
   >
     <div class="flex items-center gap-2 md:gap-3 min-w-0">
       <!-- Menu button: phones only (the menu is always visible from the md width up) -->
@@ -16,6 +16,18 @@
         (click)="menuOpen.set(!menuOpen())"
       >
         {{ menuOpen() ? '✕' : '☰' }}
+      </button>
+      <button
+        type="button"
+        data-testid="sidebar-toggle"
+        class="hidden md:flex shrink-0 w-9 h-9 rounded-lg border border-surface-300 text-surface-700 hover:bg-surface-100 items-center justify-center"
+        [attr.aria-expanded]="!sidebarCollapsed()"
+        aria-controls="main-menu"
+        [attr.aria-label]="sidebarCollapsed() ? 'Show sidebar' : 'Hide sidebar'"
+        [title]="sidebarCollapsed() ? 'Show sidebar' : 'Hide sidebar'"
+        (click)="sidebarCollapsed.set(!sidebarCollapsed())"
+      >
+        <i class="pi pi-bars" aria-hidden="true"></i>
       </button>
       <div
         class="shrink-0 w-8 h-8 rounded-lg bg-primary-600 text-white flex items-center justify-center font-bold text-sm"
@@ -75,7 +87,8 @@
     <aside
       id="main-menu"
       [class]="
-        'bg-white border-r border-surface-200 flex-col p-4 shrink-0 w-64 min-h-0 md:flex md:static md:z-auto ' +
+        'bg-white border-r border-surface-200 flex-col p-3 shrink-0 w-56 min-h-0 md:static md:z-auto ' +
+        (sidebarCollapsed() ? 'md:hidden ' : 'md:flex ') +
         (menuOpen() ? 'flex fixed top-16 bottom-0 left-0 z-20 shadow-xl' : 'hidden')
       "
     >
@@ -85,7 +98,7 @@
             [routerLink]="item.path"
             routerLinkActive="bg-primary-50 text-primary-700 font-semibold"
             (click)="menuOpen.set(false)"
-            class="flex items-center px-3 py-2.5 rounded-xl text-sm font-medium text-surface-700 hover:bg-surface-100 hover:text-surface-900 transition-colors"
+            class="flex items-center px-3 py-2 rounded-xl text-sm font-medium text-surface-700 hover:bg-surface-100 hover:text-surface-900 transition-colors"
           >
             {{ item.label }}
           </a>

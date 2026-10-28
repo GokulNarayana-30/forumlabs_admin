@@ -45,6 +45,7 @@ export const DIMENSION_TABS: readonly DimensionTab[] = [
   standalone: true,
   imports: [CommonModule, SvgBarChartComponent, BreakdownTableComponent, ExportDialogComponent],
   templateUrl: './revenue-page.component.html',
+  styleUrl: './revenue-page.component.scss',
 })
 export class RevenuePageComponent implements OnInit {
   private readonly revenueService = inject(RevenueService);

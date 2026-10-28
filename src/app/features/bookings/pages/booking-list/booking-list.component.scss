@@ -1,0 +1,155 @@
+:host {
+  display: block;
+  min-width: 0;
+  container: bookings / inline-size;
+}
+
+.booking-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.booking-date {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  max-width: 100%;
+}
+
+.booking-date input {
+  min-width: 0;
+  width: 9.5rem;
+  flex: 1;
+}
+
+.booking-date button {
+  flex-shrink: 0;
+}
+
+.booking-table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.booking-table th,
+.booking-table td {
+  padding: 0.875rem 0.75rem;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.booking-table th:nth-child(1) {
+  width: 13%;
+}
+.booking-table th:nth-child(2) {
+  width: 11%;
+}
+.booking-table th:nth-child(3) {
+  width: 17%;
+}
+.booking-table th:nth-child(4) {
+  width: 11%;
+}
+.booking-table th:nth-child(5) {
+  width: 12%;
+}
+.booking-table th:nth-child(6) {
+  width: 10%;
+}
+.booking-table th:nth-child(7) {
+  width: 11%;
+}
+.booking-table th:nth-child(8) {
+  width: 15%;
+}
+
+.booking-cell-label {
+  display: none;
+}
+
+.booking-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.booking-actions button {
+  min-height: 2rem;
+  white-space: normal;
+}
+
+.booking-actions > span {
+  flex-basis: 100%;
+}
+
+// Reflow by the space left for the page, including when the sidebar is shown or hidden.
+@container bookings (max-width: 68rem) {
+  .booking-table,
+  .booking-table tbody {
+    display: block;
+  }
+
+  .booking-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .booking-table tbody {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .booking-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    border: 1px solid var(--color-surface-200);
+    border-radius: 0.75rem;
+    padding: 0.5rem;
+    min-width: 0;
+  }
+
+  .booking-table td {
+    display: block;
+    min-width: 0;
+    padding: 0.625rem;
+  }
+
+  .booking-table td:nth-child(1),
+  .booking-table td:nth-child(2),
+  .booking-table td:nth-child(3),
+  .booking-table td:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .booking-cell-label {
+    display: block;
+    color: var(--color-surface-500);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+  }
+
+  .booking-actions {
+    justify-content: flex-start;
+    border-top: 1px solid var(--color-surface-200);
+    padding-top: 0.75rem;
+  }
+
+  .booking-actions button {
+    min-height: 2.5rem;
+  }
+}

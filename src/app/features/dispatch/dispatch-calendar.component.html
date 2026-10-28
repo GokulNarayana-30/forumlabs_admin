@@ -1,13 +1,13 @@
-<div class="space-y-6">
+<div class="admin-page admin-dispatch-calendar space-y-6">
   <!-- Top bar with date navigation & view toggle -->
-  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  <div class="admin-page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     <div>
       <h1 class="text-2xl font-bold text-surface-900 tracking-tight">Dispatch Calendar</h1>
       <p class="text-xs text-surface-500 mt-1">
         Slot window view and phlebotomist roster (Asia/Kolkata)
       </p>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2">
       <a
         routerLink="/dispatch"
         class="inline-flex items-center px-4 py-2 rounded-xl text-xs font-semibold text-primary-700 bg-primary-50 hover:bg-primary-100 border border-primary-200 transition-colors"
@@ -36,7 +36,7 @@
     class="bg-white p-4 rounded-2xl border border-surface-200 shadow-xs flex flex-wrap items-center justify-between gap-4"
   >
     <!-- Date switcher -->
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2">
       <button
         type="button"
         (click)="previousDay()"
@@ -46,6 +46,7 @@
       </button>
       <input
         type="date"
+        aria-label="Dispatch date (IST)"
         [ngModel]="selectedDate()"
         (ngModelChange)="onDateChange($event)"
         class="px-3 py-1.5 rounded-xl border border-surface-300 text-xs font-medium text-surface-800 focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -60,15 +61,17 @@
     </div>
 
     <!-- Filters -->
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-3">
       <input
         type="text"
+        aria-label="Filter by area"
         placeholder="Filter by area..."
         [ngModel]="selectedArea()"
         (ngModelChange)="selectedArea.set($event); onFilterChange()"
         class="px-3 py-1.5 rounded-xl border border-surface-300 text-xs text-surface-800 placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
       />
       <select
+        aria-label="Visit status"
         [ngModel]="selectedStatus()"
         (ngModelChange)="selectedStatus.set($event); onFilterChange()"
         class="px-3 py-1.5 rounded-xl border border-surface-300 text-xs text-surface-800 focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
@@ -84,7 +87,7 @@
   </div>
 
   <!-- Main grid: Visits by Window + Phlebotomist Roster -->
-  <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+  <div class="admin-dispatch-grid grid grid-cols-1 lg:grid-cols-4 gap-6">
     <!-- Slot Windows & Visits (3 cols) -->
     <div class="lg:col-span-3 space-y-4">
       @let groups = getGroupedVisits();
@@ -114,7 +117,7 @@
                   class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-surface-50 transition-colors"
                 >
                   <div class="space-y-1">
-                    <div class="flex items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
                       <span class="text-xs font-bold text-surface-900">{{
                         visit.booking_ref
                       }}</span>
@@ -125,7 +128,7 @@
                         [class.bg-surface-100]="!visit.is_late"
                         [class.text-surface-700]="!visit.is_late"
                       >
-                        {{ visit.status }}
+                        {{ visit.status.replaceAll('_', ' ') | titlecase }}
                       </span>
                     </div>
                     <div class="text-xs text-surface-600">

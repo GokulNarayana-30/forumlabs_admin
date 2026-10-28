@@ -259,4 +259,31 @@ describe('AdminLayoutComponent', () => {
       expect((el().querySelector('main') as HTMLElement).className).toContain('p-3');
     });
   });
+
+  it('can hide and restore the desktop sidebar without changing the phone menu state', () => {
+    const el = fixture.nativeElement as HTMLElement;
+    const toggle = el.querySelector('[data-testid="sidebar-toggle"]') as HTMLButtonElement;
+    const menu = el.querySelector('#main-menu') as HTMLElement;
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(toggle.getAttribute('aria-label')).toBe('Hide sidebar');
+
+    toggle.click();
+    fixture.detectChanges();
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(toggle.getAttribute('aria-label')).toBe('Show sidebar');
+    expect(menu.className).toContain('md:hidden');
+    expect(component.menuOpen()).toBe(false);
+
+    // The phone's drawer remains usable even after the desktop sidebar has been tucked away.
+    (el.querySelector('[data-testid="menu-btn"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(component.menuOpen()).toBe(true);
+    expect(el.querySelector('[data-testid="menu-backdrop"]')).toBeTruthy();
+
+    toggle.click();
+    fixture.detectChanges();
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(menu.className).toContain('md:flex');
+    expect(component.navItems().some((item) => item.path === '/bookings')).toBe(true);
+  });
 });

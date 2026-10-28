@@ -1,0 +1,33 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.breakdown-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.breakdown-scroll table {
+  min-width: 60rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.breakdown-scroll th {
+  white-space: nowrap;
+}
+
+.breakdown-scroll th,
+.breakdown-scroll td {
+  padding: 0.875rem 1rem;
+}
+
+.breakdown-scroll td:first-child {
+  min-width: 12rem;
+  max-width: 20rem;
+  overflow-wrap: anywhere;
+}
+
+.breakdown-scroll td:not(:first-child) {
+  white-space: nowrap;
+}

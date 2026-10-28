@@ -1,13 +1,13 @@
-<div class="space-y-6">
+<div class="admin-page admin-reports space-y-6">
   <!-- Header -->
-  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+  <div class="admin-page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     <div>
       <h1 class="text-2xl font-bold tracking-tight text-surface-900">Diagnostic Reports</h1>
       <p class="text-sm text-surface-500 mt-1">
         Manage report intake, two-person approver review, and canonical withdrawals.
       </p>
     </div>
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-3">
       <ui-button
         label="Refresh"
         icon="pi pi-refresh"
@@ -20,7 +20,7 @@
   </div>
 
   <!-- Tabs -->
-  <div class="flex border-b border-surface-200 gap-4">
+  <div class="admin-tabs flex flex-wrap border-b border-surface-200 gap-4">
     <button
       type="button"
       (click)="selectTab('intake')"
@@ -70,34 +70,50 @@
     class="bg-surface-0 border border-surface-200 rounded-xl overflow-hidden shadow-xs"
   >
     <div class="overflow-x-auto">
-      <table class="w-full text-left" style="min-width: 50rem">
+      <table role="table" class="admin-responsive-table w-full text-left">
         <thead class="bg-surface-50 border-b border-surface-200">
-          <tr>
-            <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">
+          <tr role="row">
+            <th
+              scope="col"
+              class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4"
+            >
               Booking Ref
             </th>
-            <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">
+            <th
+              scope="col"
+              class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4"
+            >
               Patient
             </th>
-            <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">
+            <th
+              scope="col"
+              class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4"
+            >
               Tests
             </th>
-            <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">
+            <th
+              scope="col"
+              class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4"
+            >
               Slot Date
             </th>
-            <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">
+            <th
+              scope="col"
+              class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4"
+            >
               Status
             </th>
             <th
+              scope="col"
               class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4 text-right"
             >
               Actions
             </th>
           </tr>
         </thead>
-        <tbody>
+        <tbody role="rowgroup">
           @if (loading()) {
-            <tr>
+            <tr role="row">
               <td colspan="99" class="text-center py-8 text-surface-500 text-sm" role="status">
                 Loading…
               </td>
@@ -105,16 +121,21 @@
           } @else {
             @for (item of intakeQueue(); track $index) {
               <tr
+                role="row"
                 class="hover:bg-surface-50 transition-colors border-b border-surface-100 last:border-0"
               >
-                <td class="py-3 px-4 font-mono text-sm font-semibold text-surface-900">
+                <td
+                  role="cell"
+                  data-label="Booking Ref"
+                  class="py-3 px-4 font-mono text-sm font-semibold text-surface-900"
+                >
                   {{ item.booking_ref }}
                 </td>
-                <td class="py-3 px-4 text-sm">
+                <td role="cell" data-label="Patient" class="py-3 px-4 text-sm">
                   <div class="font-medium text-surface-900">{{ item.patient_name }}</div>
                   <div class="text-xs text-surface-500 font-mono">{{ item.patient_code }}</div>
                 </td>
-                <td class="py-3 px-4 text-sm text-surface-700">
+                <td role="cell" data-label="Tests" class="py-3 px-4 text-sm text-surface-700">
                   <div class="flex flex-wrap gap-1">
                     <span
                       *ngFor="let test of item.test_names"
@@ -124,25 +145,30 @@
                     </span>
                   </div>
                 </td>
-                <td class="py-3 px-4 text-sm text-surface-600">
+                <td role="cell" data-label="Slot Date" class="py-3 px-4 text-sm text-surface-600">
                   {{ item.slot_date || '-' }}
                 </td>
-                <td class="py-3 px-4 text-sm">
-                  <ui-tag [value]="item.status" severity="info"></ui-tag>
+                <td role="cell" data-label="Status" class="py-3 px-4 text-sm">
+                  <ui-tag
+                    [value]="item.status.replaceAll('_', ' ') | titlecase"
+                    severity="info"
+                  ></ui-tag>
                 </td>
-                <td class="py-3 px-4 text-sm text-right">
-                  <ui-button
-                    label="Add Report"
-                    icon="pi pi-file-plus"
-                    size="small"
-                    (onClick)="openAddReport(item)"
-                  ></ui-button>
+                <td role="cell" data-label="Actions" class="py-3 px-4 text-sm text-right">
+                  <div class="admin-row-actions">
+                    <ui-button
+                      label="Add Report"
+                      icon="pi pi-file-plus"
+                      size="small"
+                      (onClick)="openAddReport(item)"
+                    ></ui-button>
+                  </div>
                 </td>
               </tr>
             }
             @if (intakeQueue().length === 0) {
-              <tr>
-                <td colspan="6" class="text-center py-8 text-surface-500 text-sm">
+              <tr role="row">
+                <td role="cell" colspan="6" class="text-center py-8 text-surface-500 text-sm">
                   No orders pending report intake.
                 </td>
               </tr>
@@ -159,37 +185,56 @@
     class="bg-surface-0 border border-surface-200 rounded-xl overflow-hidden shadow-xs"
   >
     <div class="overflow-x-auto">
-      <table class="w-full text-left" style="min-width: 55rem">
+      <table role="table" class="admin-responsive-table w-full text-left">
         <thead class="bg-surface-50 border-b border-surface-200">
-          <tr>
-            <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">
+          <tr role="row">
+            <th
+              scope="col"
+              class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4"
+            >
               Booking Ref
             </th>
-            <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">
+            <th
+              scope="col"
+              class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4"
+            >
               Patient
             </th>
-            <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">
+            <th
+              scope="col"
+              class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4"
+            >
               Tests
             </th>
-            <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">
+            <th
+              scope="col"
+              class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4"
+            >
               Reg No
             </th>
-            <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">
+            <th
+              scope="col"
+              class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4"
+            >
               Version
             </th>
-            <th class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4">
+            <th
+              scope="col"
+              class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4"
+            >
               Uploaded At
             </th>
             <th
+              scope="col"
               class="text-xs font-semibold uppercase tracking-wider text-surface-600 py-3 px-4 text-right"
             >
               Actions
             </th>
           </tr>
         </thead>
-        <tbody>
+        <tbody role="rowgroup">
           @if (loading()) {
-            <tr>
+            <tr role="row">
               <td colspan="99" class="text-center py-8 text-surface-500 text-sm" role="status">
                 Loading…
               </td>
@@ -197,16 +242,21 @@
           } @else {
             @for (item of approvalQueue(); track $index) {
               <tr
+                role="row"
                 class="hover:bg-surface-50 transition-colors border-b border-surface-100 last:border-0"
               >
-                <td class="py-3 px-4 font-mono text-sm font-semibold text-surface-900">
+                <td
+                  role="cell"
+                  data-label="Booking Ref"
+                  class="py-3 px-4 font-mono text-sm font-semibold text-surface-900"
+                >
                   {{ item.booking_ref }}
                 </td>
-                <td class="py-3 px-4 text-sm">
+                <td role="cell" data-label="Patient" class="py-3 px-4 text-sm">
                   <div class="font-medium text-surface-900">{{ item.patient_name }}</div>
                   <div class="text-xs text-surface-500 font-mono">{{ item.patient_code }}</div>
                 </td>
-                <td class="py-3 px-4 text-sm text-surface-700">
+                <td role="cell" data-label="Tests" class="py-3 px-4 text-sm text-surface-700">
                   <div class="flex flex-wrap gap-1">
                     <span
                       *ngFor="let test of item.test_names"
@@ -216,43 +266,49 @@
                     </span>
                   </div>
                 </td>
-                <td class="py-3 px-4 font-mono text-sm text-surface-800">
+                <td
+                  role="cell"
+                  data-label="Reg No"
+                  class="py-3 px-4 font-mono text-sm text-surface-800"
+                >
                   {{ item.reg_no || '-' }}
                 </td>
-                <td class="py-3 px-4 text-sm">
+                <td role="cell" data-label="Version" class="py-3 px-4 text-sm">
                   <span
                     class="inline-block px-2 py-0.5 bg-primary-50 text-primary-700 font-mono text-xs rounded font-bold"
                   >
                     v{{ item.version }}
                   </span>
                 </td>
-                <td class="py-3 px-4 text-xs text-surface-500">
+                <td role="cell" data-label="Uploaded At" class="py-3 px-4 text-xs text-surface-500">
                   {{ item.uploaded_at | date: 'medium' }}
                 </td>
-                <td class="py-3 px-4 text-sm text-right space-x-2">
-                  <ui-button
-                    label="Preview"
-                    icon="pi pi-eye"
-                    size="small"
-                    [outlined]="true"
-                    (onClick)="openPreview(item)"
-                  ></ui-button>
+                <td role="cell" data-label="Actions" class="py-3 px-4 text-sm text-right space-x-2">
+                  <div class="admin-row-actions">
+                    <ui-button
+                      label="Preview"
+                      icon="pi pi-eye"
+                      size="small"
+                      [outlined]="true"
+                      (onClick)="openPreview(item)"
+                    ></ui-button>
 
-                  <ui-button
-                    *ngIf="canWithdraw()"
-                    label="Withdraw"
-                    icon="pi pi-ban"
-                    size="small"
-                    severity="danger"
-                    [outlined]="true"
-                    (onClick)="openWithdraw(item)"
-                  ></ui-button>
+                    <ui-button
+                      *ngIf="canWithdraw()"
+                      label="Withdraw"
+                      icon="pi pi-ban"
+                      size="small"
+                      severity="danger"
+                      [outlined]="true"
+                      (onClick)="openWithdraw(item)"
+                    ></ui-button>
+                  </div>
                 </td>
               </tr>
             }
             @if (approvalQueue().length === 0) {
-              <tr>
-                <td colspan="7" class="text-center py-8 text-surface-500 text-sm">
+              <tr role="row">
+                <td role="cell" colspan="7" class="text-center py-8 text-surface-500 text-sm">
                   No draft reports awaiting approval.
                 </td>
               </tr>

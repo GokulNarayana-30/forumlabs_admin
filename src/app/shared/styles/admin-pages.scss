@@ -1,0 +1,317 @@
+// Opt-in layouts for operations pages. Breakpoints follow the available page width,
+// so the expanded navigation cannot squeeze tables or hide their actions.
+.admin-page {
+  container: admin-page / inline-size;
+  min-width: 0;
+  color: var(--color-surface-800);
+
+  > .admin-page-header {
+    flex-wrap: wrap;
+    align-items: flex-start;
+
+    > div:first-child {
+      flex: 1 1 20rem;
+      min-width: 0;
+    }
+
+    > div:last-child:not(:first-child) {
+      flex-wrap: wrap;
+      max-width: 100%;
+      gap: 0.5rem;
+    }
+
+    h1,
+    h2 {
+      font-size: 1.5rem;
+      line-height: 1.3;
+      letter-spacing: -0.035em;
+    }
+
+    p {
+      margin-top: 0.5rem;
+      font-size: 0.875rem;
+      line-height: 1.6;
+    }
+  }
+
+  input:not([type='checkbox']):not([type='radio']),
+  select {
+    min-width: 0;
+    max-width: 100%;
+    min-height: 2.5rem;
+  }
+
+  .admin-toolbar {
+    flex-wrap: wrap;
+    align-items: flex-start;
+
+    > div {
+      min-width: 0;
+      max-width: 100%;
+    }
+  }
+
+  .admin-date-range {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    max-width: 100%;
+
+    label {
+      display: grid;
+      gap: 0.375rem;
+      min-width: 0;
+    }
+
+    input {
+      width: 100%;
+    }
+  }
+
+  .admin-tabs {
+    gap: 0.5rem 1rem;
+
+    > button {
+      min-height: 2.75rem;
+      flex-wrap: wrap;
+    }
+  }
+
+  .admin-responsive-table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    font-variant-numeric: tabular-nums;
+
+    th,
+    td {
+      padding: 0.875rem 0.75rem;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      vertical-align: top;
+      min-width: 0;
+    }
+
+    th {
+      font-size: 0.6875rem;
+      line-height: 1.5;
+      letter-spacing: 0.045em;
+    }
+
+    .truncate {
+      max-width: 100%;
+      white-space: normal;
+      overflow: visible;
+      text-overflow: clip;
+    }
+
+    td[data-label='Actions'],
+    th:last-child {
+      width: 10rem;
+    }
+
+    ui-tag > span {
+      max-width: 100%;
+      white-space: normal;
+    }
+  }
+
+  .admin-row-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+
+    > * {
+      margin: 0;
+      max-width: 100%;
+    }
+
+    button,
+    a {
+      min-height: 2.25rem;
+      white-space: normal;
+    }
+  }
+}
+
+.admin-catalog .admin-responsive-table {
+  th:nth-child(3) {
+    width: 22%;
+  }
+
+  th:last-child {
+    width: 14%;
+  }
+}
+
+@mixin record-cards {
+  display: block;
+  border: 0;
+
+  thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  tbody,
+  tfoot {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--color-surface-50);
+  }
+
+  tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    min-width: 0;
+    padding: 0.5rem;
+    border: 1px solid var(--color-surface-200);
+    border-radius: 1rem;
+    background: var(--color-surface-0);
+  }
+
+  td {
+    display: block;
+    width: auto;
+    min-width: 0;
+    padding: 0.625rem;
+    text-align: left;
+    border: 0;
+
+    &[data-label]::before {
+      content: attr(data-label);
+      display: block;
+      margin-bottom: 0.25rem;
+      font-family: inherit;
+      font-size: 0.625rem;
+      line-height: 1.5;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--color-surface-500);
+    }
+
+    &:first-child,
+    &:last-child,
+    &[data-label='Item Name'],
+    &[data-label='Tests'],
+    &[data-label='Existing Bookings Kept'],
+    &[data-label='Roles'] {
+      grid-column: 1 / -1;
+    }
+
+    &:first-child {
+      padding-bottom: 0.875rem;
+      border-bottom: 1px solid var(--color-surface-100);
+      margin-bottom: 0.25rem;
+      font-weight: 600;
+    }
+
+    &[data-label='Actions'],
+    &[data-label='Action'] {
+      width: auto;
+      border-top: 1px solid var(--color-surface-100);
+      margin-top: 0.25rem;
+      padding-top: 0.875rem;
+
+      &::before {
+        display: none;
+      }
+    }
+  }
+
+  .admin-row-actions {
+    justify-content: flex-start;
+
+    button,
+    a {
+      min-height: 2.75rem;
+    }
+  }
+
+  .admin-section-row {
+    grid-column: 1 / -1;
+    border: 0;
+    padding: 0;
+    background: transparent;
+
+    td {
+      border: 0;
+      margin: 0;
+      padding: 0.25rem;
+      font-size: 0.875rem;
+    }
+  }
+
+  .admin-empty-cell {
+    display: none;
+  }
+
+  tfoot tr {
+    grid-column: 1 / -1;
+  }
+}
+
+@container admin-page (max-width: 80rem) {
+  .admin-page .admin-table-dense {
+    @include record-cards;
+  }
+}
+
+@container admin-page (max-width: 68rem) {
+  .admin-page .admin-responsive-table {
+    @include record-cards;
+  }
+
+  .admin-catalog .admin-responsive-table td:first-child {
+    grid-column: auto;
+    border-bottom: 0;
+    margin-bottom: 0;
+    padding-bottom: 0.625rem;
+  }
+
+  .admin-dispatch-grid {
+    grid-template-columns: minmax(0, 1fr);
+
+    > * {
+      grid-column: auto;
+      min-width: 0;
+    }
+  }
+}
+
+@container admin-page (max-width: 35rem) {
+  .admin-page-header {
+    flex-direction: column;
+
+    > div:first-child {
+      flex-basis: auto !important;
+    }
+  }
+
+  .admin-page .admin-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-page .admin-responsive-table {
+    tbody,
+    tfoot {
+      padding: 0.75rem;
+      gap: 0.75rem;
+    }
+  }
+}

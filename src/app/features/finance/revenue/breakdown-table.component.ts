@@ -9,6 +9,7 @@ import { formatInr } from '../../marketing/inr';
   standalone: true,
   imports: [CommonModule, UiTagComponent],
   templateUrl: './breakdown-table.component.html',
+  styleUrl: './breakdown-table.component.scss',
 })
 export class BreakdownTableComponent {
   readonly result = input<BreakdownResult | null>(null);

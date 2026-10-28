@@ -48,6 +48,24 @@ describe('SvgBarChartComponent and layoutBars', () => {
       component = fixture.componentInstance;
     });
 
+    it('keeps every bar and exact value for a long range while using a readable subset of date labels', () => {
+      const items = Array.from({ length: 93 }, (_, index) => ({
+        label: `Period ${index + 1}`,
+        value: index % 2 === 0 ? index * 100 : -index * 100,
+      }));
+      fixture.componentRef.setInput('items', items);
+      fixture.componentRef.setInput('valueLabel', (value: number) => `Value ${value}`);
+      fixture.detectChanges();
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelectorAll('rect')).toHaveLength(93);
+      const labels = el.querySelectorAll('[data-chart-label]');
+      expect(labels.length).toBeLessThanOrEqual(6);
+      expect(labels[0].textContent).toContain('Period 1');
+      expect(labels[labels.length - 1].textContent).toContain('Period 93');
+      expect(el.querySelectorAll('rect title')[1].textContent).toContain('Period 2: Value -100');
+      expect(el.querySelector('svg')?.getAttribute('height')).toBe('120');
+    });
+
     it('renders one rect per bar with role="img", aria-label, fill classes and text labels', () => {
       fixture.componentRef.setInput('items', [
         { label: '2026-10-23', value: 100 },
@@ -72,13 +90,15 @@ describe('SvgBarChartComponent and layoutBars', () => {
       expect(baseline).toBeTruthy();
       expect(baseline?.classList.contains('stroke-surface-300')).toBe(true);
 
-      const texts = el.querySelectorAll('text');
+      const texts = el.querySelectorAll('[data-chart-label]');
       expect(texts.length).toBeGreaterThanOrEqual(2);
       const textContent = Array.from(texts)
         .map((t) => t.textContent?.trim())
         .join(' ');
       expect(textContent).toContain('2026-10-23');
       expect(textContent).toContain('2026-10-24');
+      expect(svg?.getAttribute('preserveAspectRatio')).toBe('none');
+      expect(rects[0].querySelector('title')?.textContent).toContain('2026-10-23: 100');
 
       // Check no style attribute holds color
       for (const node of el.querySelectorAll('*')) {

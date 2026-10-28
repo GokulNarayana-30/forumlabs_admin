@@ -1,4 +1,4 @@
-<div class="space-y-6">
+<div class="admin-page admin-patient-search space-y-6">
   <!-- Header -->
   <div>
     <h1 class="text-2xl font-bold tracking-tight text-surface-900">Patient Record Lookup</h1>
@@ -101,49 +101,66 @@
       <div class="text-center py-8 text-surface-500 text-sm">No matching patients found.</div>
     } @else {
       <div class="overflow-x-auto">
-        <table class="w-full text-left text-sm text-surface-700">
+        <table
+          role="table"
+          class="admin-responsive-table w-full text-left text-sm text-surface-700"
+        >
           <thead
             class="bg-surface-50 border-b border-surface-200 text-xs uppercase font-semibold text-surface-500 tracking-wider"
           >
-            <tr>
-              <th class="py-3 px-4">Patient Code</th>
-              <th class="py-3 px-4">Masked Name</th>
-              <th class="py-3 px-4">Masked Phone</th>
-              <th class="py-3 px-4">Relation</th>
-              <th class="py-3 px-4">Bookings</th>
-              <th class="py-3 px-4 text-right">Actions</th>
+            <tr role="row">
+              <th scope="col" class="py-3 px-4">Patient Code</th>
+              <th scope="col" class="py-3 px-4">Masked Name</th>
+              <th scope="col" class="py-3 px-4">Masked Phone</th>
+              <th scope="col" class="py-3 px-4">Relation</th>
+              <th scope="col" class="py-3 px-4">Bookings</th>
+              <th scope="col" class="py-3 px-4 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-surface-100">
+          <tbody role="rowgroup" class="divide-y divide-surface-100">
             @for (item of results(); track item.patient_id) {
-              <tr class="hover:bg-surface-50 transition-colors">
-                <td class="py-3 px-4 font-mono font-semibold text-primary-700">
+              <tr role="row" class="hover:bg-surface-50 transition-colors">
+                <td
+                  role="cell"
+                  data-label="Patient Code"
+                  class="py-3 px-4 font-mono font-semibold text-primary-700"
+                >
                   {{ item.patient_code }}
                 </td>
-                <td class="py-3 px-4 font-medium text-surface-900">
+                <td
+                  role="cell"
+                  data-label="Masked Name"
+                  class="py-3 px-4 font-medium text-surface-900"
+                >
                   {{ item.name_masked }}
                 </td>
-                <td class="py-3 px-4 font-mono text-surface-700">
+                <td
+                  role="cell"
+                  data-label="Masked Phone"
+                  class="py-3 px-4 font-mono text-surface-700"
+                >
                   {{ item.phone_masked }}
                 </td>
-                <td class="py-3 px-4 text-surface-600 capitalize">
+                <td role="cell" data-label="Relation" class="py-3 px-4 text-surface-600 capitalize">
                   {{ item.relation }}
                 </td>
-                <td class="py-3 px-4 text-surface-700">
+                <td role="cell" data-label="Bookings" class="py-3 px-4 text-surface-700">
                   <span
                     class="inline-block px-2 py-0.5 bg-surface-100 rounded text-xs font-semibold"
                   >
                     {{ item.booking_count }}
                   </span>
                 </td>
-                <td class="py-3 px-4 text-right">
-                  <ui-button
-                    label="View Details"
-                    icon="pi pi-user"
-                    size="small"
-                    [outlined]="true"
-                    (onClick)="selectPatient(item)"
-                  ></ui-button>
+                <td role="cell" data-label="Actions" class="py-3 px-4 text-right">
+                  <div class="admin-row-actions">
+                    <ui-button
+                      label="View Details"
+                      icon="pi pi-user"
+                      size="small"
+                      [outlined]="true"
+                      (onClick)="selectPatient(item)"
+                    ></ui-button>
+                  </div>
                 </td>
               </tr>
             }

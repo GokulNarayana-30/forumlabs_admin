@@ -1,6 +1,6 @@
-<div class="space-y-6">
+<div class="admin-page admin-slots space-y-6">
   <!-- Header Bar -->
-  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+  <div class="admin-page-header flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <h2 class="text-xl font-bold text-surface-900">Slots & Capacity Management</h2>
       <p class="text-xs text-surface-500">
@@ -8,7 +8,7 @@
         closures.
       </p>
     </div>
-    <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center gap-3">
       <div
         *ngIf="settings()"
         class="hidden md:flex items-center gap-2 rounded-full border border-surface-200 bg-surface-50 px-3 py-1.5 text-xs text-surface-700"
@@ -121,7 +121,7 @@
       class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-surface-200 pb-4"
     >
       <div>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
           <h3 class="text-lg font-bold text-surface-900">
             {{ formatDateHeader(selectedDay()!.date) }}
           </h3>
@@ -144,7 +144,7 @@
         </p>
       </div>
 
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
         <button
           *ngIf="!selectedDay()!.closed"
           type="button"
@@ -172,7 +172,7 @@
       *ngIf="selectedDay()!.closed"
       class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-800"
     >
-      <div class="flex items-center gap-2 font-semibold text-sm">
+      <div class="flex flex-wrap items-center gap-2 font-semibold text-sm">
         <i class="pi pi-info-circle"></i>
         <span>Day is closed for new bookings</span>
       </div>
@@ -184,31 +184,35 @@
 
     <!-- Windows Grid / Table -->
     <div class="mt-6 overflow-hidden rounded-xl border border-surface-200">
-      <table class="min-w-full divide-y divide-surface-200 text-left text-xs">
+      <table
+        role="table"
+        class="admin-responsive-table min-w-full divide-y divide-surface-200 text-left text-xs"
+      >
         <thead class="bg-surface-50 font-semibold text-surface-700">
-          <tr>
-            <th class="px-4 py-3">Slot Window</th>
-            <th class="px-4 py-3">Status</th>
-            <th class="px-4 py-3">Capacity</th>
-            <th class="px-4 py-3">Booked</th>
-            <th class="px-4 py-3">Held</th>
-            <th class="px-4 py-3">Existing Bookings Kept</th>
-            <th class="px-4 py-3 text-right">Actions</th>
+          <tr role="row">
+            <th scope="col" class="px-4 py-3">Slot Window</th>
+            <th scope="col" class="px-4 py-3">Status</th>
+            <th scope="col" class="px-4 py-3">Capacity</th>
+            <th scope="col" class="px-4 py-3">Booked</th>
+            <th scope="col" class="px-4 py-3">Held</th>
+            <th scope="col" class="px-4 py-3">Existing Bookings Kept</th>
+            <th scope="col" class="px-4 py-3 text-right">Actions</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-surface-200 bg-surface-0">
+        <tbody role="rowgroup" class="divide-y divide-surface-200 bg-surface-0">
           <tr
+            role="row"
             *ngFor="let window of selectedDay()!.windows"
             class="hover:bg-surface-50 transition-colors"
           >
-            <td class="px-4 py-3">
+            <td role="cell" data-label="Slot Window" class="px-4 py-3">
               <span class="font-medium text-surface-900 block">
                 {{ formatWindowLabel(window) }}
               </span>
               <span class="text-[11px] font-mono text-surface-400">{{ window.window_id }}</span>
             </td>
 
-            <td class="px-4 py-3">
+            <td role="cell" data-label="Status" class="px-4 py-3">
               <span
                 *ngIf="!window.active"
                 data-testid="window-hidden"
@@ -243,7 +247,7 @@
               </span>
             </td>
 
-            <td class="px-4 py-3 font-semibold text-surface-900">
+            <td role="cell" data-label="Capacity" class="px-4 py-3 font-semibold text-surface-900">
               <button
                 type="button"
                 (click)="openOverrideModal(window)"
@@ -256,15 +260,15 @@
               </button>
             </td>
 
-            <td class="px-4 py-3 text-surface-800">
+            <td role="cell" data-label="Booked" class="px-4 py-3 text-surface-800">
               <span class="font-semibold">{{ window.booked_count }}</span>
             </td>
 
-            <td class="px-4 py-3 text-surface-500">
+            <td role="cell" data-label="Held" class="px-4 py-3 text-surface-500">
               {{ window.held_count }}
             </td>
 
-            <td class="px-4 py-3 text-surface-600">
+            <td role="cell" data-label="Existing Bookings Kept" class="px-4 py-3 text-surface-600">
               <span *ngIf="window.existing_bookings_kept.length === 0" class="text-surface-400"
                 >None</span
               >
@@ -273,14 +277,16 @@
               </span>
             </td>
 
-            <td class="px-4 py-3 text-right">
-              <button
-                type="button"
-                (click)="openOverrideModal(window)"
-                class="rounded-full border border-surface-300 bg-surface-0 px-3 py-1.5 text-xs font-medium text-surface-700 hover:bg-surface-50"
-              >
-                Edit places / close
-              </button>
+            <td role="cell" data-label="Actions" class="px-4 py-3 text-right">
+              <div class="admin-row-actions">
+                <button
+                  type="button"
+                  (click)="openOverrideModal(window)"
+                  class="rounded-full border border-surface-300 bg-surface-0 px-3 py-1.5 text-xs font-medium text-surface-700 hover:bg-surface-50"
+                >
+                  Edit places / close
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
