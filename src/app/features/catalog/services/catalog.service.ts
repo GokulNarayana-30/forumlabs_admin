@@ -289,6 +289,17 @@ export class CatalogService {
     return firstValueFrom(this.api.get<StaffServiceAreaItemDto[]>('/staff/catalog/service-areas'));
   }
 
+  async removeServiceArea(pincode: string): Promise<StaffServiceAreaItemDto> {
+    return firstValueFrom(
+      this.api.delete<StaffServiceAreaItemDto>(
+        `/staff/catalog/service-areas/${encodeURIComponent(pincode)}`,
+        // The shared client only adds a key to requests with a body: one fresh key per click is enough here,
+        // because a repeat of a removal that already happened answers 404, which the screen shows as "already removed".
+        { headers: { 'Idempotency-Key': crypto.randomUUID() } },
+      ),
+    );
+  }
+
   async upsertServiceArea(
     pincode: string,
     payload: UpsertServiceAreaPayload,

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { CatalogService, StaffServiceAreaItemDto } from '../../services/catalog.service';
 import { errorText } from '../../../../core/api/error-text';
+import { ApiClientError } from '../../../../core/api/api-client.service';
 
 @Component({
   selector: 'app-service-area-manager',
@@ -28,6 +29,8 @@ export class ServiceAreaManagerComponent implements OnInit {
   readonly formFeeRupees = signal<string>('0');
   readonly formServiceable = signal<boolean>(true);
   readonly editingPincode = signal<string | null>(null);
+  /** The pincode whose Remove is waiting for its confirmation click. */
+  readonly confirmingRemovePincode = signal<string | null>(null);
 
   readonly filteredAreas = computed(() => {
     const q = this.searchTerm().trim().toLowerCase();
@@ -126,6 +129,30 @@ export class ServiceAreaManagerComponent implements OnInit {
       await this.loadAreas();
     } catch (err: unknown) {
       this.errorMessage.set(errorText(err, 'Failed to save pincode'));
+    } finally {
+      this.isSaving.set(false);
+    }
+  }
+
+  async removePincode(item: StaffServiceAreaItemDto): Promise<void> {
+    this.confirmingRemovePincode.set(null);
+    this.isSaving.set(true);
+    this.errorMessage.set('');
+    this.successMessage.set('');
+
+    try {
+      await this.catalogService.removeServiceArea(item.pincode);
+      if (this.editingPincode() === item.pincode) this.resetForm();
+      this.successMessage.set(`Pincode ${item.pincode} (${item.area_name}) removed.`);
+      await this.loadAreas();
+    } catch (err: unknown) {
+      if (err instanceof ApiClientError && err.status === 404) {
+        // Already gone (a second click, or another person removed it): the list is simply out of date.
+        this.successMessage.set(`Pincode ${item.pincode} was already removed.`);
+        await this.loadAreas();
+      } else {
+        this.errorMessage.set(errorText(err, 'Failed to remove pincode'));
+      }
     } finally {
       this.isSaving.set(false);
     }

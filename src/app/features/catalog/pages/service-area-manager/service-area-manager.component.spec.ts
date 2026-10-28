@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CatalogService } from '../../services/catalog.service';
+import { ApiClientError } from '../../../../core/api/api-client.service';
 import { ServiceAreaManagerComponent } from './service-area-manager.component';
 
 const areas = [
@@ -27,12 +28,14 @@ describe('ServiceAreaManagerComponent', () => {
   let catalog: {
     getServiceAreas: ReturnType<typeof vi.fn>;
     upsertServiceArea: ReturnType<typeof vi.fn>;
+    removeServiceArea: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
     catalog = {
       getServiceAreas: vi.fn().mockResolvedValue(areas),
       upsertServiceArea: vi.fn().mockResolvedValue(areas[0]),
+      removeServiceArea: vi.fn().mockResolvedValue(areas[0]),
     };
     await TestBed.configureTestingModule({
       imports: [ServiceAreaManagerComponent],
@@ -117,5 +120,67 @@ describe('ServiceAreaManagerComponent', () => {
     await component.onSavePincode();
     expect(component.errorMessage()).not.toBe('');
     expect(component.successMessage()).toBe('');
+  });
+
+  describe('remove', () => {
+    beforeEach(() => fixture.detectChanges());
+
+    const button = (testId: string) =>
+      (fixture.nativeElement as HTMLElement).querySelector(
+        `[data-testid="${testId}"]`,
+      ) as HTMLButtonElement | null;
+    const buttonByText = (text: string) =>
+      Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find(
+        (b) => (b.textContent ?? '').trim() === text,
+      ) as HTMLButtonElement | undefined;
+
+    it('the first click only asks (with a warning for a pincode customers can book), Keep removes nothing', () => {
+      button('remove-pincode')!.click();
+      fixture.detectChanges();
+      expect(catalog.removeServiceArea).not.toHaveBeenCalled();
+      expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+        'Customers can book here',
+      );
+      buttonByText('Keep')!.click();
+      fixture.detectChanges();
+      expect(catalog.removeServiceArea).not.toHaveBeenCalled();
+      expect(button('remove-pincode')).not.toBeNull();
+    });
+
+    it('Yes, remove deletes that pincode once, reloads the list and says so', async () => {
+      button('remove-pincode')!.click();
+      fixture.detectChanges();
+      button('confirm-remove-pincode')!.click();
+      await fixture.whenStable();
+      expect(catalog.removeServiceArea).toHaveBeenCalledTimes(1);
+      expect(catalog.removeServiceArea).toHaveBeenCalledWith('560062');
+      expect(catalog.getServiceAreas).toHaveBeenCalledTimes(2);
+      expect(component.successMessage()).toContain('560062');
+      expect(component.confirmingRemovePincode()).toBeNull();
+    });
+
+    it('a pincode that is already gone (404) is shown as already removed, not as an error', async () => {
+      catalog.removeServiceArea.mockRejectedValue(
+        new ApiClientError(404, 'not_found', 'This does not exist.'),
+      );
+      await component.removePincode(areas[1]!);
+      expect(component.errorMessage()).toBe('');
+      expect(component.successMessage()).toContain('already removed');
+    });
+
+    it('any other failure shows the error and keeps the list', async () => {
+      catalog.removeServiceArea.mockRejectedValue(
+        new ApiClientError(403, 'forbidden', 'No access.'),
+      );
+      await component.removePincode(areas[0]!);
+      expect(component.errorMessage()).not.toBe('');
+      expect(component.successMessage()).toBe('');
+    });
+
+    it('removing the pincode being edited clears the form', async () => {
+      component.startEdit(areas[0]!);
+      await component.removePincode(areas[0]!);
+      expect(component.editingPincode()).toBeNull();
+    });
   });
 });
