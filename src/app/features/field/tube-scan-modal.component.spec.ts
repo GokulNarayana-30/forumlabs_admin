@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { environment } from '../../../environments/environment';
 import { TestBed } from '@angular/core/testing';
-import { encodeCode128B, TubeScanModalComponent } from './tube-scan-modal.component';
+import { TubeScanModalComponent } from './tube-scan-modal.component';
 import { FieldService, FieldVisit, StaffTube } from './services/field.service';
 
 const tube = (code: string, order = 'a', attempt = 1): StaffTube => ({
@@ -27,22 +27,27 @@ describe('Tube scan modal lifecycle', () => {
       providers: [{ provide: FieldService, useValue: service }],
     });
   });
-  it('replaces the rendered label on order and attempt change and clears it on close', async () => {
+  it('replaces the rendered bottle barcode on order and attempt change and clears it on close', async () => {
     const f = TestBed.createComponent(TubeScanModalComponent);
     f.componentRef.setInput('visible', true);
-    f.componentRef.setInput('visit', visit('a', [tube('FLT-AAAA-BBBB')]));
+    f.componentRef.setInput(
+      'visit',
+      visit('a', [{ ...tube('FLT-AAAA-BBBB'), bottle_barcode: 'BOTTLE-AAA' }]),
+    );
     await f.whenStable();
     f.detectChanges();
-    expect(f.nativeElement.textContent).toContain('FLT-AAAA-BBBB');
-    f.componentRef.setInput('visit', visit('b', [tube('FLT-CCCC-DDDD', 'b')]));
+    expect(f.nativeElement.textContent).toContain('BOTTLE-AAA');
+    f.componentRef.setInput(
+      'visit',
+      visit('b', [{ ...tube('FLT-CCCC-DDDD', 'b'), bottle_barcode: 'BOTTLE-CCC' }]),
+    );
     await f.whenStable();
     f.detectChanges();
-    expect(f.nativeElement.textContent).not.toContain('FLT-AAAA-BBBB');
-    expect(f.nativeElement.querySelector('svg')).not.toBeNull();
+    expect(f.nativeElement.textContent).not.toContain('BOTTLE-AAA');
+    expect(f.nativeElement.textContent).toContain('BOTTLE-CCC');
     f.componentRef.setInput('visit', visit('b', [], 2));
     await f.whenStable();
     f.detectChanges();
-    expect(f.nativeElement.querySelector('svg')).toBeNull();
     f.nativeElement.querySelector('[aria-label="Close modal"]').click();
     f.detectChanges();
     expect(f.componentInstance.activeTubeForBarcode()).toBeNull();
@@ -65,7 +70,6 @@ describe('Tube scan modal lifecycle', () => {
     resolve({ tubes: [tube('FLT-AAAA-BBBB')] });
     await f.whenStable();
     f.detectChanges();
-    expect(f.nativeElement.querySelector('svg')).toBeNull();
     expect(f.componentInstance.tubes()).toEqual([]);
   });
   it.each(['close', 'destroy', 'visit change'])(
@@ -126,17 +130,6 @@ const runs = [
   '132311',
   '2331112',
 ];
-function fixtureBars() {
-  let x = 10;
-  const bars: { x: number; y: number; width: number; height: number }[] = [];
-  for (const run of runs)
-    for (const [i, c] of [...run].entries()) {
-      const width = Number(c);
-      if (i % 2 === 0) bars.push({ x, y: 0, width, height: 60 });
-      x += width;
-    }
-  return bars;
-}
 
 describe('Tube labels and actual HTTP interactions', () => {
   beforeEach(() =>
@@ -157,27 +150,6 @@ describe('Tube labels and actual HTTP interactions', () => {
     f.detectChanges();
     return f;
   };
-  it('matches independent symbol/checksum runs, both quiet zones and every rendered SVG rectangle', async () => {
-    const actual = encodeCode128B(label);
-    expect(actual.bars).toEqual(fixtureBars());
-    expect(actual.totalWidth).toBe(198);
-    expect(actual.bars[0].x).toBe(10);
-    const last = actual.bars.at(-1)!;
-    expect(actual.totalWidth - last.x - last.width).toBe(10);
-    const f = await setup();
-    const svg = f.nativeElement.querySelector('svg');
-    expect(svg.getAttribute('viewBox')).toBe('0 0 198 60');
-    const rects = Array.from(svg.querySelectorAll('rect') as NodeListOf<SVGRectElement>).map(
-      (r) => ({
-        x: Number(r.getAttribute('x')),
-        y: Number(r.getAttribute('y')),
-        width: Number(r.getAttribute('width')),
-        height: Number(r.getAttribute('height')),
-      }),
-    );
-    expect(rects).toEqual(fixtureBars());
-    TestBed.inject(HttpTestingController).verify();
-  });
   it('generates then scans through real controls, rejecting invalid, foreign and stale-attempt codes', async () => {
     const f = await setup([]),
       http = TestBed.inject(HttpTestingController);
@@ -190,7 +162,6 @@ describe('Tube labels and actual HTTP interactions', () => {
     generated.flush({ kind: 'tubes_generated', tubes: [tube(label)] });
     await f.whenStable();
     f.detectChanges();
-    expect(f.nativeElement.querySelector('svg')).not.toBeNull();
     const input = async (value: string) => {
       const el = f.nativeElement.querySelector('#manual-tube-input');
       el.value = value;
@@ -202,7 +173,7 @@ describe('Tube labels and actual HTTP interactions', () => {
       f.detectChanges();
     };
     await input('bad');
-    expect(f.nativeElement.textContent).toContain('Invalid tube code format');
+    expect(f.nativeElement.textContent).toContain('not a usable bottle barcode');
     await input('FLT-0000-0000');
     expect(f.nativeElement.textContent).toContain('does not belong');
     http.expectNone((r) => r.method === 'POST');
@@ -221,6 +192,49 @@ describe('Tube labels and actual HTTP interactions', () => {
     await input(label);
     expect(f.nativeElement.textContent).toContain('does not belong');
     http.expectNone((r) => r.method === 'POST');
+    http.verify();
+  });
+  it('links the bottle barcode to the tube waiting for a bottle and shows the patient and test', async () => {
+    const f = await setup([]),
+      http = TestBed.inject(HttpTestingController);
+    const click = (text: string) =>
+      Array.from(f.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+        .find((b) => b.textContent?.includes(text))!
+        .click();
+    click('Generate Sample Tubes');
+    http.expectOne(environment.apiUrl + '/staff/orders/a/tubes').flush({
+      kind: 'tubes_generated',
+      tubes: [{ ...tube(label), patient_label: 'Asha (FRM-1)', test_name: 'CBC' }],
+    });
+    await f.whenStable();
+    f.detectChanges();
+    expect(f.nativeElement.textContent).toContain('Waiting for bottle');
+    expect(f.nativeElement.textContent).toContain('Asha (FRM-1) · CBC');
+
+    const el = f.nativeElement.querySelector('#manual-tube-input');
+    el.value = ' ab 123456 ';
+    el.dispatchEvent(new Event('input'));
+    await f.whenStable();
+    f.detectChanges();
+    click('Confirm');
+    const scan = http.expectOne(environment.apiUrl + '/staff/tubes/' + label + '/scan');
+    expect(scan.request.body).toEqual({ barcode: 'AB123456' });
+    scan.flush({
+      kind: 'tube_scanned',
+      tube: {
+        ...tube(label),
+        bottle_barcode: 'AB123456',
+        status: 'scanned_at_collection',
+        patient_label: 'Asha (FRM-1)',
+        test_name: 'CBC',
+      },
+    });
+    await f.whenStable();
+    await vi.waitFor(() => {
+      f.detectChanges();
+      expect(f.nativeElement.textContent).toContain('Bottle AB123456 linked to Asha (FRM-1) · CBC');
+    });
+    expect(f.nativeElement.textContent).toContain('Bottle linked');
     http.verify();
   });
   it('uses the native detector fixture and stops tracks after a successful scan', async () => {

@@ -10,7 +10,7 @@ import {
 } from '../../services/field.service';
 import { routes } from '../../field.routes';
 import { ApiClientError } from '../../../../core/api/api-client.service';
-import { encodeCode128B, normalizeInputTubeCode } from '../../tube-scan-modal.component';
+import { normalizeInputTubeCode } from '../../tube-scan-modal.component';
 
 describe('FieldTodayComponent', () => {
   let fixture: ComponentFixture<FieldTodayComponent>;
@@ -322,7 +322,7 @@ describe('FieldTodayComponent', () => {
     expect(router.url).toContain('summary');
   });
 
-  describe('Code 128-B SVG barcode encoding and tube normalization', () => {
+  describe('tube code normalization', () => {
     it('normalizes tube codes with Crockford mapping and case insensitivity', () => {
       expect(normalizeInputTubeCode('flt-1234-5678')).toBe('FLT-1234-5678');
       expect(normalizeInputTubeCode('flt 1234 5678')).toBe('FLT-1234-5678');
@@ -331,41 +331,6 @@ describe('FieldTodayComponent', () => {
       expect(normalizeInputTubeCode('flt-iloa-bbbb')).toBe('FLT-110A-BBBB');
       // Invalid length
       expect(normalizeInputTubeCode('123')).toBeNull();
-    });
-
-    it('encodes Code 128-B barcode with start 104, weighted checksum, stop 106, and quiet zones', () => {
-      const code = 'FLT-1111-2222';
-      const barcode = encodeCode128B(code);
-
-      expect(barcode.height).toBe(60);
-      expect(barcode.totalWidth).toBeGreaterThan(150);
-      expect(barcode.bars.length).toBeGreaterThan(20);
-
-      // Bars start after quiet zone (>= 10 modules)
-      expect(barcode.bars[0].x).toBe(10);
-      // All bar rects have positive dimensions
-      for (const bar of barcode.bars) {
-        expect(bar.width).toBeGreaterThanOrEqual(1);
-        expect(bar.height).toBe(60);
-        expect(bar.y).toBe(0);
-      }
-    });
-
-    it('verifies independent Code 128-B checksum calculation against manual calculation', () => {
-      // Manual verification: 'FLT-1111-2222'
-      // start 104
-      // 'F'(38)*1=38, 'L'(44)*2=88, 'T'(52)*3=156, '-'(13)*4=52,
-      // '1'(17)*5=85, '1'(17)*6=102, '1'(17)*7=119, '1'(17)*8=136,
-      // '-'(13)*9=117, '2'(18)*10=180, '2'(18)*11=198, '2'(18)*12=216, '2'(18)*13=234
-      // sum = 104 + 1721 = 1825; 1825 % 103 = 74.
-      // Expected total width: 10 + 11 + 13*11 + 11 + 13 + 10 = 198 modules
-      const barcode = encodeCode128B('FLT-1111-2222');
-      expect(barcode.totalWidth).toBe(198);
-      expect(barcode.bars.slice(-7, -4).map(({ x, width }) => [x, width])).toEqual([
-        [164, 1],
-        [169, 2],
-        [173, 1],
-      ]);
     });
   });
 

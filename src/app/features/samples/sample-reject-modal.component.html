@@ -12,7 +12,11 @@
           <span>Reject Specimen Sample</span>
         </h3>
         <p class="text-xs text-surface-500">
-          Tube: <strong class="font-mono text-surface-800">{{ tube?.tube_code }}</strong> | Test:
+          Tube:
+          <strong class="font-mono text-surface-800">{{
+            tube?.bottle_barcode ?? tube?.tube_code
+          }}</strong>
+          | Test:
           <strong class="text-surface-800">{{ tube?.test_name }}</strong>
         </p>
       </div>

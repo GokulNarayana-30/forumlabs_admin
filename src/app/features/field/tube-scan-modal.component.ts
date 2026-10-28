@@ -1,15 +1,3 @@
-/*
- * Portions of the Code 128 pattern table below are adapted from the ZXing project:
- * https://github.com/zxing/zxing/blob/zxing-3.5.3/core/src/main/java/com/google/zxing/oned/Code128Reader.java
- *
- * Copyright 2008 ZXing authors
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- */
-
 import {
   Component,
   ElementRef,
@@ -28,178 +16,6 @@ import { FormsModule } from '@angular/forms';
 import { FieldService, FieldVisit, StaffTube } from './services/field.service';
 import { errorText } from '../../core/api/error-text';
 
-export const CODE128_PATTERNS: readonly (readonly number[])[] = [
-  [2, 1, 2, 2, 2, 2], // 0
-  [2, 2, 2, 1, 2, 2],
-  [2, 2, 2, 2, 2, 1],
-  [1, 2, 1, 2, 2, 3],
-  [1, 2, 1, 3, 2, 2],
-  [1, 3, 1, 2, 2, 2], // 5
-  [1, 2, 2, 2, 1, 3],
-  [1, 2, 2, 3, 1, 2],
-  [1, 3, 2, 2, 1, 2],
-  [2, 2, 1, 2, 1, 3],
-  [2, 2, 1, 3, 1, 2], // 10
-  [2, 3, 1, 2, 1, 2],
-  [1, 1, 2, 2, 3, 2],
-  [1, 2, 2, 1, 3, 2],
-  [1, 2, 2, 2, 3, 1],
-  [1, 1, 3, 2, 2, 2], // 15
-  [1, 2, 3, 1, 2, 2],
-  [1, 2, 3, 2, 2, 1],
-  [2, 2, 3, 2, 1, 1],
-  [2, 2, 1, 1, 3, 2],
-  [2, 2, 1, 2, 3, 1], // 20
-  [2, 1, 3, 2, 1, 2],
-  [2, 2, 3, 1, 1, 2],
-  [3, 1, 2, 1, 3, 1],
-  [3, 1, 1, 2, 2, 2],
-  [3, 2, 1, 1, 2, 2], // 25
-  [3, 2, 1, 2, 2, 1],
-  [3, 1, 2, 2, 1, 2],
-  [3, 2, 2, 1, 1, 2],
-  [3, 2, 2, 2, 1, 1],
-  [2, 1, 2, 1, 2, 3], // 30
-  [2, 1, 2, 3, 2, 1],
-  [2, 3, 2, 1, 2, 1],
-  [1, 1, 1, 3, 2, 3],
-  [1, 3, 1, 1, 2, 3],
-  [1, 3, 1, 3, 2, 1], // 35
-  [1, 1, 2, 3, 1, 3],
-  [1, 3, 2, 1, 1, 3],
-  [1, 3, 2, 3, 1, 1],
-  [2, 1, 1, 3, 1, 3],
-  [2, 3, 1, 1, 1, 3], // 40
-  [2, 3, 1, 3, 1, 1],
-  [1, 1, 2, 1, 3, 3],
-  [1, 1, 2, 3, 3, 1],
-  [1, 3, 2, 1, 3, 1],
-  [1, 1, 3, 1, 2, 3], // 45
-  [1, 1, 3, 3, 2, 1],
-  [1, 3, 3, 1, 2, 1],
-  [3, 1, 3, 1, 2, 1],
-  [2, 1, 1, 3, 3, 1],
-  [2, 3, 1, 1, 3, 1], // 50
-  [2, 1, 3, 1, 1, 3],
-  [2, 1, 3, 3, 1, 1],
-  [2, 1, 3, 1, 3, 1],
-  [3, 1, 1, 1, 2, 3],
-  [3, 1, 1, 3, 2, 1], // 55
-  [3, 3, 1, 1, 2, 1],
-  [3, 1, 2, 1, 1, 3],
-  [3, 1, 2, 3, 1, 1],
-  [3, 3, 2, 1, 1, 1],
-  [3, 1, 4, 1, 1, 1], // 60
-  [2, 2, 1, 4, 1, 1],
-  [4, 3, 1, 1, 1, 1],
-  [1, 1, 1, 2, 2, 4],
-  [1, 1, 1, 4, 2, 2],
-  [1, 2, 1, 1, 2, 4], // 65
-  [1, 2, 1, 4, 2, 1],
-  [1, 4, 1, 1, 2, 2],
-  [1, 4, 1, 2, 2, 1],
-  [1, 1, 2, 2, 1, 4],
-  [1, 1, 2, 4, 1, 2], // 70
-  [1, 2, 2, 1, 1, 4],
-  [1, 2, 2, 4, 1, 1],
-  [1, 4, 2, 1, 1, 2],
-  [1, 4, 2, 2, 1, 1],
-  [2, 4, 1, 2, 1, 1], // 75
-  [2, 2, 1, 1, 1, 4],
-  [4, 1, 3, 1, 1, 1],
-  [2, 4, 1, 1, 1, 2],
-  [1, 3, 4, 1, 1, 1],
-  [1, 1, 1, 2, 4, 2], // 80
-  [1, 2, 1, 1, 4, 2],
-  [1, 2, 1, 2, 4, 1],
-  [1, 1, 4, 2, 1, 2],
-  [1, 2, 4, 1, 1, 2],
-  [1, 2, 4, 2, 1, 1], // 85
-  [4, 1, 1, 2, 1, 2],
-  [4, 2, 1, 1, 1, 2],
-  [4, 2, 1, 2, 1, 1],
-  [2, 1, 2, 1, 4, 1],
-  [2, 1, 4, 1, 2, 1], // 90
-  [4, 1, 2, 1, 2, 1],
-  [1, 1, 1, 1, 4, 3],
-  [1, 1, 1, 3, 4, 1],
-  [1, 3, 1, 1, 4, 1],
-  [1, 1, 4, 1, 1, 3], // 95
-  [1, 1, 4, 3, 1, 1],
-  [4, 1, 1, 1, 1, 3],
-  [4, 1, 1, 3, 1, 1],
-  [1, 1, 3, 1, 4, 1],
-  [1, 1, 4, 1, 3, 1], // 100
-  [3, 1, 1, 1, 4, 1],
-  [4, 1, 1, 1, 3, 1],
-  [2, 1, 1, 4, 1, 2],
-  [2, 1, 1, 2, 1, 4], // 104 (Start B)
-  [2, 1, 1, 2, 3, 2], // 105 (Start C)
-  [2, 3, 3, 1, 1, 1, 2], // 106 (Stop)
-];
-
-export interface BarcodeRect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-export interface BarcodeSvgData {
-  totalWidth: number;
-  height: number;
-  bars: BarcodeRect[];
-}
-
-export function encodeCode128B(text: string): BarcodeSvgData {
-  const START_B = 104;
-  const STOP = 106;
-  const QUIET_ZONE = 10;
-  const BAR_HEIGHT = 60;
-
-  const symbolValues: number[] = [START_B];
-  let checksum = START_B;
-
-  for (let i = 0; i < text.length; i++) {
-    const code = text.charCodeAt(i) - 32;
-    symbolValues.push(code);
-    checksum += code * (i + 1);
-  }
-
-  const checksumSymbol = checksum % 103;
-  symbolValues.push(checksumSymbol);
-  symbolValues.push(STOP);
-
-  const bars: BarcodeRect[] = [];
-  let currentX = QUIET_ZONE;
-
-  for (const sym of symbolValues) {
-    const pattern = CODE128_PATTERNS[sym];
-    if (!pattern) continue;
-
-    for (let pIdx = 0; pIdx < pattern.length; pIdx++) {
-      const width = pattern[pIdx]!;
-      if (pIdx % 2 === 0) {
-        // Bar
-        bars.push({
-          x: currentX,
-          y: 0,
-          width,
-          height: BAR_HEIGHT,
-        });
-      }
-      currentX += width;
-    }
-  }
-
-  const totalWidth = currentX + QUIET_ZONE;
-  return {
-    totalWidth,
-    height: BAR_HEIGHT,
-    bars,
-  };
-}
-
 export function normalizeInputTubeCode(input: string): string | null {
   if (!input || typeof input !== 'string') return null;
 
@@ -215,6 +31,14 @@ export function normalizeInputTubeCode(input: string): string | null {
   }
 
   return `FLT-${cleaned.slice(0, 4)}-${cleaned.slice(4, 8)}`;
+}
+
+/** The barcode printed on the lab's bottle: 6 to 32 letters, digits or . _ - (never starting with FLT). Null when unusable. */
+export function normalizeBottleBarcode(input: string): string | null {
+  if (!input || typeof input !== 'string') return null;
+  const cleaned = input.replace(/\s+/g, '').toUpperCase();
+  if (cleaned.startsWith('FLT')) return null;
+  return /^[A-Z0-9][A-Z0-9._-]{5,31}$/.test(cleaned) ? cleaned : null;
 }
 
 @Component({
@@ -249,6 +73,7 @@ export class TubeScanModalComponent implements OnChanges, OnDestroy {
   private cameraStartTimer: ReturnType<typeof setTimeout> | null = null;
   private mediaStream: MediaStream | null = null;
   private scanAnimationId: number | null = null;
+  private detectorFormats: string[] = [];
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['visit'] || changes['visible']) {
@@ -288,8 +113,11 @@ export class TubeScanModalComponent implements OnChanges, OnDestroy {
     if (typeof window !== 'undefined' && 'BarcodeDetector' in window) {
       try {
         const formats: string[] = await (window as any).BarcodeDetector.getSupportedFormats();
-        if (generation === this.generation)
-          this.hasBarcodeDetector.set(formats.includes('code_128'));
+        if (generation === this.generation) {
+          // The lab's bottles may carry any common barcode type, so read every format the phone supports.
+          this.detectorFormats = formats;
+          this.hasBarcodeDetector.set(formats.length > 0);
+        }
       } catch {
         if (generation === this.generation) this.hasBarcodeDetector.set(false);
       }
@@ -320,56 +148,91 @@ export class TubeScanModalComponent implements OnChanges, OnDestroy {
     }
   }
 
-  getBarcodeSvg(code: string): BarcodeSvgData {
-    return encodeCode128B(code);
-  }
-
   selectTubeForBarcode(tube: StaffTube): void {
     this.activeTubeForBarcode.set(tube);
   }
 
-  printBarcode(): void {
-    if (typeof window !== 'undefined') {
-      window.print();
-    }
+  /** The tube a bottle scan belongs to: the one picked in the list, else the first still waiting for a bottle. */
+  private pendingTarget(): StaffTube | null {
+    const active = this.activeTubeForBarcode();
+    const waiting = (t: StaffTube) => t.status === 'generated';
+    return active && waiting(active) ? active : (this.tubes().find(waiting) ?? null);
   }
 
   async onManualSubmit(): Promise<void> {
-    const raw = this.manualCodeInput();
-    const normalized = normalizeInputTubeCode(raw);
-    if (!normalized) {
-      this.errorMessage.set('Invalid tube code format. Expected FLT-XXXX-XXXX or 8 characters.');
+    await this.handleScannedValue(this.manualCodeInput());
+  }
+
+  /**
+   * One value from the camera or the keyboard. A code we generated scans that tube as before; any other usable
+   * barcode is the bottle's own and is linked to the tube for the patient being collected.
+   */
+  private async handleScannedValue(raw: string): Promise<void> {
+    this.errorMessage.set('');
+    this.successMessage.set('');
+    const generated = normalizeInputTubeCode(raw);
+    const matchedTube = generated ? this.tubes().find((t) => t.tube_code === generated) : undefined;
+    if (matchedTube) {
+      if (matchedTube.status !== 'generated') {
+        this.successMessage.set(`Tube ${matchedTube.tube_code} is already scanned.`);
+        this.manualCodeInput.set('');
+        return;
+      }
+      await this.scanTube(matchedTube.tube_code);
       return;
     }
 
-    const matchedTube = this.tubes().find((t) => t.tube_code === normalized);
-    if (!matchedTube) {
-      this.errorMessage.set(`Tube ${normalized} does not belong to this order.`);
+    // Something that looks like one of our own codes but is not in this visit is never taken for a bottle barcode.
+    if (raw.trim().toUpperCase().startsWith('FLT')) {
+      this.errorMessage.set(
+        generated
+          ? `Tube ${generated} does not belong to this order.`
+          : 'Invalid tube code format. Expected FLT-XXXX-XXXX.',
+      );
       return;
     }
 
-    if (matchedTube.status === 'scanned_at_collection') {
-      this.successMessage.set(`Tube ${normalized} is already scanned.`);
+    const barcode = normalizeBottleBarcode(raw);
+    if (!barcode) {
+      this.errorMessage.set(
+        'That is not a usable bottle barcode. Scan the barcode on the bottle, or type its 6 to 32 letters and digits.',
+      );
+      return;
+    }
+    const linked = this.tubes().find((t) => t.bottle_barcode === barcode);
+    if (linked) {
+      this.successMessage.set(`Bottle ${barcode} is already scanned for this visit.`);
       this.manualCodeInput.set('');
       return;
     }
-
-    await this.scanTube(matchedTube.tube_code);
+    const target = this.pendingTarget();
+    if (!target) {
+      this.errorMessage.set('Every tube for this visit already has a bottle.');
+      return;
+    }
+    await this.scanTube(target.tube_code, barcode);
   }
 
-  async scanTube(tubeCode: string): Promise<void> {
+  async scanTube(tubeCode: string, barcode?: string): Promise<void> {
     if (!this.visible || this.isScanning() || !this.tubes().some((t) => t.tube_code === tubeCode))
       return;
     const generation = this.generation;
     this.isScanning.set(true);
     this.errorMessage.set('');
     try {
-      const res = await this.fieldService.scanTubeCollection(tubeCode);
+      const res = await this.fieldService.scanTubeCollection(tubeCode, barcode);
       if (generation !== this.generation) return;
-      const updated = this.tubes().map((t) => (t.tube_code === tubeCode ? res.tube : t));
+      // The bottle's barcode replaces the generated code, so match the tube by its id.
+      const updated = this.tubes().map((t) => (t.id === res.tube.id ? res.tube : t));
       this.tubes.set(updated);
+      this.activeTubeForBarcode.set(updated.find((t) => t.status === 'generated') ?? res.tube);
       this.tubesUpdated.emit();
-      this.successMessage.set(`Tube ${tubeCode} scanned and confirmed.`);
+      const who = [res.tube.patient_label, res.tube.test_name].filter(Boolean).join(' · ');
+      this.successMessage.set(
+        barcode
+          ? `Bottle ${res.tube.bottle_barcode ?? barcode} linked${who ? ` to ${who}` : ''}.`
+          : `Tube ${res.tube.tube_code} scanned and confirmed.`,
+      );
       this.manualCodeInput.set('');
     } catch (err: unknown) {
       if (generation === this.generation)
@@ -444,7 +307,7 @@ export class TubeScanModalComponent implements OnChanges, OnDestroy {
     if (!this.hasBarcodeDetector() || !(window as any).BarcodeDetector) return;
 
     const generation = this.cameraGeneration;
-    const detector = new (window as any).BarcodeDetector({ formats: ['code_128'] });
+    const detector = new (window as any).BarcodeDetector({ formats: this.detectorFormats });
 
     const scanFrame = async () => {
       if (
@@ -461,15 +324,11 @@ export class TubeScanModalComponent implements OnChanges, OnDestroy {
           const barcodes = await detector.detect(video);
           if (generation !== this.cameraGeneration || !this.visible) return;
           if (barcodes.length > 0) {
-            const raw = barcodes[0].rawValue;
-            const normalized = normalizeInputTubeCode(raw);
-            if (normalized) {
-              const matchedTube = this.tubes().find((t) => t.tube_code === normalized);
-              if (matchedTube && matchedTube.status !== 'scanned_at_collection') {
-                this.stopCamera();
-                await this.scanTube(matchedTube.tube_code);
-                return;
-              }
+            const raw = String(barcodes[0].rawValue ?? '');
+            if (raw && !this.isScanning()) {
+              this.stopCamera();
+              await this.handleScannedValue(raw);
+              return;
             }
           }
         } catch {

@@ -36,12 +36,17 @@ export type StaffTubeStatus =
 export interface StaffTube {
   id: string;
   tube_code: string;
+  /** The barcode printed on the lab bottle, once linked at the collection scan. */
+  bottle_barcode?: string | null;
   order_id: string;
   attempt: number;
   patient_row_id: string;
   test_ordinal: number;
   status: StaffTubeStatus;
   created_at: string;
+  /** Frozen labels, minimum patient data: first name and patient code, and the test name. */
+  patient_label?: string;
+  test_name?: string;
 }
 
 export interface FieldVisit {
@@ -164,8 +169,12 @@ export class FieldService {
     return this.mutate(`/staff/orders/${orderId}/tubes`, {});
   }
 
-  async scanTubeCollection(tubeCode: string): Promise<StaffTubeScannedResult> {
-    return this.mutate(`/staff/tubes/${tubeCode}/scan`, {});
+  /** With `barcode`, links the barcode printed on the bottle to this tube while scanning it. */
+  async scanTubeCollection(tubeCode: string, barcode?: string): Promise<StaffTubeScannedResult> {
+    return this.mutate(
+      `/staff/tubes/${encodeURIComponent(tubeCode)}/scan`,
+      barcode ? { barcode } : {},
+    );
   }
 
   async handoverTubes(tubeCodes: string[]): Promise<StaffTubesHandoverResult> {

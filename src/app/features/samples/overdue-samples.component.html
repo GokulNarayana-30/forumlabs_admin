@@ -73,7 +73,7 @@
       <tbody class="divide-y divide-surface-200 bg-surface-0">
         <tr *ngFor="let tube of tubes()" class="hover:bg-surface-50 transition-colors">
           <td class="px-4 py-3 font-mono font-medium text-surface-900">
-            {{ tube.tube_code }}
+            {{ tube.bottle_barcode ?? tube.tube_code }}
           </td>
           <td class="px-4 py-3 font-mono text-surface-700">
             {{ tube.booking_ref }}

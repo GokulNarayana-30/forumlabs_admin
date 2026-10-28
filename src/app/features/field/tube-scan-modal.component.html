@@ -73,7 +73,9 @@
             <span class="text-xs font-bold uppercase tracking-wide text-surface-500">
               Assigned Tubes ({{ tubes().length }})
             </span>
-            <span class="text-xs text-surface-500"> Click tube to view printable barcode </span>
+            <span class="text-xs text-surface-500">
+              Scan the bottle for the patient you are collecting from
+            </span>
           </div>
 
           <div class="space-y-2">
@@ -89,10 +91,22 @@
               >
                 <div>
                   <div class="font-mono text-sm font-bold text-surface-900">
-                    {{ tube.tube_code }}
+                    @if (tube.bottle_barcode) {
+                      {{ tube.bottle_barcode }}
+                    } @else if (tube.status === 'generated') {
+                      Waiting for bottle
+                    } @else {
+                      {{ tube.tube_code }}
+                    }
                   </div>
                   <div class="text-xs text-surface-500">
-                    Ordinal #{{ tube.test_ordinal + 1 }} · Attempt {{ tube.attempt }}
+                    @if (tube.patient_label || tube.test_name) {
+                      {{ tube.patient_label }}{{ tube.patient_label && tube.test_name ? ' · ' : ''
+                      }}{{ tube.test_name }}
+                    } @else {
+                      Ordinal #{{ tube.test_ordinal + 1 }}
+                    }
+                    · Attempt {{ tube.attempt }}
                   </div>
                 </div>
 
@@ -101,69 +115,25 @@
                     <span
                       class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200"
                     >
-                      &check; Scanned
+                      &check; Bottle linked
                     </span>
                   } @else {
                     <span
                       class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200"
                     >
-                      Pending Scan
+                      Needs bottle
                     </span>
                   }
                 </div>
               </div>
             }
           </div>
-
-          <!-- Active Tube Barcode & Print View -->
-          @if (activeTubeForBarcode()) {
-            <div
-              class="bg-surface-0 border border-surface-200 rounded-xl p-4 text-center space-y-2"
-            >
-              <span class="text-xs font-semibold text-surface-500 block">
-                Physical Barcode Label (Code 128-B)
-              </span>
-
-              @let svgData = getBarcodeSvg(activeTubeForBarcode()!.tube_code);
-              <div
-                class="flex justify-center my-2 p-2 bg-white rounded-lg border border-surface-100"
-              >
-                <svg
-                  [attr.viewBox]="'0 0 ' + svgData.totalWidth + ' ' + svgData.height"
-                  class="w-full max-w-xs h-16"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  @for (bar of svgData.bars; track bar.x) {
-                    <rect
-                      [attr.x]="bar.x"
-                      [attr.y]="bar.y"
-                      [attr.width]="bar.width"
-                      [attr.height]="bar.height"
-                      class="fill-surface-950"
-                    />
-                  }
-                </svg>
-              </div>
-
-              <div class="font-mono text-xs font-bold tracking-widest text-surface-900">
-                {{ activeTubeForBarcode()!.tube_code }}
-              </div>
-
-              <button
-                type="button"
-                (click)="printBarcode()"
-                class="px-3 py-1.5 rounded-lg text-xs font-semibold text-surface-700 bg-surface-100 hover:bg-surface-200 border border-surface-300 transition-colors"
-              >
-                Print Label
-              </button>
-            </div>
-          }
         </div>
 
         <!-- Scan Section -->
         <div class="pt-3 border-t border-surface-100 space-y-3">
           <h3 class="text-xs font-bold uppercase tracking-wide text-surface-500">
-            Confirm Tube Collection Scan
+            Scan the bottle after collecting the sample
           </h3>
 
           <!-- Camera Stream (if supported) -->
@@ -203,7 +173,7 @@
           <!-- Manual typing fallback (always provided) -->
           <div class="space-y-1.5">
             <label for="manual-tube-input" class="text-xs font-semibold text-surface-700 block">
-              Manual Tube Code Input (Keyboard Fallback)
+              Or type the bottle barcode
             </label>
             <div class="flex gap-2">
               <input
@@ -211,7 +181,7 @@
                 type="text"
                 [ngModel]="manualCodeInput()"
                 (ngModelChange)="manualCodeInput.set($event)"
-                placeholder="e.g. FLT-ABCD-1234 or ABCD1234"
+                placeholder="Barcode printed on the bottle"
                 (keyup.enter)="onManualSubmit()"
                 class="flex-1 px-3 py-2 rounded-xl border border-surface-300 text-xs font-mono uppercase focus:outline-hidden focus:ring-2 focus:ring-primary-500"
               />
@@ -229,8 +199,8 @@
               </button>
             </div>
             <p class="text-2xs text-surface-500">
-              Type the 8-character tube code. Ambiguous letters (I, L, O) and dashes are normalized
-              automatically.
+              The barcode is linked to the patient and test selected above (the first one waiting if
+              none is selected). A bottle that is already linked to someone else is refused.
             </p>
           </div>
         </div>

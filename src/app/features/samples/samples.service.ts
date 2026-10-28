@@ -25,6 +25,7 @@ export interface TubeCollector {
 
 export interface Tube {
   tube_code: string;
+  bottle_barcode?: string | null;
   order_id: string;
   attempt: number;
   patient_row_id: string;

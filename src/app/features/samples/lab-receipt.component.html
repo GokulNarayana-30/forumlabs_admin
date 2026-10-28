@@ -70,8 +70,8 @@
     <div class="rounded-2xl border border-surface-200 bg-surface-0 p-6 shadow-sm">
       <h3 class="text-sm font-semibold text-surface-800 mb-2">Scan or Enter Tube Barcode</h3>
       <p class="text-xs text-surface-500 mb-4">
-        Supports handheld barcode scanner keyboard input or manual code entry (e.g. FLT-XXXX-XXXX).
-        Press Enter to lookup.
+        Supports handheld barcode scanner keyboard input or manual code entry of the barcode printed
+        on the bottle. Press Enter to lookup.
       </p>
 
       <form (ngSubmit)="onSearchOrScan()" class="flex flex-col sm:flex-row gap-3">
@@ -122,7 +122,7 @@
         <div>
           <div class="flex items-center gap-2">
             <span class="font-mono text-lg font-bold text-surface-900">
-              {{ currentTube()!.tube_code }}
+              {{ currentTube()!.bottle_barcode ?? currentTube()!.tube_code }}
             </span>
             <span
               [ngClass]="{
