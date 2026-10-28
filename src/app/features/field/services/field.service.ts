@@ -13,6 +13,8 @@ export interface FieldVisitAddress {
   landmark: string | null;
   pincode: string;
   access_notes: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface FieldVisitPatient {

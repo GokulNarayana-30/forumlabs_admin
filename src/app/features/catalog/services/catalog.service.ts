@@ -94,6 +94,20 @@ export interface ReorderCategoriesPayload {
   categories: CategoryReorderItemDto[];
 }
 
+export interface StaffServiceAreaItemDto {
+  pincode: string;
+  area_name: string;
+  serviceable: boolean;
+  collection_fee_paise: number | null;
+  updated_at: string;
+}
+
+export interface UpsertServiceAreaPayload {
+  area_name: string;
+  serviceable: boolean;
+  collection_fee_paise?: number | null;
+}
+
 // Wire shape of CatalogImportPreview / CatalogImportRow in docs/api/openapi.yaml
 // (apps/api/src/catalog/import/import-plan.ts). Never invent fields here: the
 // component derives its display values from these.
@@ -266,6 +280,23 @@ export class CatalogService {
       this.api.patch<StaffCatalogVisibilityResultDto>(
         `/staff/catalog/items/${encodeURIComponent(id)}/visibility`,
         { active },
+        { idempotent: true },
+      ),
+    );
+  }
+
+  async getServiceAreas(): Promise<StaffServiceAreaItemDto[]> {
+    return firstValueFrom(this.api.get<StaffServiceAreaItemDto[]>('/staff/catalog/service-areas'));
+  }
+
+  async upsertServiceArea(
+    pincode: string,
+    payload: UpsertServiceAreaPayload,
+  ): Promise<StaffServiceAreaItemDto> {
+    return firstValueFrom(
+      this.api.put<StaffServiceAreaItemDto>(
+        `/staff/catalog/service-areas/${encodeURIComponent(pincode)}`,
+        payload,
         { idempotent: true },
       ),
     );

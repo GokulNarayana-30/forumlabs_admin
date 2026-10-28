@@ -3,6 +3,7 @@ import { CatalogListComponent } from './pages/catalog-list/catalog-list.componen
 import { CategoryManagerComponent } from './pages/category-manager/category-manager.component';
 import { CatalogImportComponent } from './pages/catalog-import/catalog-import.component';
 import { CatalogCreateComponent } from './pages/catalog-create/catalog-create.component';
+import { ServiceAreaManagerComponent } from './pages/service-area-manager/service-area-manager.component';
 import { roleGuard } from '../../core/auth/role.guard';
 
 export const routes: Routes = [
@@ -19,6 +20,10 @@ export const routes: Routes = [
   {
     path: 'categories',
     component: CategoryManagerComponent,
+  },
+  {
+    path: 'service-areas',
+    component: ServiceAreaManagerComponent,
   },
   {
     path: 'import',

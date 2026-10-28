@@ -224,6 +224,14 @@ export class FieldTodayComponent implements OnInit {
   }
 
   getMapsLink(addr: FieldVisitAddress): string {
+    if (
+      typeof addr.latitude === 'number' &&
+      Number.isFinite(addr.latitude) &&
+      typeof addr.longitude === 'number' &&
+      Number.isFinite(addr.longitude)
+    ) {
+      return `https://www.google.com/maps/search/?api=1&query=${addr.latitude},${addr.longitude}`;
+    }
     const parts = [addr.house, addr.street, addr.area, addr.pincode].filter(Boolean);
     const query = encodeURIComponent(parts.join(', '));
     return `https://www.google.com/maps/search/?api=1&query=${query}`;
