@@ -42,6 +42,8 @@ export const PHASE15_CHILD_ROUTE_EXPECTATIONS: readonly {
 }[] = [
   // Intake, canned replies, SLA policy and CSAT: support desk staff (report approvers work the queue).
   { parent: 'tickets', path: 'tools', allowed: ['support', 'super_admin'] },
+  // The full patient directory (25 a page, masked, audited): super_admin only.
+  { parent: 'patients', path: 'directory', allowed: ['super_admin'] },
   // Deletion queue, restore and retention: support and super_admin.
   { parent: 'patients', path: 'deletions', allowed: ['support', 'super_admin'] },
 ];
@@ -56,6 +58,7 @@ export const ROLE_MATRIX_EXPECTATIONS: readonly RoleMatrixExpectation[] = [
       'Doctors',
       'Reports',
       'Patient Search',
+      'All Patients',
       // 15-13: deletion queue and restore (support / super_admin); retention is super_admin only.
       'Account Deletions',
       'Tickets',
@@ -558,6 +561,7 @@ describe('Admin Staff Role Matrix (All 9 Roles) (W-08)', () => {
         'Doctors',
         'Reports',
         'Patient Search',
+        'All Patients',
         'Account Deletions',
         'Tickets',
         'Dispatch',

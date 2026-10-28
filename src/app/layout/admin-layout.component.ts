@@ -38,6 +38,7 @@ export class AdminLayoutComponent {
       path: '/patients',
       roles: ['support', 'booking_dispatch', 'super_admin'],
     },
+    { label: 'All Patients', path: '/patients/directory', roles: ['super_admin'] },
     { label: 'Account Deletions', path: '/patients/deletions', roles: ['support', 'super_admin'] },
     // report_approver: the API scopes them to the urgent report queue (15-12).
     { label: 'Tickets', path: '/tickets', roles: ['support', 'report_approver', 'super_admin'] },
