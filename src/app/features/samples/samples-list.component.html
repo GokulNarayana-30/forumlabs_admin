@@ -1,0 +1,125 @@
+<div class="space-y-4">
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-end">
+      <div>
+        <label for="samples-stage" class="block text-xs font-semibold text-surface-600 mb-1"
+          >Where is it now</label
+        >
+        <select
+          id="samples-stage"
+          [ngModel]="stage()"
+          (ngModelChange)="setStage($event)"
+          class="rounded-xl border border-surface-300 bg-surface-0 px-3 py-2 text-xs"
+        >
+          @for (option of stageOptions; track option.value) {
+            <option [value]="option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
+      <div>
+        <label for="samples-date" class="block text-xs font-semibold text-surface-600 mb-1"
+          >Scanned on</label
+        >
+        <input
+          id="samples-date"
+          type="date"
+          [ngModel]="date()"
+          (ngModelChange)="setDate($event)"
+          class="rounded-xl border border-surface-300 bg-surface-0 px-3 py-2 text-xs"
+        />
+      </div>
+    </div>
+    <button
+      type="button"
+      (click)="load()"
+      [disabled]="isLoading()"
+      class="rounded-xl border border-surface-300 bg-surface-100 px-4 py-2 text-xs font-semibold text-surface-700 hover:bg-surface-200 disabled:opacity-50"
+    >
+      Refresh
+    </button>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700" role="alert">
+      {{ errorMessage() }}
+    </div>
+  }
+
+  @if (isLoading() && samples().length === 0) {
+    <p class="text-xs text-surface-500">Loading samples...</p>
+  } @else if (samples().length === 0 && !errorMessage()) {
+    <div
+      class="rounded-2xl border border-surface-200 bg-surface-50 p-8 text-center text-sm text-surface-600"
+    >
+      No samples for this day and filter yet. A sample appears here the moment the phlebotomist
+      scans its bottle.
+    </div>
+  } @else {
+    <div class="overflow-x-auto rounded-2xl border border-surface-200 bg-surface-0">
+      <table class="min-w-full text-left text-xs">
+        <thead class="bg-surface-50 text-surface-500 uppercase tracking-wide">
+          <tr>
+            <th class="px-3 py-2 font-semibold">Bottle barcode</th>
+            <th class="px-3 py-2 font-semibold">Patient</th>
+            <th class="px-3 py-2 font-semibold">Test</th>
+            <th class="px-3 py-2 font-semibold">Booking</th>
+            <th class="px-3 py-2 font-semibold">Collected by</th>
+            <th class="px-3 py-2 font-semibold">Scanned</th>
+            <th class="px-3 py-2 font-semibold">Handed over</th>
+            <th class="px-3 py-2 font-semibold">Received at lab</th>
+            <th class="px-3 py-2 font-semibold">Status</th>
+            <th class="px-3 py-2"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-surface-100">
+          @for (sample of samples(); track sample.id) {
+            <tr>
+              <td class="px-3 py-2 font-mono font-semibold text-surface-900">
+                {{ codeOf(sample) }}
+              </td>
+              <td class="px-3 py-2">{{ sample.patient_label }}</td>
+              <td class="px-3 py-2">{{ sample.test_name }}</td>
+              <td class="px-3 py-2">{{ sample.booking_ref }}</td>
+              <td class="px-3 py-2">{{ sample.collector?.display_name ?? '—' }}</td>
+              <td class="px-3 py-2">{{ formatTime(sample.scanned_at) }}</td>
+              <td class="px-3 py-2">{{ formatTime(sample.handed_over_at) }}</td>
+              <td class="px-3 py-2">
+                {{ formatTime(sample.received_at ?? sample.rejected_at) }}
+              </td>
+              <td class="px-3 py-2">
+                <span
+                  class="inline-flex rounded-full border px-2.5 py-1 font-bold"
+                  [ngClass]="statusClass(sample)"
+                  >{{ statusLabel(sample) }}</span
+                >
+              </td>
+              <td class="px-3 py-2 text-right">
+                @if (sample.status === 'handed_over' || sample.status === 'scanned_at_collection') {
+                  <button
+                    type="button"
+                    (click)="openSample.emit(codeOf(sample))"
+                    class="rounded-lg bg-primary-600 px-3 py-1.5 font-bold text-white hover:bg-primary-700"
+                  >
+                    Receive
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (nextCursor()) {
+      <div class="text-center">
+        <button
+          type="button"
+          (click)="loadMore()"
+          [disabled]="isLoading()"
+          class="rounded-xl border border-surface-300 bg-surface-100 px-4 py-2 text-xs font-semibold text-surface-700 hover:bg-surface-200 disabled:opacity-50"
+        >
+          Load more
+        </button>
+      </div>
+    }
+  }
+</div>

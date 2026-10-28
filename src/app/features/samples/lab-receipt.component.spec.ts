@@ -8,6 +8,7 @@ import {
   TubeReceivedResult,
   TubeRejectedResult,
   OverdueTubesResult,
+  SamplesResult,
 } from './samples.service';
 import { ApiClientError } from '../../core/api/api-client.service';
 
@@ -42,6 +43,12 @@ describe('LabReceiptComponent', () => {
       getTubeByCode: vi.fn(),
       receiveTube: vi.fn(),
       rejectTube: vi.fn(),
+      getSamples: vi.fn().mockResolvedValue({
+        kind: 'samples',
+        date: '2026-10-28',
+        samples: [],
+        next_cursor: null,
+      } as SamplesResult),
       getOverdueTubes: vi.fn().mockResolvedValue({
         kind: 'overdue_tubes',
         tubes: [],
@@ -58,6 +65,56 @@ describe('LabReceiptComponent', () => {
     component = fixture.componentInstance;
     fixture.detectChanges();
     await fixture.whenStable();
+    // The screen opens on All Samples; these tests exercise the scan and receive tab.
+    component.setTab('scan');
+    fixture.detectChanges();
+  });
+
+  it('opens on the All Samples list, and a row opens that sample on the scan tab', async () => {
+    const fresh = TestBed.createComponent(LabReceiptComponent);
+    mockSamplesService.getSamples.mockResolvedValue({
+      kind: 'samples',
+      date: '2026-10-28',
+      samples: [
+        {
+          ...sampleTube,
+          id: 'tube-1',
+          bottle_barcode: 'BOTTLE-0001',
+          status: 'handed_over',
+          scanned_at: '2026-10-28T05:00:00Z',
+          handed_over_at: '2026-10-28T06:00:00Z',
+          received_at: null,
+          rejected_at: null,
+        },
+      ],
+      next_cursor: null,
+    } as SamplesResult);
+    mockSamplesService.getTubeByCode.mockResolvedValue({
+      kind: 'tube',
+      tube: sampleTube,
+    } as TubeResult);
+    fresh.detectChanges();
+    await fresh.whenStable();
+    fresh.detectChanges();
+
+    const text = (fresh.nativeElement as HTMLElement).textContent ?? '';
+    expect(fresh.componentInstance.activeTab()).toBe('list');
+    expect(text).toContain('BOTTLE-0001');
+    expect(text).toContain('Ananya (P02)');
+    expect(text).toContain('Handed over, waiting for lab');
+    expect(mockSamplesService.getSamples).toHaveBeenCalledWith(
+      expect.objectContaining({ stage: 'all', limit: 100 }),
+    );
+
+    const receive = Array.from(
+      (fresh.nativeElement as HTMLElement).querySelectorAll('button'),
+    ).find((b) => b.textContent?.trim() === 'Receive')!;
+    receive.click();
+    fresh.detectChanges();
+    await fresh.whenStable();
+
+    expect(fresh.componentInstance.activeTab()).toBe('scan');
+    expect(mockSamplesService.getTubeByCode).toHaveBeenCalledWith('BOTTLE-0001');
   });
 
   it('renders initial scanning interface with autofocus input', () => {

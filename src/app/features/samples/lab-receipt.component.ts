@@ -4,12 +4,19 @@ import { FormsModule } from '@angular/forms';
 import { SamplesService, Tube } from './samples.service';
 import { SampleRejectModalComponent } from './sample-reject-modal.component';
 import { OverdueSamplesComponent } from './overdue-samples.component';
+import { SamplesListComponent } from './samples-list.component';
 import { errorText } from '../../core/api/error-text';
 
 @Component({
   selector: 'app-lab-receipt',
   standalone: true,
-  imports: [CommonModule, FormsModule, SampleRejectModalComponent, OverdueSamplesComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    SampleRejectModalComponent,
+    OverdueSamplesComponent,
+    SamplesListComponent,
+  ],
   templateUrl: './lab-receipt.component.html',
 })
 export class LabReceiptComponent implements OnInit, OnDestroy {
@@ -22,7 +29,7 @@ export class LabReceiptComponent implements OnInit, OnDestroy {
 
   @ViewChild('barcodeInput') barcodeInputRef!: ElementRef<HTMLInputElement>;
 
-  readonly activeTab = signal<'scan' | 'overdue'>('scan');
+  readonly activeTab = signal<'list' | 'scan' | 'overdue'>('list');
 
   // Scanning & lookup state
   readonly tubeCodeInput = signal<string>('');
@@ -44,7 +51,7 @@ export class LabReceiptComponent implements OnInit, OnDestroy {
     // Focus will be managed after view init
   }
 
-  setTab(tab: 'scan' | 'overdue'): void {
+  setTab(tab: 'list' | 'scan' | 'overdue'): void {
     this.activeTab.set(tab);
     if (tab === 'scan') {
       setTimeout(() => this.focusInput(), 100);
@@ -157,6 +164,11 @@ export class LabReceiptComponent implements OnInit, OnDestroy {
     } catch {
       // Tube state already acknowledged
     }
+  }
+
+  /** A row of the samples list: open it on the receipt tab. */
+  onOpenSample(code: string): void {
+    this.onSelectOverdueTube(code);
   }
 
   onSelectOverdueTube(tubeCode: string): void {

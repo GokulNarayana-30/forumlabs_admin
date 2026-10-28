@@ -109,7 +109,7 @@
 
     td[data-label='Actions'],
     th:last-child {
-      width: 10rem;
+      width: var(--admin-actions-width, 10rem);
     }
 
     ui-tag > span {
@@ -133,9 +133,15 @@
     button,
     a {
       min-height: 2.25rem;
-      white-space: normal;
+      flex-shrink: 0;
+      white-space: nowrap;
+      overflow-wrap: normal;
     }
   }
+}
+
+.admin-members {
+  --admin-actions-width: 22rem;
 }
 
 .admin-catalog .admin-responsive-table {

@@ -39,6 +39,24 @@ export interface Tube {
   collected_at: string | null;
 }
 
+export type SampleStage = 'all' | 'with_collector' | 'handed_over' | 'received' | 'rejected';
+
+/** A collected sample on the lab board: the tube and when each step happened (null until it did). */
+export interface Sample extends Tube {
+  id: string;
+  scanned_at: string | null;
+  handed_over_at: string | null;
+  received_at: string | null;
+  rejected_at: string | null;
+}
+
+export interface SamplesResult {
+  kind: 'samples';
+  date: string;
+  samples: Sample[];
+  next_cursor: string | null;
+}
+
 export interface OrderTubesResult {
   kind: 'order_tubes';
   order_id: string;
@@ -105,6 +123,20 @@ export class SamplesService {
 
   async getTubesByOrder(orderId: string): Promise<OrderTubesResult> {
     return firstValueFrom(this.api.get<OrderTubesResult>(`/staff/orders/${orderId}/tubes`));
+  }
+
+  async getSamples(params: {
+    stage?: SampleStage;
+    date?: string;
+    limit?: number;
+    cursor?: string;
+  }): Promise<SamplesResult> {
+    const queryParams: Record<string, string | number> = {};
+    if (params.stage) queryParams['stage'] = params.stage;
+    if (params.date) queryParams['date'] = params.date;
+    if (params.limit !== undefined) queryParams['limit'] = params.limit;
+    if (params.cursor) queryParams['cursor'] = params.cursor;
+    return firstValueFrom(this.api.get<SamplesResult>('/staff/tubes', { params: queryParams }));
   }
 
   async getOverdueTubes(params?: {

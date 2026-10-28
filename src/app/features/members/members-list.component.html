@@ -181,44 +181,42 @@
             <!-- Actions -->
             <td role="cell" data-label="Actions" class="px-5 py-3 text-right">
               <div class="admin-row-actions">
-                <div class="inline-flex items-center justify-end gap-1.5">
-                  <button
-                    type="button"
-                    (click)="openRolesModal(member)"
-                    class="rounded-lg border border-surface-300 bg-surface-0 px-2.5 py-1 text-[11px] font-medium text-surface-700 hover:bg-surface-50"
-                  >
-                    Manage Roles
-                  </button>
-                  <button
-                    type="button"
-                    (click)="openPasswordModal(member)"
-                    class="rounded-lg border border-surface-300 bg-surface-0 px-2.5 py-1 text-[11px] font-medium text-surface-700 hover:bg-surface-50"
-                  >
-                    Reset Password
-                  </button>
-                  <button
-                    *ngIf="member.status === 'active'"
-                    type="button"
-                    (click)="openDeactivateModal(member)"
-                    [disabled]="member.is_self"
-                    [title]="
-                      member.is_self
-                        ? 'You cannot deactivate your own account'
-                        : 'Deactivate staff account'
-                    "
-                    class="rounded-lg border border-red-300 bg-surface-0 px-2.5 py-1 text-[11px] font-medium text-red-700 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    Deactivate
-                  </button>
-                  <button
-                    *ngIf="member.status === 'disabled'"
-                    type="button"
-                    (click)="reactivateMember(member)"
-                    class="rounded-lg border border-emerald-300 bg-surface-0 px-2.5 py-1 text-[11px] font-medium text-emerald-700 hover:bg-emerald-50"
-                  >
-                    Reactivate
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  (click)="openRolesModal(member)"
+                  class="rounded-lg border border-surface-300 bg-surface-0 px-2.5 py-1 text-[11px] font-medium text-surface-700 hover:bg-surface-50"
+                >
+                  Manage Roles
+                </button>
+                <button
+                  type="button"
+                  (click)="openPasswordModal(member)"
+                  class="rounded-lg border border-surface-300 bg-surface-0 px-2.5 py-1 text-[11px] font-medium text-surface-700 hover:bg-surface-50"
+                >
+                  Reset Password
+                </button>
+                <button
+                  *ngIf="member.status === 'active'"
+                  type="button"
+                  (click)="openDeactivateModal(member)"
+                  [disabled]="member.is_self"
+                  [title]="
+                    member.is_self
+                      ? 'You cannot deactivate your own account'
+                      : 'Deactivate staff account'
+                  "
+                  class="rounded-lg border border-red-300 bg-surface-0 px-2.5 py-1 text-[11px] font-medium text-red-700 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Deactivate
+                </button>
+                <button
+                  *ngIf="member.status === 'disabled'"
+                  type="button"
+                  (click)="reactivateMember(member)"
+                  class="rounded-lg border border-emerald-300 bg-surface-0 px-2.5 py-1 text-[11px] font-medium text-emerald-700 hover:bg-emerald-50"
+                >
+                  Reactivate
+                </button>
               </div>
             </td>
           </tr>
