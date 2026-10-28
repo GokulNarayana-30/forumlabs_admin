@@ -14,6 +14,7 @@ import {
 } from '../../services/bookings.service';
 import { StaffStateService } from '../../../../core/state/staff-state.service';
 import { isAssignableStatus } from '../../../dispatch/assignable-status';
+import { AddPersonModalComponent } from '../../../field/add-person-modal.component';
 import { AssignPhleboDialogComponent } from '../../components/assign-phlebo-dialog/assign-phlebo-dialog.component';
 import { BookingDetailDrawerComponent } from '../../components/booking-detail-drawer/booking-detail-drawer.component';
 import { errorText } from '../../../../core/api/error-text';
@@ -26,7 +27,13 @@ export interface StatusFilterOption {
 @Component({
   selector: 'app-booking-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, AssignPhleboDialogComponent, BookingDetailDrawerComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    AssignPhleboDialogComponent,
+    BookingDetailDrawerComponent,
+    AddPersonModalComponent,
+  ],
   templateUrl: './booking-list.component.html',
   styleUrl: './booking-list.component.scss',
 })
@@ -137,6 +144,27 @@ export class BookingListComponent implements OnInit {
 
   async onAssigned(): Promise<void> {
     this.successMessage.set('Phlebotomist assigned successfully.');
+    await this.loadOrders();
+  }
+
+  readonly addPersonOrderId = signal<string | null>(null);
+  readonly addPersonVisible = signal(false);
+
+  /** Dispatch can add another person to a visit that has a phlebotomist, until the sample is collected. */
+  canAddPerson(order: StaffOrderListItemDto): boolean {
+    return (
+      ['phlebotomist_assigned', 'on_the_way', 'arrived'].includes(order.status) &&
+      this.staffState.hasRole('booking_dispatch')
+    );
+  }
+
+  openAddPerson(order: StaffOrderListItemDto): void {
+    this.addPersonOrderId.set(order.order_id);
+    this.addPersonVisible.set(true);
+  }
+
+  async onPersonAdded(): Promise<void> {
+    this.successMessage.set('A new booking was added to this visit.');
     await this.loadOrders();
   }
 

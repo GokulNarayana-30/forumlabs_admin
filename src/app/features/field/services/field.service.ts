@@ -108,6 +108,64 @@ export interface StaffTubesHandoverResult {
   tubes: StaffTube[];
 }
 
+export interface AddPersonCandidate {
+  id: string;
+  name: string;
+  relation: string;
+  date_of_birth: string;
+  gender: string;
+  on_this_visit: boolean;
+}
+
+export interface AddPersonItem {
+  id: string;
+  kind: string;
+  name: string;
+  price_paise: number;
+  mrp_paise: number;
+  gender: string;
+  min_age_years: number | null;
+  max_age_years: number | null;
+}
+
+export interface AddPersonOptions {
+  kind: 'add_person_options';
+  open: boolean;
+  people_left: number;
+  people: AddPersonCandidate[];
+  items: AddPersonItem[];
+}
+
+export type AddPersonBody = {
+  person:
+    | { kind: 'existing'; patient_id: string }
+    | {
+        kind: 'new';
+        details: {
+          name: string;
+          relation: string;
+          date_of_birth: string;
+          gender: string;
+          share_consent: boolean;
+          guardian_confirmed?: boolean;
+        };
+      };
+  item_ids: string[];
+};
+
+export interface AddPersonResult {
+  kind: 'person_added';
+  order: {
+    id: string;
+    booking_ref: string;
+    status: string;
+    payment_status: string;
+    total_paise: number;
+  };
+  patient: { id: string; name: string; patient_code: string };
+  lines: Array<{ item_id: string; item_name: string; net_paise: number }>;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -135,6 +193,19 @@ export class FieldService {
       if (!uncertain) this.pendingMutations.delete(action);
       throw error;
     }
+  }
+
+  async getAddPersonOptions(orderId: string, q: string): Promise<AddPersonOptions> {
+    return firstValueFrom(
+      this.api.get<AddPersonOptions>(`/staff/orders/${orderId}/add-person/options`, {
+        params: { q },
+      }),
+    );
+  }
+
+  /** Adds a person to the visit as a new booking; a retry of the same request replays instead of adding twice. */
+  async addPerson(orderId: string, body: AddPersonBody): Promise<AddPersonResult> {
+    return this.mutate(`/staff/orders/${orderId}/add-person`, body);
   }
 
   async getTodayVisits(date?: string): Promise<FieldVisitsResult> {

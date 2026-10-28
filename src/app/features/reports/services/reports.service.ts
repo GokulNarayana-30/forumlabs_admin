@@ -10,6 +10,8 @@ export interface StaffReportQueueItem {
   patient_name: string;
   patient_code: string;
   test_names: string[];
+  /** The barcodes on this patient's bottles, so the lab matches a bottle to a report. */
+  bottle_barcodes?: string[];
   slot_date?: string;
   report_id?: string;
   version?: number;

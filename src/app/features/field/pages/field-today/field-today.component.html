@@ -263,6 +263,17 @@
                   }
                 </button>
 
+                <!-- Add another person at the door (a second booking of the same customer) -->
+                <button
+                  type="button"
+                  (click)="openAddPerson(visit)"
+                  [disabled]="actionInProgressOrderId() === visit.order_id || !visit.accepted_at"
+                  class="px-3 py-1.5 rounded-xl text-xs font-semibold text-surface-700 bg-surface-100 hover:bg-surface-200 border border-surface-200 disabled:opacity-40 transition-colors"
+                  data-testid="add-person-btn"
+                >
+                  Add person
+                </button>
+
                 <!-- Scan Samples button -->
                 <button
                   type="button"
@@ -323,6 +334,14 @@
     [visible]="notCollectedModalVisible()"
     (visibleChange)="notCollectedModalVisible.set($event)"
     (notCollected)="onNotCollectedSuccess()"
+  />
+
+  <!-- Add Person Modal -->
+  <app-add-person-modal
+    [orderId]="addPersonOrderId()"
+    [visible]="addPersonVisible()"
+    (visibleChange)="addPersonVisible.set($event)"
+    (added)="onPersonAdded()"
   />
 
   <!-- Tube Scan Modal -->

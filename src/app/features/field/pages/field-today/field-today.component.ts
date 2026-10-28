@@ -9,6 +9,7 @@ import {
 } from '../../services/field.service';
 import { CollectPaymentModalComponent } from '../../components/collect-payment-modal/collect-payment-modal.component';
 import { NotCollectedModalComponent } from '../../components/not-collected-modal/not-collected-modal.component';
+import { AddPersonModalComponent } from '../../add-person-modal.component';
 import { TubeScanModalComponent } from '../../tube-scan-modal.component';
 import { errorText } from '../../../../core/api/error-text';
 import { FieldDateBarComponent } from '../../components/field-date-bar/field-date-bar.component';
@@ -24,6 +25,7 @@ import { refusalText } from '../../refusal-text';
     CollectPaymentModalComponent,
     NotCollectedModalComponent,
     TubeScanModalComponent,
+    AddPersonModalComponent,
     FieldDateBarComponent,
   ],
   templateUrl: './field-today.component.html',
@@ -112,6 +114,19 @@ export class FieldTodayComponent implements OnInit {
   openNotCollectedModal(visit: FieldVisit): void {
     this.selectedVisitForFailure.set(visit);
     this.notCollectedModalVisible.set(true);
+  }
+
+  readonly addPersonOrderId = signal<string | null>(null);
+  readonly addPersonVisible = signal(false);
+
+  openAddPerson(visit: FieldVisit): void {
+    this.addPersonOrderId.set(visit.order_id);
+    this.addPersonVisible.set(true);
+  }
+
+  /** A booking was added at the door: show it among today's visits. */
+  onPersonAdded(): void {
+    void this.loadVisits();
   }
 
   openTubeModal(visit: FieldVisit): void {

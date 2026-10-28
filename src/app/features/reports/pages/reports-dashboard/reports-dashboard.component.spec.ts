@@ -20,6 +20,7 @@ describe('ReportsDashboardComponent', () => {
       patient_name: 'Aarav Sharma',
       patient_code: 'P01',
       test_names: ['Complete Blood Count', 'Lipid Profile'],
+      bottle_barcodes: ['BOTTLE-0001', 'BOTTLE-0002'],
       slot_date: '2026-10-19',
     },
   ];
@@ -33,6 +34,7 @@ describe('ReportsDashboardComponent', () => {
       patient_name: 'Priya Patel',
       patient_code: 'P02',
       test_names: ['HbA1c'],
+      bottle_barcodes: [],
       report_id: 'rep-2',
       version: 1,
       reg_no: 'REG-2026-001',
@@ -90,6 +92,18 @@ describe('ReportsDashboardComponent', () => {
     expect(mockReportsService.getQueues).toHaveBeenCalledWith('approval');
     expect(component.intakeQueue().length).toBe(1);
     expect(component.approvalQueue().length).toBe(1);
+  });
+
+  it('shows the bottle barcodes of each person in both tabs, or says none was linked', () => {
+    const text = () => (fixture.nativeElement as HTMLElement).textContent ?? '';
+    fixture.detectChanges();
+    expect(text()).toContain('Bottle barcode');
+    expect(text()).toContain('BOTTLE-0001');
+    expect(text()).toContain('BOTTLE-0002');
+    component.selectTab('approval');
+    fixture.detectChanges();
+    expect(text()).toContain('Bottle barcode');
+    expect(text()).toContain('No bottle linked');
   });
 
   it('switches between intake and approval tabs', () => {
