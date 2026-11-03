@@ -37,8 +37,9 @@ export const FORBIDDEN_PATTERNS = [
 
 export function scanSource(content, filePath) {
   const errors = [];
+  const normalizedPath = filePath.replace(/\\/g, '/');
   for (const { name, regex, fileFilter } of FORBIDDEN_PATTERNS) {
-    if (fileFilter && !fileFilter(filePath)) continue;
+    if (fileFilter && !fileFilter(normalizedPath)) continue;
     regex.lastIndex = 0;
     let match;
     while ((match = regex.exec(content)) !== null) {

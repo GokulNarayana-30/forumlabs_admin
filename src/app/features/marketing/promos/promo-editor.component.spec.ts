@@ -295,6 +295,7 @@ describe('PromoEditorComponent', () => {
       secondary_label: null,
       style: 'Brand Gradient',
       image_url: null,
+      web_image_url: null,
       target_kind: 'none',
       target_id: null,
       coupon_id: null,
@@ -341,5 +342,111 @@ describe('PromoEditorComponent', () => {
       stored.id,
       expect.objectContaining({ price_item_ids: [] }),
     );
+  });
+  describe('website picture of a home banner', () => {
+    const WEB = 'https://cdn.forumhospital.com/promos/banner-web.webp';
+    function fillRequired() {
+      component.form.internal_name = 'Banner';
+      component.form.headline = 'Headline';
+      component.form.body = 'Body';
+    }
+
+    it('shows an app picture field and a website picture field, each with its size hint', () => {
+      component.form.placement = 'home_carousel';
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.textContent).toContain('App picture');
+      expect(el.querySelector('[data-testid="app-image-hint"]')?.textContent).toContain('4:5');
+      expect(el.querySelector('[data-testid="app-image-hint"]')?.textContent).toContain(
+        '800 × 1000',
+      );
+      expect(el.textContent).toContain('Website picture');
+      expect(el.querySelector('[data-testid="web-image-hint"]')?.textContent).toContain('2:1');
+      expect(el.querySelector('[data-testid="web-image-hint"]')?.textContent).toContain(
+        '1600 × 800',
+      );
+    });
+
+    it('hides the website picture for a popup, which the website does not show, and sends none', () => {
+      component.form.placement = 'home_popup';
+      component.form.web_image_url = WEB; // typed before switching the placement
+      fixture.detectChanges();
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.querySelector('[data-testid="web-image-field"]')).toBeNull();
+      expect(el.querySelector('[data-testid="app-image-hint"]')).toBeNull();
+      expect(el.textContent).not.toContain('Website picture');
+      mockPromosService.createPromo.mockReturnValue(of(mockExistingPromo));
+      fillRequired();
+      component.savePromo();
+      expect(mockPromosService.createPromo).toHaveBeenCalledWith(
+        expect.objectContaining({ placement: 'home_popup', web_image_url: null }),
+      );
+    });
+
+    it('checks the website picture like the app picture: https and an allowed host', () => {
+      component.form.placement = 'home_carousel';
+      component.form.web_image_url = 'http://cdn.forumhospital.com/w.webp';
+      expect(component.isWebImageUrlValid()).toBe(false);
+      expect(component.webImageUrlError()).toBe('Image URL must use HTTPS.');
+      component.form.web_image_url = 'https://not-ours.example.com/w.webp';
+      expect(component.isWebImageUrlValid()).toBe(false);
+      component.form.web_image_url = WEB;
+      expect(component.isWebImageUrlValid()).toBe(true);
+      component.form.web_image_url = '   ';
+      expect(component.isWebImageUrlValid()).toBe(true);
+    });
+
+    it('does not save while the website picture is wrong, and says why', () => {
+      component.form.placement = 'home_carousel';
+      fillRequired();
+      component.form.web_image_url = 'http://cdn.forumhospital.com/w.webp';
+      component.savePromo();
+      expect(mockPromosService.createPromo).not.toHaveBeenCalled();
+      expect(component.errorMessage()).toBe('Image URL must use HTTPS.');
+    });
+
+    it('sends the trimmed website picture beside the app picture', () => {
+      mockPromosService.createPromo.mockReturnValue(of(mockExistingPromo));
+      component.form.placement = 'home_carousel';
+      fillRequired();
+      component.form.image_url = 'https://cdn.forumhospital.com/promos/app.webp';
+      component.form.web_image_url = `  ${WEB}  `;
+      component.savePromo();
+      expect(mockPromosService.createPromo).toHaveBeenCalledWith(
+        expect.objectContaining({
+          image_url: 'https://cdn.forumhospital.com/promos/app.webp',
+          web_image_url: WEB,
+        }),
+      );
+    });
+
+    it('sends null when no website picture is given, so an old one can be cleared', () => {
+      mockPromosService.createPromo.mockReturnValue(of(mockExistingPromo));
+      component.form.placement = 'home_carousel';
+      fillRequired();
+      component.form.web_image_url = '';
+      component.savePromo();
+      expect(mockPromosService.createPromo).toHaveBeenCalledWith(
+        expect.objectContaining({ web_image_url: null }),
+      );
+    });
+
+    it('loads the saved website picture into the form and previews it', () => {
+      mockPromosService.getPromo.mockReturnValue(of({ ...mockExistingPromo, web_image_url: WEB }));
+      component.loadPromo('promo-123');
+      fixture.detectChanges();
+      expect(component.form.web_image_url).toBe(WEB);
+      const preview = fixture.nativeElement.querySelector(
+        'img[alt="Website picture preview"]',
+      ) as HTMLImageElement | null;
+      expect(preview?.getAttribute('src')).toBe(WEB);
+    });
+
+    it('treats a promo saved before the website picture existed as having none', () => {
+      component.loadPromo('promo-123'); // mockExistingPromo has no web_image_url
+      fixture.detectChanges();
+      expect(component.form.web_image_url).toBe('');
+      expect(fixture.nativeElement.querySelector('img[alt="Website picture preview"]')).toBeNull();
+    });
   });
 });

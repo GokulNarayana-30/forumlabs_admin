@@ -46,6 +46,8 @@ export interface PromoItem {
   secondary_label: string | null;
   style: string | null;
   image_url: string | null;
+  /** The picture the customer website shows for a home banner (about 2:1). */
+  web_image_url?: string | null;
   target_kind: PromoTargetKind;
   target_id: string | null;
   coupon_id: string | null;
@@ -75,6 +77,7 @@ export interface CreatePromoDto {
   secondary_label?: string | null;
   style?: string | null;
   image_url?: string | null;
+  web_image_url?: string | null;
   target_kind: PromoTargetKind;
   target_id?: string | null;
   coupon_id?: string | null;
@@ -99,6 +102,7 @@ export interface UpdatePromoDto {
   secondary_label?: string | null;
   style?: string | null;
   image_url?: string | null;
+  web_image_url?: string | null;
   target_kind?: PromoTargetKind;
   target_id?: string | null;
   coupon_id?: string | null;
@@ -153,6 +157,7 @@ export interface PromoPreviewResult {
     };
     prices_paise: number[];
     image_url: string | null;
+    web_image_url?: string | null;
   } | null;
   popup: {
     id: string;

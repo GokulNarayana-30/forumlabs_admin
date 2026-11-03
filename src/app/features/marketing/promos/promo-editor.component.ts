@@ -31,6 +31,7 @@ export interface PromoFormState {
   secondary_label: string;
   style: string;
   image_url: string;
+  web_image_url: string;
   target_kind: PromoTargetKind;
   target_id: string;
   coupon_id: string;
@@ -99,6 +100,7 @@ export class PromoEditorComponent implements OnInit {
     secondary_label: '',
     style: 'Brand Gradient',
     image_url: '',
+    web_image_url: '',
     target_kind: 'none',
     target_id: '',
     coupon_id: '',
@@ -141,6 +143,7 @@ export class PromoEditorComponent implements OnInit {
           secondary_label: promo.secondary_label ?? '',
           style: promo.style ?? 'Brand Gradient',
           image_url: promo.image_url ?? '',
+          web_image_url: promo.web_image_url ?? '',
           target_kind: promo.target_kind,
           target_id: promo.target_id ?? '',
           coupon_id: promo.coupon_id ?? '',
@@ -189,6 +192,18 @@ export class PromoEditorComponent implements OnInit {
     const hosts = this.allowedImageHosts();
     if (hosts === null) return this.policyError() || 'Image policy is loading. Try again shortly.';
     return imageUrlProblem(this.form.image_url, hosts);
+  }
+
+  /** The website picture exists only for home banners; a popup has none. */
+  isWebImageUrlValid(): boolean {
+    return this.webImageUrlError() === null;
+  }
+
+  webImageUrlError(): string | null {
+    if (this.form.placement !== 'home_carousel' || !this.form.web_image_url.trim()) return null;
+    const hosts = this.allowedImageHosts();
+    if (hosts === null) return this.policyError() || 'Image policy is loading. Try again shortly.';
+    return imageUrlProblem(this.form.web_image_url, hosts);
   }
 
   loadPriceItems(): void {
@@ -277,6 +292,10 @@ export class PromoEditorComponent implements OnInit {
       this.errorMessage.set(this.imageUrlError());
       return;
     }
+    if (!this.isWebImageUrlValid()) {
+      this.errorMessage.set(this.webImageUrlError());
+      return;
+    }
     if (this.requiresTargetId() && !this.form.target_id.trim()) {
       this.errorMessage.set(`Target ID is required for target kind "${this.form.target_kind}".`);
       return;
@@ -326,6 +345,8 @@ export class PromoEditorComponent implements OnInit {
       secondary_label: this.form.secondary_label.trim() || null,
       style: this.form.style.trim() || null,
       image_url: this.form.image_url.trim() || null,
+      web_image_url:
+        this.form.placement === 'home_carousel' ? this.form.web_image_url.trim() || null : null,
       target_kind: this.form.target_kind,
       target_id: this.form.target_id.trim() || null,
       coupon_id: this.form.target_kind === 'coupon' ? this.form.target_id.trim() || null : null,

@@ -136,7 +136,9 @@
         </div>
 
         <div>
-          <label class="block text-xs font-medium text-surface-700">Image HTTPS URL</label>
+          <label class="block text-xs font-medium text-surface-700">{{
+            form.placement === 'home_carousel' ? 'App picture · HTTPS URL' : 'Image HTTPS URL'
+          }}</label>
           <input
             type="text"
             [(ngModel)]="form.image_url"
@@ -145,6 +147,13 @@
           />
           @if (imageUrlError()) {
             <p class="mt-1 text-xs text-red-600">{{ imageUrlError() }}</p>
+          }
+          @if (form.placement === 'home_carousel') {
+            <p class="mt-1 text-xs text-surface-500" data-testid="app-image-hint">
+              About 4:5, for example 800 × 1000 px. It fills the right 40% of the app banner and
+              fades into the gradient on its left, so keep the subject on the right and put no words
+              in the picture: the app draws the text.
+            </p>
           }
         </div>
 
@@ -157,6 +166,39 @@
               class="h-24 w-auto rounded-lg object-contain border border-surface-200 bg-surface-50"
             />
           </div>
+        }
+
+        @if (form.placement === 'home_carousel') {
+          <div data-testid="web-image-field">
+            <label class="block text-xs font-medium text-surface-700"
+              >Website picture · HTTPS URL (optional)</label
+            >
+            <input
+              type="text"
+              [(ngModel)]="form.web_image_url"
+              placeholder="https://cdn.forumhospital.com/promos/banner-web.webp"
+              class="mt-1 w-full rounded-lg border border-surface-300 p-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 font-mono text-xs"
+            />
+            @if (webImageUrlError()) {
+              <p class="mt-1 text-xs text-red-600">{{ webImageUrlError() }}</p>
+            }
+            <p class="mt-1 text-xs text-surface-500" data-testid="web-image-hint">
+              About 2:1, for example 1600 × 800 px, with the subject on the right. The customer
+              website shows this picture; with none, the website shows its own banner picture. The
+              app never uses it.
+            </p>
+          </div>
+
+          @if (form.web_image_url && isWebImageUrlValid()) {
+            <div class="mt-2">
+              <span class="text-xs text-surface-500 block mb-1">Website Picture Preview:</span>
+              <img
+                [src]="form.web_image_url"
+                alt="Website picture preview"
+                class="h-24 w-auto rounded-lg object-contain border border-surface-200 bg-surface-50"
+              />
+            </div>
+          }
         }
       </div>
 
