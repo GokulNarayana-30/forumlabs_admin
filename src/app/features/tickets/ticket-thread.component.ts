@@ -18,10 +18,16 @@ import {
   StaffTicketDetailDto,
   StaffTicketAssigneeDto,
   CannedReplyDto,
+  ChatReadStateDto,
+  TicketMessageDto,
   newKey,
   isPriorityReasonCode,
   type PriorityReasonCode,
 } from './services/tickets.service';
+import {
+  SupportChatSocketService,
+  type StaffChatSocketEvent,
+} from './services/support-chat-socket.service';
 import { StaffStateService } from '../../core/state/staff-state.service';
 import { errorText } from '../../core/api/error-text';
 import { assigneeLabelFor } from './assignee-label';
@@ -54,12 +60,15 @@ export interface PendingAttachment {
 })
 export class TicketThreadComponent implements OnInit, OnDestroy {
   private readonly ticketsService = inject(TicketsService);
+  private readonly chatSocket = inject(SupportChatSocketService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly staffState = inject(StaffStateService);
 
   readonly ticketId = signal<string>('');
   readonly detail = signal<StaffTicketDetailDto | null>(null);
+  readonly readState = signal<ChatReadStateDto | null>(null);
+  readonly customerTyping = signal<boolean>(false);
   readonly assignees = signal<StaffTicketAssigneeDto[]>([]);
   readonly assigneesLoaded = signal<boolean>(false);
   readonly loading = signal<boolean>(true);
@@ -101,8 +110,14 @@ export class TicketThreadComponent implements OnInit, OnDestroy {
 
   private isDestroyed = false;
   private routeSubscription?: Subscription;
+  private socketSub?: Subscription;
   private ticketGeneration = 0;
   private loadGeneration = 0;
+  private activeJoinedTicketId: string | null = null;
+  private typingExpiryTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastTypingSentAt = 0;
+  private lastReadSentSeq = 0;
+  private lastDeliveredSentSeq = 0;
 
   readonly statusOptions = [
     { label: 'Open', value: 'open' },
@@ -112,11 +127,27 @@ export class TicketThreadComponent implements OnInit, OnDestroy {
   ];
 
   ngOnInit(): void {
+    if (this.canChangePriority()) {
+      this.chatSocket.ensureStarted();
+    }
+    this.socketSub = this.chatSocket.events$.subscribe((ev) => {
+      this.handleSocketEvent(ev);
+    });
     void this.loadAssignees();
     void this.loadCannedReplies();
     this.routeSubscription = this.route.paramMap.subscribe((params) => {
       const id = params.get('ticket_id') || '';
       if (id === this.ticketId() && this.ticketGeneration > 0) return;
+      if (this.activeJoinedTicketId && this.canChangePriority()) {
+        this.chatSocket.leaveTicket(this.activeJoinedTicketId);
+      }
+      this.activeJoinedTicketId = null;
+      this.clearTypingTimer();
+      this.customerTyping.set(false);
+      this.readState.set(null);
+      this.lastTypingSentAt = 0;
+      this.lastReadSentSeq = 0;
+      this.lastDeliveredSentSeq = 0;
       this.ticketGeneration++;
       this.ticketId.set(id);
       this.detail.set(null);
@@ -137,6 +168,12 @@ export class TicketThreadComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.isDestroyed = true;
+    if (this.activeJoinedTicketId && this.canChangePriority()) {
+      this.chatSocket.leaveTicket(this.activeJoinedTicketId);
+    }
+    this.activeJoinedTicketId = null;
+    this.clearTypingTimer();
+    this.socketSub?.unsubscribe();
     this.routeSubscription?.unsubscribe();
     this.detail.set(null);
     this.assignees.set([]);
@@ -187,7 +224,11 @@ export class TicketThreadComponent implements OnInit, OnDestroy {
         generation === this.ticketGeneration &&
         load === this.loadGeneration
       ) {
-        this.detail.set(data);
+        this.detail.set({
+          ...data,
+          messages: this.sortAndDedupMessages(data.messages),
+        });
+        this.afterTicketLoaded(data, generation);
       }
     } catch (err: any) {
       if (
@@ -209,6 +250,291 @@ export class TicketThreadComponent implements OnInit, OnDestroy {
       ) {
         this.loading.set(false);
       }
+    }
+  }
+
+  onReplyInput(value: string): void {
+    this.replyText.set(value);
+    const current = this.detail();
+    const id = this.ticketId();
+    if (!id || !this.canChangePriority() || current?.ticket.channel !== 'chat') {
+      return;
+    }
+    if (!this.chatSocket.isAuthorized()) {
+      return;
+    }
+    const now = Date.now();
+    if (value.trim().length > 0) {
+      if (now - this.lastTypingSentAt >= 1_500) {
+        this.lastTypingSentAt = now;
+        this.chatSocket.sendTyping(id, true);
+      }
+    } else if (this.lastTypingSentAt > 0) {
+      this.lastTypingSentAt = 0;
+      this.chatSocket.sendTyping(id, false);
+    }
+  }
+
+  receiptStatusFor(msg: TicketMessageDto): '' | 'Delivered' | 'Read' {
+    if (msg.sender !== 'support' || typeof msg.seq !== 'number') {
+      return '';
+    }
+    const rs = this.readState();
+    if (!rs) {
+      return '';
+    }
+    if (rs.customer_read_seq >= msg.seq) {
+      return 'Read';
+    }
+    if (rs.customer_delivered_seq >= msg.seq) {
+      return 'Delivered';
+    }
+    return '';
+  }
+
+  private afterTicketLoaded(data: StaffTicketDetailDto, generation: number): void {
+    if (data.ticket.channel !== 'chat' || !this.canChangePriority()) {
+      return;
+    }
+    const max = this.maxSeq(data.messages);
+    if (this.chatSocket.isAuthorized()) {
+      if (this.activeJoinedTicketId !== data.ticket.id) {
+        this.activeJoinedTicketId = data.ticket.id;
+        this.chatSocket.joinTicket(data.ticket.id, max);
+      }
+    } else if (max > 0 && (data.ticket.unread_count ?? 0) > 0) {
+      void this.ackCustomerMessages(data.ticket.id, max, generation);
+    }
+  }
+
+  private handleSocketEvent(ev: StaffChatSocketEvent): void {
+    if (this.isDestroyed || !this.canChangePriority()) {
+      return;
+    }
+    const id = this.ticketId();
+    const gen = this.ticketGeneration;
+    const current = this.detail();
+    if (!id || !current || current.ticket.id !== id || current.ticket.channel !== 'chat') {
+      return;
+    }
+
+    switch (ev.type) {
+      case 'auth.ok': {
+        this.activeJoinedTicketId = id;
+        this.chatSocket.joinTicket(id, this.maxSeq(current.messages));
+        return;
+      }
+
+      case 'resync_required': {
+        void this.catchUpMessages(id, gen);
+        return;
+      }
+
+      case 'chat.joined': {
+        if (ev.ticket_id !== id) return;
+        this.readState.set(ev.read_state);
+        const localMax = this.maxSeq(current.messages);
+        if (ev.catch_up_required || ev.read_state.last_seq > localMax) {
+          void this.catchUpMessages(id, gen);
+        } else if (ev.read_state.last_seq > ev.read_state.staff_read_seq) {
+          void this.ackCustomerMessages(id, ev.read_state.last_seq, gen);
+        }
+        return;
+      }
+
+      case 'chat.message': {
+        if (ev.ticket_id !== id) return;
+        const prevMax = this.maxSeq(current.messages);
+        const msgSeq = typeof ev.message.seq === 'number' ? ev.message.seq : null;
+        this.mergeMessages([ev.message]);
+        if (msgSeq !== null && prevMax > 0 && msgSeq > prevMax + 1) {
+          void this.catchUpMessages(id, gen, prevMax);
+        }
+        if (ev.message.sender === 'customer' && msgSeq !== null) {
+          void this.ackCustomerMessages(id, msgSeq, gen);
+        }
+        return;
+      }
+
+      case 'chat.receipt': {
+        if (ev.ticket_id !== id) return;
+        const prev = this.readState();
+        if (!prev) {
+          this.readState.set(ev.read_state);
+          return;
+        }
+        this.readState.set({
+          ...ev.read_state,
+          last_seq: Math.max(prev.last_seq, ev.read_state.last_seq),
+          customer_delivered_seq: Math.max(
+            prev.customer_delivered_seq,
+            ev.read_state.customer_delivered_seq,
+          ),
+          customer_read_seq: Math.max(prev.customer_read_seq, ev.read_state.customer_read_seq),
+          staff_delivered_seq: Math.max(
+            prev.staff_delivered_seq,
+            ev.read_state.staff_delivered_seq,
+          ),
+          staff_read_seq: Math.max(prev.staff_read_seq, ev.read_state.staff_read_seq),
+        });
+        return;
+      }
+
+      case 'chat.typing': {
+        const actor = ev.actor ?? ev.sender;
+        if (ev.ticket_id !== id || actor !== 'customer') return;
+        this.clearTypingTimer();
+        if (ev.is_typing) {
+          this.customerTyping.set(true);
+          this.typingExpiryTimer = setTimeout(() => {
+            if (!this.isDestroyed && gen === this.ticketGeneration) {
+              this.customerTyping.set(false);
+            }
+          }, 4_000);
+        } else {
+          this.customerTyping.set(false);
+        }
+        return;
+      }
+
+      case 'chat.ticket': {
+        if (ev.ticket_id !== id) return;
+        const latest = this.detail();
+        if (!latest || latest.ticket.id !== id) return;
+        this.detail.set({
+          ...latest,
+          ticket: {
+            ...latest.ticket,
+            status: ev.status,
+            unread_count: ev.staff_unread_count ?? ev.unread_count ?? latest.ticket.unread_count,
+            updated_at: ev.updated_at ?? latest.ticket.updated_at,
+          },
+        });
+        return;
+      }
+
+      default:
+        return;
+    }
+  }
+
+  private async catchUpMessages(
+    ticketId: string,
+    generation: number,
+    startAfterSeq?: number,
+  ): Promise<void> {
+    let afterSeq = startAfterSeq ?? this.maxSeq(this.detail()?.messages ?? []);
+    for (let pageIndex = 0; pageIndex < 20; pageIndex++) {
+      let page;
+      try {
+        page = await this.ticketsService.getMessagesAfter(ticketId, afterSeq);
+      } catch {
+        return;
+      }
+      if (
+        this.isDestroyed ||
+        generation !== this.ticketGeneration ||
+        this.ticketId() !== ticketId
+      ) {
+        return;
+      }
+      if (page.read_state) {
+        this.readState.set(page.read_state);
+      }
+      if (page.messages.length > 0) {
+        this.mergeMessages(page.messages);
+        const maxCustomerSeq = page.messages.reduce(
+          (max, m) =>
+            m.sender === 'customer' && typeof m.seq === 'number' && m.seq > max ? m.seq : max,
+          0,
+        );
+        if (maxCustomerSeq > 0) {
+          await this.ackCustomerMessages(ticketId, maxCustomerSeq, generation);
+        }
+      }
+      const nextAfter = this.maxSeq(page.messages);
+      if (!page.has_more || page.messages.length === 0 || nextAfter <= afterSeq) {
+        return;
+      }
+      afterSeq = nextAfter;
+    }
+  }
+
+  private async ackCustomerMessages(
+    ticketId: string,
+    seq: number,
+    generation: number,
+  ): Promise<void> {
+    if (seq <= 0 || seq <= this.lastReadSentSeq) {
+      return;
+    }
+    if (this.chatSocket.isAuthorized()) {
+      if (seq > this.lastDeliveredSentSeq) {
+        this.lastDeliveredSentSeq = seq;
+        this.chatSocket.sendDelivered(ticketId, seq);
+      }
+      this.lastReadSentSeq = seq;
+      this.chatSocket.sendRead(ticketId, seq);
+      return;
+    }
+
+    this.lastReadSentSeq = seq;
+    try {
+      const updated = await this.ticketsService.markRead(ticketId, seq);
+      if (
+        !this.isDestroyed &&
+        generation === this.ticketGeneration &&
+        this.ticketId() === ticketId
+      ) {
+        this.readState.set(updated);
+      }
+    } catch {
+      // Allow retry if markRead HTTP fallback failed transiently.
+      if (this.lastReadSentSeq === seq) {
+        this.lastReadSentSeq = seq - 1;
+      }
+    }
+  }
+
+  private mergeMessages(incoming: TicketMessageDto[]): void {
+    const current = this.detail();
+    if (!current || incoming.length === 0) {
+      return;
+    }
+    this.detail.set({
+      ...current,
+      messages: this.sortAndDedupMessages([...current.messages, ...incoming]),
+    });
+  }
+
+  private sortAndDedupMessages(messages: TicketMessageDto[]): TicketMessageDto[] {
+    const byId = new Map<string, TicketMessageDto>();
+    for (const msg of messages) {
+      byId.set(msg.id, msg);
+    }
+    return Array.from(byId.values()).sort((a, b) => {
+      const seqDiff = (a.seq ?? 0) - (b.seq ?? 0);
+      if (seqDiff !== 0) return seqDiff;
+      const timeDiff = a.sent_at.localeCompare(b.sent_at);
+      if (timeDiff !== 0) return timeDiff;
+      return a.id.localeCompare(b.id);
+    });
+  }
+
+  private maxSeq(messages: TicketMessageDto[]): number {
+    let max = 0;
+    for (const m of messages) {
+      if (typeof m.seq === 'number' && m.seq > max) {
+        max = m.seq;
+      }
+    }
+    return max;
+  }
+
+  private clearTypingTimer(): void {
+    if (this.typingExpiryTimer !== null) {
+      clearTimeout(this.typingExpiryTimer);
+      this.typingExpiryTimer = null;
     }
   }
 

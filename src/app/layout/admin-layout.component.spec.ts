@@ -4,18 +4,22 @@ import { signal } from '@angular/core';
 import { AdminLayoutComponent } from './admin-layout.component';
 import { StaffStateService, StaffRole } from '../core/state/staff-state.service';
 import { AuthService } from '../core/auth/auth.service';
+import { SupportChatSocketService } from '../features/tickets/services/support-chat-socket.service';
 
 describe('AdminLayoutComponent', () => {
   let fixture: ComponentFixture<AdminLayoutComponent>;
   let component: AdminLayoutComponent;
   let mockStaffState: any;
   let mockAuthService: any;
+  let mockChatSocket: any;
   let rolesSignal: any;
   let displayNameSignal: any;
+  let totalUnreadSignal: any;
 
   beforeEach(async () => {
     rolesSignal = signal<StaffRole[]>(['super_admin']);
     displayNameSignal = signal<string>('Super Admin User');
+    totalUnreadSignal = signal<number>(0);
 
     mockStaffState = {
       roles: rolesSignal,
@@ -38,12 +42,18 @@ describe('AdminLayoutComponent', () => {
       signOut: vi.fn(),
     };
 
+    mockChatSocket = {
+      totalUnread: totalUnreadSignal,
+      ensureStarted: vi.fn(),
+    };
+
     await TestBed.configureTestingModule({
       imports: [AdminLayoutComponent],
       providers: [
         provideRouter([]),
         { provide: StaffStateService, useValue: mockStaffState },
         { provide: AuthService, useValue: mockAuthService },
+        { provide: SupportChatSocketService, useValue: mockChatSocket },
       ],
     }).compileComponents();
 
@@ -285,5 +295,24 @@ describe('AdminLayoutComponent', () => {
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
     expect(menu.className).toContain('md:flex');
     expect(component.navItems().some((item) => item.path === '/bookings')).toBe(true);
+  });
+
+  it('shows unread badge beside exact Tickets nav label when unread > 0 and adds no extra sidebar link', () => {
+    rolesSignal.set(['support']);
+    totalUnreadSignal.set(0);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="tickets-unread-badge"]')).toBeNull();
+
+    totalUnreadSignal.set(4);
+    fixture.detectChanges();
+    const badge = el.querySelector('[data-testid="tickets-unread-badge"]') as HTMLElement;
+    expect(badge).toBeTruthy();
+    expect(badge.textContent?.trim()).toBe('4');
+    expect(component.navItems().map((i) => i.label)).toEqual([
+      'Patient Search',
+      'Account Deletions',
+      'Tickets',
+    ]);
   });
 });

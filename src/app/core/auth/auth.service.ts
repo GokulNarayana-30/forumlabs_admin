@@ -14,6 +14,43 @@ export class AuthService {
   private readonly injector = inject(Injector);
   public readonly supabase: SupabaseClient = createSupabaseAuthClient();
   private currentSession: Session | null = null;
+  private readonly beforeSignOutHooks = new Set<() => Promise<void> | void>();
+  private signOutPromise: Promise<void> | null = null;
+
+  /**
+   * Registers a cleanup callback run best-effort (and time-boxed) BEFORE Supabase invalidates the
+   * session during signOut(). Returns an unregister function.
+   */
+  registerBeforeSignOut(hook: () => Promise<void> | void): () => void {
+    this.beforeSignOutHooks.add(hook);
+    return () => {
+      this.beforeSignOutHooks.delete(hook);
+    };
+  }
+
+  /**
+   * Returns an in-memory/tab-restored access token, or forces a Supabase refresh when renewing a
+   * WebSocket session before JWT expiry.
+   */
+  async getAccessToken(forceRefresh = false): Promise<string | null> {
+    if (forceRefresh) {
+      try {
+        const { data, error } = await this.supabase.auth.refreshSession();
+        if (!error && data.session?.access_token) {
+          this.currentSession = data.session;
+          return data.session.access_token;
+        }
+      } catch {
+        // Fall through to any still-valid session
+      }
+      return this.getSession()?.access_token ?? null;
+    }
+
+    const active = this.getSession();
+    if (active?.access_token) return active.access_token;
+    const restored = await this.restoreSession();
+    return restored?.access_token ?? null;
+  }
 
   async signIn(
     email: string,
@@ -33,7 +70,43 @@ export class AuthService {
   }
 
   async signOut(): Promise<void> {
+    // Re-entrancy guard: a 401 on a before-sign-out request (e.g. setting availability away)
+    // triggers authInterceptor -> signOut(), which must await the active sign-out rather than
+    // recursively re-running hooks.
+    if (this.signOutPromise) {
+      return this.signOutPromise;
+    }
+    this.signOutPromise = this.performSignOut().finally(() => {
+      this.signOutPromise = null;
+    });
+    return this.signOutPromise;
+  }
+
+  private async runBeforeSignOutHooks(): Promise<void> {
+    if (this.beforeSignOutHooks.size === 0) return;
+    const tasks = [...this.beforeSignOutHooks].map((hook) =>
+      Promise.resolve()
+        .then(() => hook())
+        .catch(() => undefined),
+    );
+    let timerId: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        Promise.allSettled(tasks),
+        new Promise<void>((resolve) => {
+          timerId = setTimeout(resolve, 1_500);
+        }),
+      ]);
+    } finally {
+      if (timerId !== undefined) {
+        clearTimeout(timerId);
+      }
+    }
+  }
+
+  private async performSignOut(): Promise<void> {
     this.injector.get(PendingAuthOperations).clear();
+    await this.runBeforeSignOutHooks();
     try {
       await this.supabase.auth.signOut();
     } finally {

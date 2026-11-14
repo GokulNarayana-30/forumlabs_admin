@@ -132,4 +132,50 @@ describe('AuthService (tab-scoped session)', () => {
 
     expect(apiClient.resetIdempotencyKeys).toHaveBeenCalledTimes(1);
   });
+
+  it('getAccessToken returns active session token and refreshes via refreshSession when forced', async () => {
+    sessionTabStorage.setItem(
+      KEY,
+      JSON.stringify({ access_token: 'current-jwt', expires_at: soon() }),
+    );
+    expect(await service.getAccessToken()).toBe('current-jwt');
+
+    vi.spyOn(service.supabase.auth, 'refreshSession').mockResolvedValueOnce({
+      data: { session: { access_token: 'refreshed-jwt', expires_at: soon() } as any, user: null },
+      error: null,
+    });
+
+    expect(await service.getAccessToken(true)).toBe('refreshed-jwt');
+    expect(service.getSession()?.access_token).toBe('refreshed-jwt');
+  });
+
+  it('runs registered before-sign-out hooks before supabase.auth.signOut and bounds slow hooks', async () => {
+    const order: string[] = [];
+    vi.spyOn(service.supabase.auth, 'signOut').mockImplementationOnce(async () => {
+      order.push('supabase.signOut');
+      return { error: null };
+    });
+
+    service.registerBeforeSignOut(async () => {
+      order.push('away');
+    });
+
+    await service.signOut();
+    expect(order).toEqual(['away', 'supabase.signOut']);
+  });
+
+  it('prevents recursive before-sign-out hook execution when signOut is re-entered (e.g. 401 on away)', async () => {
+    let hookCalls = 0;
+    vi.spyOn(service.supabase.auth, 'signOut').mockResolvedValueOnce({ error: null });
+
+    service.registerBeforeSignOut(async () => {
+      hookCalls += 1;
+      // Simulate authInterceptor observing a 401 during the away request and calling signOut()
+      await service.signOut();
+    });
+
+    await service.signOut();
+    expect(hookCalls).toBe(1);
+    expect(service.supabase.auth.signOut).toHaveBeenCalledTimes(1);
+  });
 });

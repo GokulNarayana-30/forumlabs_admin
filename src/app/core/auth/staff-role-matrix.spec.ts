@@ -5,6 +5,7 @@ import { roleGuard } from './role.guard';
 import { StaffStateService } from '../state/staff-state.service';
 import { AuthService } from './auth.service';
 import { AdminLayoutComponent } from '../../layout/admin-layout.component';
+import { SupportChatSocketService } from '../../features/tickets/services/support-chat-socket.service';
 import { routes, refundFinanceGuard } from '../../app.routes';
 import { routes as ticketChildRoutes } from '../../features/tickets/tickets.routes';
 import { routes as patientChildRoutes } from '../../features/patients/patients.routes';
@@ -337,6 +338,10 @@ describe('Admin Staff Role Matrix (All 9 Roles) (W-08)', () => {
         { provide: AuthService, useValue: mockAuthService },
         { provide: StaffStateService, useValue: mockStaffState },
         { provide: Router, useValue: mockRouter },
+        {
+          provide: SupportChatSocketService,
+          useValue: { totalUnread: () => 0, ensureStarted: vi.fn() },
+        },
       ],
     });
   });

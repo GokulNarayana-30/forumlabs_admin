@@ -2,11 +2,15 @@ import { Injectable, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { ApiClient } from '../../../core/api/api-client.service';
 
+export type TicketChannel = 'app' | 'phone' | 'walk_in' | 'chat';
+
 export interface StaffTicketSummaryDto {
   id: string;
   reference: string;
   category: string;
   status: string;
+  channel?: TicketChannel;
+  unread_count?: number;
   booking_id: string | null;
   booking_ref: string | null;
   report_id: string | null;
@@ -41,7 +45,7 @@ export type BreachLabel = 'ok' | 'near_breach' | 'overdue';
 export interface DeskTicketItemDto extends StaffTicketSummaryDto {
   priority: 'normal' | 'urgent';
   queue_role: 'support' | 'report_approver';
-  channel: 'app' | 'phone' | 'walk_in';
+  channel: TicketChannel;
   first_reply_due_at: string | null;
   resolution_due_at: string | null;
   breach: BreachLabel;
@@ -146,6 +150,7 @@ export interface TicketMessageDto {
   sender: 'customer' | 'support';
   body: string;
   sent_at: string;
+  seq?: number | null;
   attachments?: SupportAttachmentDto[];
 }
 
@@ -155,6 +160,8 @@ export interface StaffTicketDto {
   category: string;
   status: string;
   priority?: 'normal' | 'urgent';
+  channel?: TicketChannel;
+  unread_count?: number;
   description: string;
   booking_id: string | null;
   booking_ref: string | null;
@@ -165,6 +172,47 @@ export interface StaffTicketDto {
   resolved_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export type StaffAvailabilityStatus = 'available' | 'away';
+
+export interface SupportAvailabilityDto {
+  online: boolean;
+  reason: 'online' | 'outside_hours' | 'holiday' | 'no_agent_available';
+  next_open_at: string | null;
+  opens_in_ist_text: string | null;
+}
+
+export interface StaffMyAvailabilityDto {
+  my_status: StaffAvailabilityStatus;
+  expires_at: string | null;
+  availability: SupportAvailabilityDto;
+}
+
+export interface ChatReadStateDto {
+  ticket_id: string;
+  last_seq: number;
+  customer_delivered_seq: number;
+  customer_read_seq: number;
+  staff_delivered_seq: number;
+  staff_read_seq: number;
+  customer_delivered_at: string | null;
+  customer_read_at: string | null;
+  staff_delivered_at: string | null;
+  staff_read_at: string | null;
+}
+
+export interface TicketMessagesPageDto {
+  ticket_id: string;
+  status: string;
+  messages: TicketMessageDto[];
+  read_state: ChatReadStateDto | null;
+  has_more: boolean;
+}
+
+export interface SupportUnreadSummaryDto {
+  total_unread: number;
+  chat_unread: number;
 }
 
 export interface StaffTicketDetailDto {
@@ -382,5 +430,37 @@ export class TicketsService {
         { idempotent: true },
       ),
     );
+  }
+
+  async getAvailability(): Promise<StaffMyAvailabilityDto> {
+    return firstValueFrom(this.api.get<StaffMyAvailabilityDto>('/staff/support/availability'));
+  }
+
+  async setAvailability(status: StaffAvailabilityStatus): Promise<StaffMyAvailabilityDto> {
+    return firstValueFrom(
+      this.api.post<StaffMyAvailabilityDto>('/staff/support/availability', { status }),
+    );
+  }
+
+  async getMessagesAfter(
+    ticketId: string,
+    afterSeq = 0,
+    limit = 50,
+  ): Promise<TicketMessagesPageDto> {
+    return firstValueFrom(
+      this.api.get<TicketMessagesPageDto>(`/staff/support/tickets/${ticketId}/messages`, {
+        params: { after_seq: String(afterSeq), limit: String(limit) },
+      }),
+    );
+  }
+
+  async markRead(ticketId: string, seq: number): Promise<ChatReadStateDto> {
+    return firstValueFrom(
+      this.api.post<ChatReadStateDto>(`/staff/support/tickets/${ticketId}/read`, { seq }),
+    );
+  }
+
+  async getUnreadSummary(): Promise<SupportUnreadSummaryDto> {
+    return firstValueFrom(this.api.get<SupportUnreadSummaryDto>('/staff/support/unread'));
   }
 }

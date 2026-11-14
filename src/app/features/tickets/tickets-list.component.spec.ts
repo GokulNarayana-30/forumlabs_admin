@@ -3,16 +3,24 @@ import { signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { Subject } from 'rxjs';
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { environment } from '../../../environments/environment';
 import { StaffStateService } from '../../core/state/staff-state.service';
 import { TicketsListComponent } from './tickets-list.component';
 import { TicketsService, DeskTicketItemDto } from './services/tickets.service';
+import {
+  SupportChatSocketService,
+  type StaffChatSocketEvent,
+} from './services/support-chat-socket.service';
 
 describe('TicketsListComponent', () => {
   let fixture: ComponentFixture<TicketsListComponent>;
   let component: TicketsListComponent;
   let mockTicketsService: any;
+  let mockChatSocket: any;
+  let events$: Subject<StaffChatSocketEvent>;
+  let myStatusSignal: ReturnType<typeof signal<'available' | 'away'>>;
   let staffRoles: ReturnType<typeof signal<string[]>>;
 
   const mockTickets: DeskTicketItemDto[] = [
@@ -62,6 +70,23 @@ describe('TicketsListComponent', () => {
     mockTicketsService = {
       getDesk: vi.fn().mockResolvedValue(mockTickets),
     };
+    events$ = new Subject<StaffChatSocketEvent>();
+    myStatusSignal = signal<'available' | 'away'>('away');
+    mockChatSocket = {
+      events$: events$.asObservable(),
+      myStatus: myStatusSignal.asReadonly(),
+      availability: signal({
+        online: false,
+        reason: 'no_agent_available',
+        next_open_at: null,
+        opens_in_ist_text: null,
+      }).asReadonly(),
+      totalUnread: signal(0).asReadonly(),
+      ensureStarted: vi.fn(),
+      setAvailability: vi.fn().mockImplementation(async (status: 'available' | 'away') => {
+        myStatusSignal.set(status);
+      }),
+    };
     staffRoles = signal<string[]>(['support']);
 
     await TestBed.configureTestingModule({
@@ -70,6 +95,7 @@ describe('TicketsListComponent', () => {
         provideRouter([]),
         { provide: TicketsService, useValue: mockTicketsService },
         { provide: StaffStateService, useValue: { roles: staffRoles } },
+        { provide: SupportChatSocketService, useValue: mockChatSocket },
       ],
     }).compileComponents();
 
@@ -266,6 +292,70 @@ describe('TicketsListComponent', () => {
       await component.onPriorityChange('normal');
       expect(mockTicketsService.getDesk.mock.calls.at(-1)[0].priority).toBe('normal');
     });
+
+    it('hides Available / Away availability switch from report_approver', () => {
+      const el = fixture.nativeElement as HTMLElement;
+      expect(el.querySelector('[data-testid="availability-switch"]')).toBeNull();
+    });
+  });
+
+  // 15.1-11: live chat channel label, availability switch, and row unread badges
+  describe('live chat desk integration', () => {
+    it('renders Live chat for channel chat and shows unread badges on chat and app rows', async () => {
+      mockTicketsService.getDesk.mockResolvedValue([
+        { ...mockTickets[0], unread_count: 2 },
+        {
+          ...mockTickets[1],
+          id: 'ticket-chat-1',
+          reference: 'TK-2026-000010',
+          channel: 'chat',
+          unread_count: 5,
+        },
+      ]);
+      await component.loadTickets();
+      fixture.detectChanges();
+
+      const rows = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('tbody tr'));
+      expect(rows[0].textContent).toContain('App');
+      expect(
+        rows[0].querySelector('[data-testid="ticket-unread-badge"]')?.textContent?.trim(),
+      ).toBe('2');
+      expect(rows[1].textContent).toContain('Live chat');
+      expect(
+        rows[1].querySelector('[data-testid="ticket-unread-badge"]')?.textContent?.trim(),
+      ).toBe('5');
+    });
+
+    it('shows Available / Away switch for support and super_admin and updates status on click', async () => {
+      const el = fixture.nativeElement as HTMLElement;
+      const availableBtn = el.querySelector(
+        '[data-testid="availability-available"]',
+      ) as HTMLButtonElement;
+      expect(availableBtn).toBeTruthy();
+      availableBtn.click();
+      await fixture.whenStable();
+      expect(mockChatSocket.setAvailability).toHaveBeenCalledWith('available');
+
+      staffRoles.set(['super_admin']);
+      fixture.detectChanges();
+      expect(el.querySelector('[data-testid="availability-switch"]')).toBeTruthy();
+    });
+
+    it('updates row unread count and status when chat.ticket arrives for an existing ticket', () => {
+      events$.next({
+        type: 'chat.ticket',
+        ticket_id: 'ticket-1',
+        channel: 'chat',
+        status: 'in_progress',
+        last_seq: 7,
+        staff_unread_count: 3,
+        updated_at: '2026-11-14T11:30:05.000Z',
+      });
+      fixture.detectChanges();
+      const updated = component.tickets().find((t) => t.id === 'ticket-1');
+      expect(updated?.unread_count).toBe(3);
+      expect(updated?.status).toBe('in_progress');
+    });
   });
 });
 
@@ -279,6 +369,21 @@ describe('TicketsListComponent desk tracer (HttpTestingController)', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: StaffStateService, useValue: { roles: signal(['support']) } },
+        {
+          provide: SupportChatSocketService,
+          useValue: {
+            events$: new Subject().asObservable(),
+            myStatus: signal<'available' | 'away'>('away').asReadonly(),
+            availability: signal({
+              online: false,
+              reason: 'no_agent_available',
+              next_open_at: null,
+              opens_in_ist_text: null,
+            }).asReadonly(),
+            totalUnread: signal(0).asReadonly(),
+            ensureStarted: vi.fn(),
+          },
+        },
       ],
     }).compileComponents();
     const http = TestBed.inject(HttpTestingController);

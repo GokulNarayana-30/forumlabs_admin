@@ -1,10 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { provideRouter, ActivatedRoute, convertToParamMap } from '@angular/router';
-import { BehaviorSubject } from 'rxjs';
-import { describe, expect, it, beforeEach, vi } from 'vitest';
+import { BehaviorSubject, Subject } from 'rxjs';
+import { afterEach, describe, expect, it, beforeEach, vi } from 'vitest';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import wsFixture from '../../../../../../docs/api/fixtures/support-chat-ws.json';
 import { environment } from '../../../environments/environment';
 import { ApiClientError } from '../../core/api/api-client.service';
 import { StaffStateService } from '../../core/state/staff-state.service';
@@ -12,8 +13,13 @@ import { PRIORITY_REASONS, TicketThreadComponent } from './ticket-thread.compone
 import {
   PRIORITY_REASON_CODES,
   TicketsService,
+  type ChatReadStateDto,
   StaffTicketDetailDto,
 } from './services/tickets.service';
+import {
+  SupportChatSocketService,
+  type StaffChatSocketEvent,
+} from './services/support-chat-socket.service';
 
 describe('TicketThreadComponent', () => {
   let fixture: ComponentFixture<TicketThreadComponent>;
@@ -89,6 +95,44 @@ describe('TicketThreadComponent', () => {
         ...mockDetail.ticket,
         assignee_user_id: 'staff-user-1',
       }),
+      getMessagesAfter: vi.fn().mockResolvedValue({
+        ticket_id: 'ticket-1',
+        status: 'open',
+        messages: [],
+        read_state: null,
+        has_more: false,
+      }),
+      markRead: vi.fn().mockResolvedValue({
+        ticket_id: 'ticket-1',
+        last_seq: 0,
+        customer_delivered_seq: 0,
+        customer_read_seq: 0,
+        staff_delivered_seq: 0,
+        staff_read_seq: 0,
+        customer_delivered_at: null,
+        customer_read_at: null,
+        staff_delivered_at: null,
+        staff_read_at: null,
+      }),
+    };
+
+    const mockSocket = {
+      events$: new Subject<StaffChatSocketEvent>().asObservable(),
+      isAuthorized: signal(true).asReadonly(),
+      myStatus: signal<'available' | 'away'>('available').asReadonly(),
+      availability: signal({
+        online: true,
+        reason: 'online' as const,
+        next_open_at: null,
+        opens_in_ist_text: null,
+      }).asReadonly(),
+      ensureStarted: vi.fn(),
+      joinTicket: vi.fn(),
+      leaveTicket: vi.fn(),
+      sendTyping: vi.fn(),
+      sendDelivered: vi.fn(),
+      sendRead: vi.fn(),
+      refreshUnread: vi.fn().mockResolvedValue(undefined),
     };
 
     await TestBed.configureTestingModule({
@@ -96,6 +140,7 @@ describe('TicketThreadComponent', () => {
       providers: [
         provideRouter([]),
         { provide: TicketsService, useValue: mockTicketsService },
+        { provide: SupportChatSocketService, useValue: mockSocket },
         { provide: StaffStateService, useValue: { roles: signal(['support']) } },
         {
           provide: ActivatedRoute,
@@ -339,6 +384,21 @@ describe('TicketThreadComponent desk tracer (HttpTestingController)', () => {
         provideHttpClient(),
         provideHttpClientTesting(),
         { provide: StaffStateService, useValue: { roles: signal(['support']) } },
+        {
+          provide: SupportChatSocketService,
+          useValue: {
+            events$: new Subject<StaffChatSocketEvent>().asObservable(),
+            isAuthorized: signal(false).asReadonly(),
+            myStatus: signal<'available' | 'away'>('away').asReadonly(),
+            ensureStarted: vi.fn(),
+            joinTicket: vi.fn(),
+            leaveTicket: vi.fn(),
+            sendTyping: vi.fn(),
+            sendDelivered: vi.fn(),
+            sendRead: vi.fn(),
+            refreshUnread: vi.fn().mockResolvedValue(undefined),
+          },
+        },
         { provide: ActivatedRoute, useValue: { paramMap: params.asObservable() } },
       ],
     }).compileComponents();
@@ -498,6 +558,25 @@ describe('TicketThreadComponent attachments, macros and priority', () => {
         expires_at: '2026-10-24T05:05:00Z',
       }),
       updatePriority: vi.fn().mockResolvedValue({ ...detail.ticket, priority: 'urgent' }),
+      getMessagesAfter: vi.fn().mockResolvedValue({
+        ticket_id: 'ticket-1',
+        status: 'open',
+        messages: [],
+        read_state: null,
+        has_more: false,
+      }),
+      markRead: vi.fn().mockResolvedValue({
+        ticket_id: 'ticket-1',
+        last_seq: 0,
+        customer_delivered_seq: 0,
+        customer_read_seq: 0,
+        staff_delivered_seq: 0,
+        staff_read_seq: 0,
+        customer_delivered_at: null,
+        customer_read_at: null,
+        staff_delivered_at: null,
+        staff_read_at: null,
+      }),
     };
     roles = signal<string[]>(['support']);
     await TestBed.configureTestingModule({
@@ -505,6 +584,21 @@ describe('TicketThreadComponent attachments, macros and priority', () => {
       providers: [
         provideRouter([]),
         { provide: TicketsService, useValue: svc },
+        {
+          provide: SupportChatSocketService,
+          useValue: {
+            events$: new Subject<StaffChatSocketEvent>().asObservable(),
+            isAuthorized: signal(true).asReadonly(),
+            myStatus: signal<'available' | 'away'>('available').asReadonly(),
+            ensureStarted: vi.fn(),
+            joinTicket: vi.fn(),
+            leaveTicket: vi.fn(),
+            sendTyping: vi.fn(),
+            sendDelivered: vi.fn(),
+            sendRead: vi.fn(),
+            refreshUnread: vi.fn().mockResolvedValue(undefined),
+          },
+        },
         { provide: StaffStateService, useValue: { roles } },
         {
           provide: ActivatedRoute,
@@ -678,5 +772,465 @@ describe('TicketThreadComponent attachments, macros and priority', () => {
     finish({ id: 'late', mime: 'image/jpeg', size: 1000 });
     await settle();
     expect(component.pending()).toEqual([]);
+  });
+});
+
+describe('TicketThreadComponent live chat (15.1-11)', () => {
+  let fixture: ComponentFixture<TicketThreadComponent>;
+  let component: TicketThreadComponent;
+  let routeParams: BehaviorSubject<ReturnType<typeof convertToParamMap>>;
+  let events$: Subject<StaffChatSocketEvent>;
+  let isAuthorizedSig: ReturnType<typeof signal<boolean>>;
+  let rolesSig: ReturnType<typeof signal<string[]>>;
+  let mockTicketsService: {
+    getTicket: ReturnType<typeof vi.fn>;
+    listAssignees: ReturnType<typeof vi.fn>;
+    listCannedReplies: ReturnType<typeof vi.fn>;
+    sendMessage: ReturnType<typeof vi.fn>;
+    addNote: ReturnType<typeof vi.fn>;
+    uploadAttachment: ReturnType<typeof vi.fn>;
+    removeAttachment: ReturnType<typeof vi.fn>;
+    openAttachment: ReturnType<typeof vi.fn>;
+    updateStatus: ReturnType<typeof vi.fn>;
+    updateAssignee: ReturnType<typeof vi.fn>;
+    updatePriority: ReturnType<typeof vi.fn>;
+    getMessagesAfter: ReturnType<typeof vi.fn>;
+    markRead: ReturnType<typeof vi.fn>;
+  };
+  let mockChatSocket: {
+    events$: ReturnType<Subject<StaffChatSocketEvent>['asObservable']>;
+    isAuthorized: ReturnType<ReturnType<typeof signal<boolean>>['asReadonly']>;
+    myStatus: ReturnType<ReturnType<typeof signal<'available' | 'away'>>['asReadonly']>;
+    ensureStarted: ReturnType<typeof vi.fn>;
+    joinTicket: ReturnType<typeof vi.fn>;
+    leaveTicket: ReturnType<typeof vi.fn>;
+    sendTyping: ReturnType<typeof vi.fn>;
+    sendDelivered: ReturnType<typeof vi.fn>;
+    sendRead: ReturnType<typeof vi.fn>;
+    refreshUnread: ReturnType<typeof vi.fn>;
+  };
+
+  const serverFrame = (name: string): Record<string, unknown> => {
+    const found = (
+      wsFixture.server_frames as Array<{ name: string; frame: Record<string, unknown> }>
+    ).find((f) => f.name === name);
+    if (!found) throw new Error(`Missing fixture frame: ${name}`);
+    return structuredClone(found.frame);
+  };
+
+  const chatDetailFor = (ticketId: string, maxSeq = 2): StaffTicketDetailDto => ({
+    ticket: {
+      id: ticketId,
+      reference: ticketId === 'ticket-chat-1' ? 'TK-2026-000101' : 'TK-2026-000102',
+      category: 'booking_help',
+      status: 'in_progress',
+      priority: 'normal',
+      channel: 'chat',
+      unread_count: 1,
+      description: 'Need help rescheduling collection',
+      booking_id: null,
+      booking_ref: null,
+      report_id: null,
+      report_released_at: null,
+      assignee_user_id: null,
+      first_response_at: null,
+      resolved_at: null,
+      created_at: '2026-11-14T10:00:00.000Z',
+      updated_at: '2026-11-14T10:02:00.000Z',
+    },
+    messages: [
+      {
+        id: 'm-1',
+        sender: 'customer',
+        body: 'Hello, is anyone online?',
+        sent_at: '2026-11-14T10:00:05.000Z',
+        seq: 1,
+      },
+      ...(maxSeq >= 2
+        ? [
+            {
+              id: 'm-2',
+              sender: 'support' as const,
+              body: 'Hi! Checking your slot now.',
+              sent_at: '2026-11-14T10:01:00.000Z',
+              seq: 2,
+            },
+          ]
+        : []),
+    ],
+    notes: [],
+  });
+
+  beforeEach(async () => {
+    vi.useFakeTimers();
+    routeParams = new BehaviorSubject(convertToParamMap({ ticket_id: 'ticket-chat-1' }));
+    events$ = new Subject<StaffChatSocketEvent>();
+    isAuthorizedSig = signal(true);
+    rolesSig = signal(['support']);
+
+    mockTicketsService = {
+      getTicket: vi
+        .fn()
+        .mockImplementation((id: string) =>
+          Promise.resolve(chatDetailFor(id, id === 'ticket-chat-1' ? 2 : 1)),
+        ),
+      listAssignees: vi.fn().mockResolvedValue([]),
+      listCannedReplies: vi.fn().mockResolvedValue([]),
+      sendMessage: vi.fn().mockResolvedValue({
+        id: 'm-99',
+        sender: 'support',
+        body: 'Reply',
+        sent_at: '2026-11-14T10:05:00.000Z',
+        seq: 5,
+      }),
+      addNote: vi.fn(),
+      uploadAttachment: vi.fn(),
+      removeAttachment: vi.fn(),
+      openAttachment: vi.fn(),
+      updateStatus: vi.fn(),
+      updateAssignee: vi.fn(),
+      updatePriority: vi.fn(),
+      getMessagesAfter: vi.fn().mockResolvedValue({
+        ticket_id: 'ticket-chat-1',
+        status: 'in_progress',
+        messages: [],
+        read_state: null,
+        has_more: false,
+      }),
+      markRead: vi.fn().mockResolvedValue({
+        ticket_id: 'ticket-chat-1',
+        last_seq: 2,
+        customer_delivered_seq: 2,
+        customer_read_seq: 1,
+        staff_delivered_seq: 2,
+        staff_read_seq: 2,
+        customer_delivered_at: '2026-11-14T10:01:05.000Z',
+        customer_read_at: null,
+        staff_delivered_at: '2026-11-14T10:01:02.000Z',
+        staff_read_at: '2026-11-14T10:01:02.000Z',
+      }),
+    };
+
+    mockChatSocket = {
+      events$: events$.asObservable(),
+      isAuthorized: isAuthorizedSig.asReadonly(),
+      myStatus: signal<'available' | 'away'>('available').asReadonly(),
+      ensureStarted: vi.fn(),
+      joinTicket: vi.fn(),
+      leaveTicket: vi.fn(),
+      sendTyping: vi.fn(),
+      sendDelivered: vi.fn(),
+      sendRead: vi.fn(),
+      refreshUnread: vi.fn().mockResolvedValue(undefined),
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [TicketThreadComponent],
+      providers: [
+        provideRouter([]),
+        { provide: TicketsService, useValue: mockTicketsService },
+        { provide: SupportChatSocketService, useValue: mockChatSocket },
+        { provide: StaffStateService, useValue: { roles: rolesSig } },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: { paramMap: { get: () => 'ticket-chat-1' } },
+            paramMap: routeParams.asObservable(),
+          },
+        },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(TicketThreadComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+    await vi.advanceTimersByTimeAsync(0);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('shows Live chat badge, joins room with after_seq, and leaves on switch/destroy', async () => {
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="live-chat-channel-badge"]')?.textContent).toContain(
+      'Live chat',
+    );
+    expect(mockChatSocket.joinTicket).toHaveBeenCalledWith('ticket-chat-1', 2);
+
+    routeParams.next(convertToParamMap({ ticket_id: 'ticket-chat-2' }));
+    await vi.advanceTimersByTimeAsync(0);
+    fixture.detectChanges();
+
+    expect(mockChatSocket.leaveTicket).toHaveBeenCalledWith('ticket-chat-1');
+    expect(mockChatSocket.joinTicket).toHaveBeenCalledWith('ticket-chat-2', 1);
+
+    fixture.destroy();
+    expect(mockChatSocket.leaveTicket).toHaveBeenCalledWith('ticket-chat-2');
+  });
+
+  it('appends live chat.message deduplicated/sorted and catches up gaps & resync_required via getMessagesAfter', async () => {
+    mockTicketsService.getMessagesAfter
+      .mockResolvedValueOnce({
+        ticket_id: 'ticket-chat-1',
+        status: 'in_progress',
+        messages: [
+          {
+            id: 'm-3',
+            sender: 'customer',
+            body: 'Missed message 3',
+            sent_at: '2026-11-14T10:02:00.000Z',
+            seq: 3,
+          },
+        ],
+        read_state: null,
+        has_more: true,
+      })
+      .mockResolvedValueOnce({
+        ticket_id: 'ticket-chat-1',
+        status: 'in_progress',
+        messages: [
+          {
+            id: 'm-4',
+            sender: 'customer',
+            body: 'Missed message 4',
+            sent_at: '2026-11-14T10:03:00.000Z',
+            seq: 4,
+          },
+        ],
+        read_state: null,
+        has_more: false,
+      });
+
+    // Server says last_seq is 4 while we only have up to seq 2 -> catch up paginated
+    events$.next({
+      type: 'chat.joined',
+      ticket_id: 'ticket-chat-1',
+      status: 'in_progress',
+      read_state: {
+        ticket_id: 'ticket-chat-1',
+        last_seq: 4,
+        customer_delivered_seq: 2,
+        customer_read_seq: 0,
+        staff_delivered_seq: 1,
+        staff_read_seq: 1,
+        customer_delivered_at: '2026-11-14T10:01:05.000Z',
+        customer_read_at: null,
+        staff_delivered_at: null,
+        staff_read_at: null,
+      },
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    fixture.detectChanges();
+
+    expect(mockTicketsService.getMessagesAfter).toHaveBeenNthCalledWith(1, 'ticket-chat-1', 2);
+    expect(mockTicketsService.getMessagesAfter).toHaveBeenNthCalledWith(2, 'ticket-chat-1', 3);
+    expect(component.detail()?.messages.map((m) => m.id)).toEqual(['m-1', 'm-2', 'm-3', 'm-4']);
+
+    // Duplicate message is ignored, next message triggers delivered/read, other ticket ignored
+    events$.next({
+      type: 'chat.message',
+      ticket_id: 'other-ticket',
+      message: {
+        id: 'm-other',
+        sender: 'customer',
+        body: 'Wrong room',
+        sent_at: '2026-11-14T10:04:00.000Z',
+        seq: 1,
+      },
+    });
+    events$.next({
+      type: 'chat.message',
+      ticket_id: 'ticket-chat-1',
+      message: {
+        id: 'm-4',
+        sender: 'customer',
+        body: 'Duplicate',
+        sent_at: '2026-11-14T10:03:00.000Z',
+        seq: 4,
+      },
+    });
+    events$.next({
+      type: 'chat.message',
+      ticket_id: 'ticket-chat-1',
+      message: {
+        ...(serverFrame('chat_message_support')['message'] as Record<string, unknown>),
+        id: 'm-5',
+        sender: 'customer',
+        body: 'Can we make it 9am?',
+        sent_at: '2026-11-14T10:04:00.000Z',
+        seq: 5,
+      },
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    fixture.detectChanges();
+
+    expect(component.detail()?.messages.map((m) => m.id)).toEqual([
+      'm-1',
+      'm-2',
+      'm-3',
+      'm-4',
+      'm-5',
+    ]);
+    expect(mockChatSocket.sendDelivered).toHaveBeenCalledWith('ticket-chat-1', 5);
+    expect(mockChatSocket.sendRead).toHaveBeenCalledWith('ticket-chat-1', 5);
+
+    // resync_required triggers catch-up from latest seq (5)
+    mockTicketsService.getMessagesAfter.mockResolvedValueOnce({
+      ticket_id: 'ticket-chat-1',
+      status: 'in_progress',
+      messages: [],
+      read_state: null,
+      has_more: false,
+    });
+    events$.next({ type: 'resync_required' });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mockTicketsService.getMessagesAfter).toHaveBeenLastCalledWith('ticket-chat-1', 5);
+  });
+
+  it('drops stale catch-up results when the agent switches tickets mid-flight', async () => {
+    let resolveCatchUp!: (v: unknown) => void;
+    mockTicketsService.getMessagesAfter.mockReturnValueOnce(
+      new Promise((r) => (resolveCatchUp = r)),
+    );
+    events$.next({ type: 'resync_required' });
+
+    routeParams.next(convertToParamMap({ ticket_id: 'ticket-chat-2' }));
+    await vi.advanceTimersByTimeAsync(0);
+
+    resolveCatchUp({
+      ticket_id: 'ticket-chat-1',
+      status: 'in_progress',
+      messages: [
+        {
+          id: 'stale-msg',
+          sender: 'customer',
+          body: 'Stale from ticket 1',
+          sent_at: '2026-11-14T10:03:00.000Z',
+          seq: 99,
+        },
+      ],
+      read_state: null,
+      has_more: false,
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(component.detail()?.ticket.id).toBe('ticket-chat-2');
+    expect(component.detail()?.messages.some((m) => m.id === 'stale-msg')).toBe(false);
+  });
+
+  it('shows Customer is typing... with 4s expiry and throttles outgoing typing events', async () => {
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="customer-typing-indicator"]')).toBeNull();
+
+    events$.next({
+      type: 'chat.typing',
+      ticket_id: 'ticket-chat-1',
+      actor: 'customer',
+      is_typing: true,
+    });
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="customer-typing-indicator"]')?.textContent).toContain(
+      'Customer is typing',
+    );
+
+    await vi.advanceTimersByTimeAsync(4_000);
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="customer-typing-indicator"]')).toBeNull();
+
+    // Throttled outgoing typing
+    component.onReplyInput('H');
+    component.onReplyInput('Hi');
+    component.onReplyInput('Hi!');
+    expect(mockChatSocket.sendTyping).toHaveBeenCalledTimes(1);
+    expect(mockChatSocket.sendTyping).toHaveBeenCalledWith('ticket-chat-1', true);
+
+    await vi.advanceTimersByTimeAsync(2_000);
+    component.onReplyInput('Hi there');
+    expect(mockChatSocket.sendTyping).toHaveBeenCalledTimes(2);
+  });
+
+  it('displays Delivered/Read receipt status on staff messages and falls back to POST /read when WS disconnected', async () => {
+    const el = fixture.nativeElement as HTMLElement;
+    events$.next({
+      type: 'chat.joined',
+      ticket_id: 'ticket-chat-1',
+      status: 'in_progress',
+      read_state: {
+        ticket_id: 'ticket-chat-1',
+        last_seq: 2,
+        customer_delivered_seq: 2,
+        customer_read_seq: 0,
+        staff_delivered_seq: 1,
+        staff_read_seq: 2,
+        customer_delivered_at: '2026-11-14T10:01:05.000Z',
+        customer_read_at: null,
+        staff_delivered_at: null,
+        staff_read_at: null,
+      },
+    });
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="msg-receipt-status"]')?.textContent).toContain(
+      'Delivered',
+    );
+
+    const receiptFrame = serverFrame('chat_receipt');
+    events$.next({
+      type: 'chat.receipt',
+      ticket_id: 'ticket-chat-1',
+      read_state: {
+        ...(receiptFrame['read_state'] as ChatReadStateDto),
+        ticket_id: 'ticket-chat-1',
+      },
+    });
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="msg-receipt-status"]')?.textContent).toContain('Read');
+
+    // Disconnected fallback: incoming unread catch-up uses POST .../read
+    isAuthorizedSig.set(false);
+    mockTicketsService.getMessagesAfter.mockResolvedValueOnce({
+      ticket_id: 'ticket-chat-1',
+      status: 'in_progress',
+      messages: [
+        {
+          id: 'm-3',
+          sender: 'customer',
+          body: 'Are you still there?',
+          sent_at: '2026-11-14T10:03:00.000Z',
+          seq: 3,
+        },
+      ],
+      read_state: null,
+      has_more: false,
+    });
+    events$.next({ type: 'resync_required' });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(mockTicketsService.markRead).toHaveBeenCalledWith('ticket-chat-1', 3);
+  });
+
+  it('handles 409 chat_already_open cleanly when reopening a closed chat ticket', async () => {
+    mockTicketsService.updateStatus.mockRejectedValueOnce(
+      new ApiClientError(409, 'chat_already_open', 'Another live chat is already open.'),
+    );
+    await component.onStatusChange('open');
+    expect(component.errorMessage()).toContain('Another live chat is already open.');
+  });
+
+  it('does not join WS ticket room or send WS typing/read when role is report_approver', async () => {
+    rolesSig.set(['report_approver']);
+    mockChatSocket.joinTicket.mockClear();
+    mockChatSocket.leaveTicket.mockClear();
+    mockChatSocket.sendTyping.mockClear();
+    mockChatSocket.sendRead.mockClear();
+
+    routeParams.next(convertToParamMap({ ticket_id: 'ticket-chat-3' }));
+    await vi.advanceTimersByTimeAsync(0);
+    component.onReplyInput('note');
+    fixture.destroy();
+
+    expect(mockChatSocket.joinTicket).not.toHaveBeenCalled();
+    expect(mockChatSocket.leaveTicket).not.toHaveBeenCalled();
+    expect(mockChatSocket.sendTyping).not.toHaveBeenCalled();
+    expect(mockChatSocket.sendRead).not.toHaveBeenCalled();
   });
 });

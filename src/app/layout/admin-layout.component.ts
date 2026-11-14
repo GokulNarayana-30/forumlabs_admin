@@ -1,8 +1,9 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { StaffStateService, StaffRole } from '../core/state/staff-state.service';
 import { AuthService } from '../core/auth/auth.service';
+import { SupportChatSocketService } from '../features/tickets/services/support-chat-socket.service';
 
 export interface NavItem {
   label: string;
@@ -16,9 +17,10 @@ export interface NavItem {
   imports: [CommonModule, RouterModule],
   templateUrl: './admin-layout.component.html',
 })
-export class AdminLayoutComponent {
+export class AdminLayoutComponent implements OnInit {
   private readonly staffState = inject(StaffStateService);
   private readonly auth = inject(AuthService);
+  private readonly chatSocket = inject(SupportChatSocketService);
 
   /** Phones only: whether the slide-in menu is open. */
   readonly menuOpen = signal(false);
@@ -29,6 +31,11 @@ export class AdminLayoutComponent {
   readonly displayName = this.staffState.displayName;
   readonly roles = this.staffState.roles;
   readonly currentUser = this.staffState.currentUser;
+  readonly ticketsUnread = computed(() => this.chatSocket.totalUnread());
+
+  ngOnInit(): void {
+    this.chatSocket.ensureStarted();
+  }
 
   private readonly allNavItems: NavItem[] = [
     { label: 'Bookings', path: '/bookings', roles: ['booking_dispatch', 'super_admin'] },

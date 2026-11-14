@@ -81,6 +81,11 @@
               [value]="data.ticket.status"
               [severity]="getStatusSeverity(data.ticket.status)"
             ></ui-tag>
+            @if (data.ticket.channel === 'chat') {
+              <span data-testid="live-chat-channel-badge">
+                <ui-tag value="Live chat" severity="info"></ui-tag>
+              </span>
+            }
             @if (data.ticket.priority === 'urgent') {
               <span data-priority><ui-tag value="Urgent" severity="danger"></ui-tag></span>
             }
@@ -258,9 +263,27 @@
                     }
                   </div>
                 }
+                @if (receiptStatusFor(msg); as receiptLabel) {
+                  <div
+                    data-testid="msg-receipt-status"
+                    class="mt-1 text-right text-xs font-medium text-surface-500"
+                  >
+                    {{ receiptLabel }}
+                  </div>
+                }
               </div>
             }
           </div>
+
+          @if (customerTyping()) {
+            <div
+              data-testid="customer-typing-indicator"
+              class="text-xs italic text-primary-700"
+              aria-live="polite"
+            >
+              Customer is typing...
+            </div>
+          }
 
           <!-- Public Reply Composer -->
           <div class="pt-4 border-t border-surface-200 space-y-2">
@@ -287,7 +310,8 @@
               </div>
             }
             <textarea
-              [(ngModel)]="replyText"
+              [ngModel]="replyText()"
+              (ngModelChange)="onReplyInput($event)"
               rows="3"
               aria-label="Reply to customer"
               placeholder="Type your response to the customer..."
