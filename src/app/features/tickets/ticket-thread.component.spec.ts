@@ -5,7 +5,7 @@ import { BehaviorSubject, Subject } from 'rxjs';
 import { afterEach, describe, expect, it, beforeEach, vi } from 'vitest';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import wsFixture from '../../../../../../docs/api/fixtures/support-chat-ws.json';
+import wsFixture from '../../../testing/support-chat-ws.json';
 import { environment } from '../../../environments/environment';
 import { ApiClientError } from '../../core/api/api-client.service';
 import { StaffStateService } from '../../core/state/staff-state.service';

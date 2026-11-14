@@ -3,7 +3,7 @@ import { signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import wsFixture from '../../../../../../../docs/api/fixtures/support-chat-ws.json';
+import wsFixture from '../../../../testing/support-chat-ws.json';
 import { environment } from '../../../../environments/environment';
 import { AuthService } from '../../../core/auth/auth.service';
 import { StaffStateService } from '../../../core/state/staff-state.service';
